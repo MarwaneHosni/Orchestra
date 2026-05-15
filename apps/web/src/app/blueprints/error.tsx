@@ -9,11 +9,5 @@ export default function BlueprintsError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  return (
-    <ErrorState
-      title="Failed to load blueprints"
-      message={error.message}
-      onRetry={reset}
-    />
-  );
+  return <ErrorState title="Failed to load blueprints" message={error.message} onRetry={reset} />;
 }

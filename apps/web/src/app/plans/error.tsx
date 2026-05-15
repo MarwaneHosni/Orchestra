@@ -9,11 +9,5 @@ export default function PlansError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  return (
-    <ErrorState
-      title="Failed to load plans"
-      message={error.message}
-      onRetry={reset}
-    />
-  );
+  return <ErrorState title="Failed to load plans" message={error.message} onRetry={reset} />;
 }

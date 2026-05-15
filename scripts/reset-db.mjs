@@ -22,12 +22,12 @@ const DB_USER = process.env.POSTGRES_USER || "orchestra";
 // target database (you cannot drop the database you are currently connected to).
 run(
   "Drop existing database",
-  `docker compose exec -T postgres psql -U ${DB_USER} -d postgres -c "DROP DATABASE IF EXISTS ${DB_NAME}"`
+  `docker compose exec -T postgres psql -U ${DB_USER} -d postgres -c "DROP DATABASE IF EXISTS ${DB_NAME}"`,
 );
 
 run(
   "Create fresh database",
-  `docker compose exec -T postgres psql -U ${DB_USER} -d postgres -c "CREATE DATABASE ${DB_NAME}"`
+  `docker compose exec -T postgres psql -U ${DB_USER} -d postgres -c "CREATE DATABASE ${DB_NAME}"`,
 );
 
 console.log(`\n✓ Database "${DB_NAME}" has been reset.`);

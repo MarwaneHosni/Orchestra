@@ -24,11 +24,7 @@ export class ValidationError extends AppError {
   }
 }
 
-export function errorHandler(
-  error: FastifyError | Error,
-  request: FastifyRequest,
-  reply: FastifyReply,
-) {
+export function errorHandler(error: FastifyError | Error, request: FastifyRequest, reply: FastifyReply) {
   if (error instanceof AppError) {
     return reply.status(error.statusCode).send({
       error: { code: error.code, message: error.message },

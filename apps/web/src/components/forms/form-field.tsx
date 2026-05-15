@@ -18,12 +18,13 @@ export function FormField({ label, error, description, required, children, class
 
   return (
     <div className={cn("space-y-1.5", className)}>
-      <label
-        htmlFor={inputId}
-        className="block text-sm font-medium text-text-primary"
-      >
+      <label htmlFor={inputId} className="block text-sm font-medium text-text-primary">
         {label}
-        {required && <span className="ml-1 text-red-500" aria-hidden="true">*</span>}
+        {required && (
+          <span className="ml-1 text-red-500" aria-hidden="true">
+            *
+          </span>
+        )}
       </label>
 
       {description && (

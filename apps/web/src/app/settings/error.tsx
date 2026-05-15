@@ -9,11 +9,5 @@ export default function SettingsError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  return (
-    <ErrorState
-      title="Failed to load settings"
-      message={error.message}
-      onRetry={reset}
-    />
-  );
+  return <ErrorState title="Failed to load settings" message={error.message} onRetry={reset} />;
 }

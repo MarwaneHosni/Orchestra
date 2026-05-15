@@ -9,9 +9,11 @@ Phase 4 required implementing the backend service scaffold: domain boundaries, m
 ## Decisions
 
 ### HTTP Framework
+
 - **Fastify 5** — chosen for built-in schema validation, plugin-based architecture (clean domain boundaries), integrated Pino logging, and strong TypeScript support. The plugin system maps naturally to domain modules.
 
 ### Domain Boundaries
+
 - Nine core domains defined as co-located modules under `src/domains/`:
   - `users`, `projects`, `ideas`, `plans`, `phases`, `subphases`, `questions`, `answers`, `generations`
 - Each domain file exports:
@@ -21,23 +23,25 @@ Phase 4 required implementing the backend service scaffold: domain boundaries, m
 
 ### API Surface
 
-| Method | Path | Status |
-|--------|------|--------|
-| GET | `/health` | ✅ Returns `{ status: "ok" }` |
-| GET | `/ready` | ✅ Returns `{ status: "ok", database: "disconnected" }` |
-| GET | `/api/v1/status` | ✅ Returns service name, version, environment |
-| GET | `/api/v1/projects` | ✅ Returns paginated project list |
-| GET | `/api/v1/projects/:id` | ✅ Returns project or 404 |
-| POST | `/api/v1/projects` | ✅ Validates input, returns 201 |
-| Other domain routes | — | ⏳ 501 Not Implemented |
+| Method              | Path                   | Status                                                  |
+| ------------------- | ---------------------- | ------------------------------------------------------- |
+| GET                 | `/health`              | ✅ Returns `{ status: "ok" }`                           |
+| GET                 | `/ready`               | ✅ Returns `{ status: "ok", database: "disconnected" }` |
+| GET                 | `/api/v1/status`       | ✅ Returns service name, version, environment           |
+| GET                 | `/api/v1/projects`     | ✅ Returns paginated project list                       |
+| GET                 | `/api/v1/projects/:id` | ✅ Returns project or 404                               |
+| POST                | `/api/v1/projects`     | ✅ Validates input, returns 201                         |
+| Other domain routes | —                      | ⏳ 501 Not Implemented                                  |
 
 ### Validation
+
 - **Zod v4** for runtime validation and TypeScript type inference.
 - Fastify's native JSON Schema validation is used for response serialization on health/ready/status endpoints.
 - Request body validation uses `CreateProjectSchema.safeParse()` with explicit `ValidationError` throw on failure.
 - Shared schemas (`paginationSchema`, `uuidSchema`, `timestampSchema`) in `src/schemas/`.
 
 ### Error Handling
+
 - Custom `AppError` base class with `code`, `message`, and `statusCode`.
 - `NotFoundError` and `ValidationError` subclasses for common cases.
 - Fastify global `errorHandler` that:
@@ -46,11 +50,13 @@ Phase 4 required implementing the backend service scaffold: domain boundaries, m
   - Unexpected errors → logged via `request.log.error`, returned as 500.
 
 ### Logging
+
 - Fastify's built-in Pino logger configured via `LOG_LEVEL` env var.
 - Pretty-print (`pino-pretty`) enabled automatically in `development` environment.
 - `silent` log level supported for test runs.
 
 ### Configuration
+
 - Typed config loader (`loadConfig()`) validates all env vars at startup using Zod.
 - Strict enumeration for `NODE_ENV`, `LOG_LEVEL`.
 - `DATABASE_URL` is optional (database connection will be added later).

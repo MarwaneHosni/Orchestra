@@ -39,20 +39,23 @@ See [docs/development.md](docs/development.md) for a detailed walkthrough, envir
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
+| Command           | Description                                          |
+| ----------------- | ---------------------------------------------------- |
 | `pnpm setup`      | Bootstrap a fresh clone: .env → DB → install → build |
-| `pnpm dev`        | Start api, web & worker in parallel |
-| `pnpm build`      | Build all workspaces |
-| `pnpm typecheck`  | Type-check all workspaces |
-| `pnpm lint`       | Lint all workspaces |
-| `pnpm test`       | Run all tests |
-| `pnpm clean`      | Remove build artifacts from all workspaces |
-| `pnpm clean:all`  | Remove build artifacts and `node_modules` |
-| `pnpm db:start`   | Start PostgreSQL via Docker Compose |
-| `pnpm db:stop`    | Stop PostgreSQL |
-| `pnpm db:reset`   | Drop and recreate the local database |
-| `pnpm db:status`  | Show Docker Compose service status |
+| `pnpm dev`        | Start api, web & worker in parallel                  |
+| `pnpm build`      | Build all workspaces                                 |
+| `pnpm typecheck`  | Type-check all workspace packages (tsc --noEmit)     |
+| `pnpm lint`       | Lint all files (ESLint)                              |
+| `pnpm format`     | Check formatting (Prettier)                          |
+| `pnpm format:fix` | Auto-fix formatting                                  |
+| `pnpm test`       | Run all tests (Vitest)                               |
+| `pnpm test:watch` | Run tests in watch mode                              |
+| `pnpm clean`      | Remove build artifacts from all workspaces           |
+| `pnpm clean:all`  | Remove build artifacts and `node_modules`            |
+| `pnpm db:start`   | Start PostgreSQL via Docker Compose                  |
+| `pnpm db:stop`    | Stop PostgreSQL                                      |
+| `pnpm db:reset`   | Drop and recreate the local database                 |
+| `pnpm db:status`  | Show Docker Compose service status                   |
 
 ## Platform Support
 

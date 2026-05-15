@@ -1,0 +1,7 @@
+dist/
+node_modules/
+.next/
+drizzle/
+pnpm-lock.yaml
+coverage/
+next-env.d.ts

@@ -23,26 +23,22 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
-          <FormField
-            label="OpenAI API Key"
-            description="Used for GPT-4 and GPT-3.5 models."
-          >
+          <FormField label="OpenAI API Key" description="Used for GPT-4 and GPT-3.5 models.">
             {(id, _errorId, descriptionId) => (
               <Input id={id} type="password" placeholder="sk-..." aria-describedby={descriptionId} />
             )}
           </FormField>
 
-          <FormField
-            label="Anthropic API Key"
-            description="Used for Claude models."
-          >
+          <FormField label="Anthropic API Key" description="Used for Claude models.">
             {(id, _errorId, descriptionId) => (
               <Input id={id} type="password" placeholder="sk-ant-..." aria-describedby={descriptionId} />
             )}
           </FormField>
 
           <div className="pt-2">
-            <Button type="submit" variant="primary">Save settings</Button>
+            <Button type="submit" variant="primary">
+              Save settings
+            </Button>
           </div>
         </form>
       </Card>
@@ -50,15 +46,10 @@ export default function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Preferences</CardTitle>
-          <CardDescription>
-            General application settings.
-          </CardDescription>
+          <CardDescription>General application settings.</CardDescription>
         </CardHeader>
         <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
-          <FormField
-            label="Default model"
-            description="Preferred AI model for plan generation."
-          >
+          <FormField label="Default model" description="Preferred AI model for plan generation.">
             {(id, _errorId, descriptionId) => (
               <select
                 id={id}
@@ -75,7 +66,9 @@ export default function SettingsPage() {
           </FormField>
 
           <div className="pt-2">
-            <Button type="submit" variant="primary">Save preferences</Button>
+            <Button type="submit" variant="primary">
+              Save preferences
+            </Button>
           </div>
         </form>
       </Card>

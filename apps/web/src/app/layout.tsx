@@ -4,8 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Orchestra — AI Software Development Orchestrator",
-  description:
-    "Transform a raw software idea into a structured, execution-ready development plan.",
+  description: "Transform a raw software idea into a structured, execution-ready development plan.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

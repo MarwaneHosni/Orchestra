@@ -9,11 +9,5 @@ export default function ProjectsError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  return (
-    <ErrorState
-      title="Failed to load projects"
-      message={error.message}
-      onRetry={reset}
-    />
-  );
+  return <ErrorState title="Failed to load projects" message={error.message} onRetry={reset} />;
 }

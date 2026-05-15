@@ -34,10 +34,12 @@ function waitForHealthy() {
         return;
       }
       try {
-        const out = execSync(
-          `docker compose ps postgres --format json`,
-          { cwd: ROOT, encoding: "utf-8", stdio: "pipe", shell: true }
-        );
+        const out = execSync(`docker compose ps postgres --format json`, {
+          cwd: ROOT,
+          encoding: "utf-8",
+          stdio: "pipe",
+          shell: true,
+        });
         if (out.includes('"Health": "healthy"')) {
           resolvePromise();
         } else {

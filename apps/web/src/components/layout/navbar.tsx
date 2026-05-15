@@ -62,7 +62,8 @@ export function Navbar() {
         <nav className="border-t border-border bg-surface md:hidden" aria-label="Mobile navigation">
           <div className="space-y-1 px-4 py-3">
             {navLinks.map((link) => {
-              const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
+              const isActive =
+                pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
               return (
                 <Link
                   key={link.href}

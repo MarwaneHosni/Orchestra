@@ -8,8 +8,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
-    "lint": "echo 'lint: no linter configured yet'",
-    "test": "echo 'test: no test runner configured yet'",
+    "lint": "echo 'lint: use pnpm lint at root'",
+    "test": "echo 'test: use pnpm test at root'",
     "clean": "rimraf dist"
   },
   "dependencies": {

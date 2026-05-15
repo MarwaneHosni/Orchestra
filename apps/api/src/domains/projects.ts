@@ -26,15 +26,24 @@ export const ProjectListSchema = paginationSchema;
 const projects: Project[] = [];
 
 export async function registerProjectRoutes(app: FastifyInstance) {
-  app.get("/api/v1/projects", {
-    schema: {
-      querystring: { type: "object", properties: { page: { type: "number" }, pageSize: { type: "number" } } },
-      response: { 200: { type: "object", properties: { data: { type: "array" }, meta: { type: "object" } } } },
+  app.get(
+    "/api/v1/projects",
+    {
+      schema: {
+        querystring: {
+          type: "object",
+          properties: { page: { type: "number" }, pageSize: { type: "number" } },
+        },
+        response: {
+          200: { type: "object", properties: { data: { type: "array" }, meta: { type: "object" } } },
+        },
+      },
     },
-  }, async (request) => {
-    const query = ProjectListSchema.parse(request.query);
-    return paginatedResponse(projects, projects.length, query.page, query.pageSize);
-  });
+    async (request) => {
+      const query = ProjectListSchema.parse(request.query);
+      return paginatedResponse(projects, projects.length, query.page, query.pageSize);
+    },
+  );
 
   app.get("/api/v1/projects/:id", async (request) => {
     const { id } = request.params as { id: string };

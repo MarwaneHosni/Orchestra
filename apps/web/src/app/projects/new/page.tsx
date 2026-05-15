@@ -18,9 +18,7 @@ export default function NewProjectPage() {
       <Card>
         <CardHeader>
           <CardTitle>Project details</CardTitle>
-          <CardDescription>
-            Provide a name and a brief description of your idea.
-          </CardDescription>
+          <CardDescription>Provide a name and a brief description of your idea.</CardDescription>
         </CardHeader>
         <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
           <FormField label="Project name" required description="A short, descriptive name for your project.">

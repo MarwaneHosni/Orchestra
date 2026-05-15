@@ -17,18 +17,21 @@ export function EmptyState({ title, description, action, className }: EmptyState
         className,
       )}
     >
-      <div className="mb-4 text-4xl" aria-hidden="true">📋</div>
+      <div className="mb-4 text-4xl" aria-hidden="true">
+        📋
+      </div>
       <h3 className="mb-2 text-lg font-semibold text-text-primary">{title}</h3>
       <p className="mb-6 max-w-sm text-sm text-text-secondary">{description}</p>
-      {action && (action.href ? (
-        <Button variant="primary" asChild>
-          <Link href={action.href}>{action.label}</Link>
-        </Button>
-      ) : (
-        <Button variant="primary" onClick={action.onClick}>
-          {action.label}
-        </Button>
-      ))}
+      {action &&
+        (action.href ? (
+          <Button variant="primary" asChild>
+            <Link href={action.href}>{action.label}</Link>
+          </Button>
+        ) : (
+          <Button variant="primary" onClick={action.onClick}>
+            {action.label}
+          </Button>
+        ))}
     </div>
   );
 }

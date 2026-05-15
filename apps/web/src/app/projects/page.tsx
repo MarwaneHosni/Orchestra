@@ -8,9 +8,7 @@ export default function ProjectsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-text-primary">Projects</h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            All your software ideas, organised as projects.
-          </p>
+          <p className="mt-1 text-sm text-text-secondary">All your software ideas, organised as projects.</p>
         </div>
         <Button asChild>
           <Link href="/projects/new">New project</Link>

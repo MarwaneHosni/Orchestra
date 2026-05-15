@@ -17,6 +17,8 @@ export type Generation = z.infer<typeof GenerationSchema>;
 
 export async function registerGenerationRoutes(app: FastifyInstance) {
   app.get("/api/v1/projects/:projectId/generations", async (_request, reply) => {
-    reply.status(501).send({ error: { code: "NOT_IMPLEMENTED", message: "Generations not yet implemented" } });
+    reply
+      .status(501)
+      .send({ error: { code: "NOT_IMPLEMENTED", message: "Generations not yet implemented" } });
   });
 }

@@ -41,11 +41,13 @@ These will be implemented as modules within `apps/api` and `apps/worker`:
 ## Conventions
 
 ### Error Handling
+
 - All errors are typed. Business errors extend a base `AppError` class with a machine-readable `code` and a user-facing `message`.
 - Unexpected errors (network failures, assertion violations) are caught by a global error boundary at each app boundary and logged before returning a generic error to the caller.
 - The `AppError` base class and associated utilities live in `packages/shared/src/errors.ts`.
 
 ### Naming
+
 - **Files:** `kebab-case.ts` (except React components → `PascalCase.tsx` — once the frontend framework is chosen).
 - **Exports:** Named exports only (no default exports).
 - **Variables/functions:** `camelCase`.
@@ -53,18 +55,21 @@ These will be implemented as modules within `apps/api` and `apps/worker`:
 - **Constants:** `UPPER_SNAKE_CASE`.
 
 ### Module Boundaries
+
 - `packages/shared` must never import from `apps/` or from other `packages/` — it is the leaf dependency.
 - `packages/config` depends only on `packages/shared` and Node built-ins.
 - `apps/*` may import from any `packages/*` but never from sibling `apps/*`.
 - Cross-app communication happens exclusively through the API layer (HTTP) or the worker queue — never through direct imports.
 
 ### Environment Variables
+
 - Accessed through a typed config helper per domain, never `process.env` directly.
 - Required variables are validated at startup; missing required variables throw immediately with a clear message.
 - Variables follow `UPPER_SNAKE_CASE`.
 - Convention: each `apps/*` or `packages/*` that needs configuration exposes a `loadConfig()` function that returns a typed config object.
 
 ### Cross-Platform
+
 - All scripts and tooling must work on Windows, macOS, and Linux.
 - `rimraf` replaces `rm -rf` in package scripts.
 - The dev launcher uses `pnpm run --parallel` rather than shell `&` for process concurrency.
