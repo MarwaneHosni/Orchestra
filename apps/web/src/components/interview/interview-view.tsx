@@ -179,6 +179,25 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
           <p className="mt-2 text-sm text-text-secondary">
             You&apos;ve answered all available questions. Generate your project plan now.
           </p>
+
+          <div className="mx-auto mt-6 max-w-sm space-y-2 rounded-lg border border-border bg-white p-4 text-left">
+            <p className="text-xs font-medium uppercase tracking-wide text-text-secondary">
+              Estimated generation cost
+            </p>
+            <div className="flex justify-between text-sm">
+              <span className="text-text-secondary">Architecture reasoning (strong)</span>
+              <span className="font-medium text-text-primary">~$0.02</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-text-secondary">Roadmap (balanced)</span>
+              <span className="font-medium text-text-primary">~$0.005</span>
+            </div>
+            <div className="flex justify-between border-t border-border pt-2 text-sm">
+              <span className="font-medium text-text-primary">Estimated total</span>
+              <span className="font-semibold text-text-primary">~$0.025</span>
+            </div>
+          </div>
+
           <div className="mt-4 flex justify-center gap-3">
             {history.length > 0 && (
               <button

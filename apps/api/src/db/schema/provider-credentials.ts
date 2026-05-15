@@ -10,7 +10,14 @@ export const providerNames = [
   "azure_openai",
   "custom",
 ] as const;
-export const credentialStatuses = ["unverified", "valid", "invalid", "expired"] as const;
+export const credentialStatuses = [
+  "unverified",
+  "valid",
+  "invalid",
+  "expired",
+  "rate_limited",
+  "failed",
+] as const;
 
 export const providerCredentials = pgTable(
   "provider_credentials",

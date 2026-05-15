@@ -116,3 +116,42 @@ export async function transitionSession(
 export async function generateBlueprint(sessionId: string): Promise<BlueprintResult> {
   return request(`/api/v1/interviews/${sessionId}/generate`, { method: "POST", body: "{}" });
 }
+
+// ── Provider Credentials ──────────────────────────────────────────────
+
+export interface ProviderCredential {
+  id: string;
+  userId: string;
+  provider: string;
+  displayName: string;
+  status: "unverified" | "valid" | "invalid" | "expired";
+  defaultModel: string | null;
+  modelsAvailable: string | null;
+  lastVerifiedAt: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+}
+
+export async function listCredentials(): Promise<{ data: ProviderCredential[] }> {
+  return request("/api/v1/provider-credentials");
+}
+
+export async function createCredential(input: {
+  provider: string;
+  apiKey: string;
+  displayName?: string;
+  defaultModel?: string;
+}): Promise<ProviderCredential> {
+  return request("/api/v1/provider-credentials", {
+    method: "POST",
+    body: JSON.stringify({ ...input, userId: "00000000-0000-0000-0000-000000000001" }),
+  });
+}
+
+export async function deleteCredential(id: string): Promise<void> {
+  await fetch(`http://localhost:3000/api/v1/provider-credentials/${id}`, { method: "DELETE" });
+}
+
+export async function validateCredential(id: string): Promise<ProviderCredential> {
+  return request(`/api/v1/provider-credentials/${id}/validate`, { method: "POST", body: "{}" });
+}
