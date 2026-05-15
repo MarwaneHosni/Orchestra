@@ -13,3 +13,4 @@ export { constraints, constraintTypes, constraintSeverities } from "./constraint
 export { risks, riskLikelihoods, riskStatuses } from "./risks.js";
 export { blueprints, blueprintFormats, blueprintStatuses } from "./blueprints.js";
 export { providerCredentials, providerNames, credentialStatuses } from "./provider-credentials.js";
+export { usageRecords, usageRecordStatuses } from "./usage-records.js";
