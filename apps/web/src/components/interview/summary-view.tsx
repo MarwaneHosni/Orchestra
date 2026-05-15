@@ -1,15 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { generateBlueprint } from "@/lib/api";
 import type { BlueprintResult } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { StepIndicator } from "@/components/ui/step-indicator";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 interface SummaryViewProps {
   sessionId: string;
 }
 
 export function SummaryView({ sessionId }: SummaryViewProps) {
+  const router = useRouter();
   const [blueprint, setBlueprint] = useState<BlueprintResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -28,10 +32,20 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
     load();
   }, [sessionId]);
 
+  const hasInsufficientPhases = blueprint?.phases.some(
+    (p) => p.status === "insufficient" || p.status === "missing",
+  );
+
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="h-8 w-48 animate-pulse rounded bg-gray-200" />
+      <div className="mx-auto max-w-3xl space-y-6">
+        <div className="h-5 w-48 animate-pulse rounded bg-gray-200" />
+        <div className="h-8 w-64 animate-pulse rounded bg-gray-200" />
+        <div className="grid grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-24 animate-pulse rounded-xl bg-gray-100" />
+          ))}
+        </div>
         <div className="h-64 w-full animate-pulse rounded-lg bg-gray-100" />
       </div>
     );
@@ -39,13 +53,27 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
-        <p className="text-red-800">{error}</p>
+      <div className="mx-auto max-w-3xl py-16">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
+          <p className="text-red-800">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 rounded-lg bg-orchestra-600 px-4 py-2 text-sm text-white hover:bg-orchestra-700"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
 
-  if (!blueprint) return null;
+  if (!blueprint) {
+    return (
+      <div className="mx-auto max-w-3xl py-16 text-center">
+        <p className="text-text-secondary">No blueprint found for this project.</p>
+      </div>
+    );
+  }
 
   const confidenceColor =
     blueprint.overallConfidence >= 0.7
@@ -56,13 +84,26 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-text-primary">{blueprint.projectName}</h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Plan v{blueprint.planVersion} &middot; Generated{" "}
-          {new Date(blueprint.generatedAt).toLocaleDateString()}
-        </p>
+      <Breadcrumb items={[{ label: "Projects", href: "/projects" }, { label: blueprint.projectName }]} />
+
+      <StepIndicator current="review" complete={["interview"]} />
+
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-text-primary">{blueprint.projectName}</h1>
+          <p className="mt-1 text-sm text-text-secondary">
+            Plan v{blueprint.planVersion} &middot; Generated{" "}
+            {new Date(blueprint.generatedAt).toLocaleDateString()}
+          </p>
+        </div>
       </div>
+
+      {hasInsufficientPhases && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          Some phases have insufficient detail. The task graph will include <strong>needs_review</strong>{" "}
+          markers for these areas. You can revisit the interview to add more detail.
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <MetricCard
@@ -97,16 +138,22 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
                   </p>
                 </div>
               </div>
-              <span
-                className={cn(
-                  "text-xs font-medium",
-                  phase.status === "sufficient" && "text-green-700",
-                  phase.status === "insufficient" && "text-amber-700",
-                  phase.status === "missing" && "text-gray-400",
+              <div className="flex items-center gap-2">
+                {(phase.status === "insufficient" || phase.status === "missing") && (
+                  <span
+                    className={cn(
+                      "text-xs font-medium",
+                      phase.status === "insufficient" && "text-amber-700",
+                      phase.status === "missing" && "text-gray-400",
+                    )}
+                  >
+                    {phase.status}
+                  </span>
                 )}
-              >
-                {phase.status}
-              </span>
+                {phase.status === "sufficient" && (
+                  <span className="text-xs font-medium text-green-700">Ready</span>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -183,6 +230,21 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
           </div>
         </section>
       )}
+
+      <div className="flex gap-3 border-t border-border pt-6">
+        <button
+          onClick={() => router.push(`/projects/${sessionId}/tasks`)}
+          className="rounded-lg bg-orchestra-600 px-6 py-2 text-sm font-medium text-white hover:bg-orchestra-700"
+        >
+          View task graph
+        </button>
+        <button
+          onClick={() => router.push(`/projects/${sessionId}/interview`)}
+          className="rounded-lg border border-border bg-white px-6 py-2 text-sm font-medium text-text-secondary hover:bg-gray-50"
+        >
+          Return to interview
+        </button>
+      </div>
     </div>
   );
 }

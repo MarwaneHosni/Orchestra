@@ -1,12 +1,12 @@
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 const stats = [
-  { label: "Projects", value: "0" },
-  { label: "Blueprints", value: "0" },
-  { label: "Plans", value: "0" },
-  { label: "Tasks", value: "0" },
+  { label: "Projects", value: "—" },
+  { label: "Blueprints", value: "—" },
+  { label: "Tasks", value: "—" },
+  { label: "Phases", value: "12" },
 ];
 
 export default function DashboardPage() {
@@ -20,7 +20,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <Button asChild>
-          <Link href="/projects">New project</Link>
+          <Link href="/projects/new">New project</Link>
         </Button>
       </div>
 

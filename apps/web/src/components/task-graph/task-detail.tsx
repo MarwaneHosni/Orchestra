@@ -22,7 +22,7 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt }: TaskDetail
   const depNames = task.dependencies.map((d) => allTasks.find((t) => t.id === d.taskId)).filter(Boolean);
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 flex w-96 flex-col border-l border-border bg-surface shadow-xl">
+    <div className="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border bg-surface shadow-xl sm:w-96">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <h2 className="text-sm font-semibold text-text-primary">Task Details</h2>
         <button onClick={onClose} className="text-text-secondary hover:text-text-primary">
@@ -43,6 +43,13 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt }: TaskDetail
             {STATUS_LABELS[task.status] ?? task.status}
           </span>
         </div>
+
+        {"failureReason" in task && task.failureReason && (
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            <p className="font-medium">Needs Review</p>
+            <p className="mt-1 text-xs">{task.failureReason}</p>
+          </div>
+        )}
 
         <div className="mt-6">
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">

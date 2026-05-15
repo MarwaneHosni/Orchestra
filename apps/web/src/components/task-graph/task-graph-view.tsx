@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { TaskNodeView } from "./task-node";
 import { TaskDetail } from "./task-detail";
 import { PromptPreview } from "./prompt-preview";
+import { StepIndicator } from "@/components/ui/step-indicator";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import type { TaskData } from "./task-node";
 
 const PHASES = [
@@ -68,8 +70,9 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="h-8 w-48 animate-pulse rounded bg-gray-200" />
+      <div className="space-y-6">
+        <div className="h-5 w-48 animate-pulse rounded bg-gray-200" />
+        <div className="h-8 w-64 animate-pulse rounded bg-gray-200" />
         <div className="grid grid-cols-3 gap-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="h-20 animate-pulse rounded-xl bg-gray-100" />
@@ -83,15 +86,27 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
         <p className="text-red-800">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 rounded-lg bg-orchestra-600 px-4 py-2 text-sm text-white hover:bg-orchestra-700"
+        >
+          Retry
+        </button>
       </div>
     );
   }
 
   if (!graph || graph.tasks.length === 0) {
     return (
-      <div className="rounded-xl border-2 border-dashed border-border p-12 text-center">
-        <p className="text-lg font-medium text-text-primary">No tasks generated yet</p>
-        <p className="mt-1 text-sm text-text-secondary">Generate a plan to see the task graph.</p>
+      <div className="space-y-6">
+        <Breadcrumb items={[{ label: "Projects", href: "/projects" }, { label: "Task Graph" }]} />
+        <StepIndicator current="tasks" complete={["interview", "review"]} />
+        <div className="rounded-xl border-2 border-dashed border-border bg-surface-secondary p-12 text-center">
+          <p className="text-lg font-medium text-text-primary">No tasks generated yet</p>
+          <p className="mt-1 text-sm text-text-secondary">
+            Complete the interview and generate a plan to see the task graph.
+          </p>
+        </div>
       </div>
     );
   }
@@ -117,13 +132,21 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
     }
   };
 
+  const needsReviewCount = graph.tasks.filter((t) => t.status === "needs_review").length;
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      <Breadcrumb items={[{ label: "Projects", href: "/projects" }, { label: "Task Graph" }]} />
+
+      <StepIndicator current="tasks" complete={["interview", "review"]} />
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-text-primary">Task Graph</h1>
           <p className="mt-1 text-sm text-text-secondary">
-            {graph.tasks.length} tasks &middot; {graph.dependencies.length} dependencies &middot; v{1}
+            {graph.tasks.length} task{graph.tasks.length !== 1 ? "s" : ""} &middot;{" "}
+            {graph.dependencies.length} dependenc{graph.dependencies.length !== 1 ? "ies" : "y"} &middot; v{1}
+            {needsReviewCount > 0 && ` · ${needsReviewCount} needs review`}
           </p>
         </div>
         <button
@@ -134,9 +157,17 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
           {exporting ? "Exporting..." : "Export bundle"}
         </button>
       </div>
+
       {exportError && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           {exportError}
+        </div>
+      )}
+
+      {needsReviewCount > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          {needsReviewCount} task{needsReviewCount !== 1 ? "s" : ""} need{needsReviewCount === 1 ? "s" : ""}{" "}
+          review due to insufficient phase detail. These are marked with an amber border.
         </div>
       )}
 
@@ -148,7 +179,12 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
 
           return (
             <div key={phase}>
-              <h3 className="mb-3 text-sm font-semibold text-text-primary">{PHASE_LABELS[phase] ?? phase}</h3>
+              <h3 className="mb-3 text-sm font-semibold text-text-primary">
+                {PHASE_LABELS[phase] ?? phase}
+                <span className="ml-2 font-normal text-text-secondary">
+                  {phaseTasks.length} task{phaseTasks.length !== 1 ? "s" : ""}
+                </span>
+              </h3>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {phaseTasks.map((task) => (
                   <TaskNodeView
@@ -177,12 +213,8 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
         />
       )}
 
-      {promptTaskId && <PromptPreview taskId={promptTaskId} onClose={() => setPromptTaskId(null)} />}
-
-      {graph.tasks.length > 30 && (
-        <p className="text-xs text-text-secondary">
-          This project has {graph.tasks.length} tasks. Scroll to see all phases.
-        </p>
+      {promptTaskId && (
+        <PromptPreview taskId={promptTaskId} sessionId={sessionId} onClose={() => setPromptTaskId(null)} />
       )}
     </div>
   );

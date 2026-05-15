@@ -4,10 +4,11 @@ import { useState, useEffect } from "react";
 
 interface PromptPreviewProps {
   taskId: string;
+  sessionId: string;
   onClose: () => void;
 }
 
-export function PromptPreview({ taskId, onClose }: PromptPreviewProps) {
+export function PromptPreview({ taskId, sessionId, onClose }: PromptPreviewProps) {
   const [prompt, setPrompt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -17,7 +18,7 @@ export function PromptPreview({ taskId, onClose }: PromptPreviewProps) {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`http://localhost:3000/api/v1/plans/dummy/tasks/${taskId}/prompt`);
+        const res = await fetch(`http://localhost:3000/api/v1/plans/${sessionId}/tasks/${taskId}/prompt`);
         if (!res.ok) throw new Error("Failed to load prompt");
         const data = await res.json();
         setPrompt(data.promptText);
@@ -28,7 +29,7 @@ export function PromptPreview({ taskId, onClose }: PromptPreviewProps) {
       }
     };
     load();
-  }, [taskId]);
+  }, [taskId, sessionId]);
 
   const handleCopy = async () => {
     if (!prompt) return;
@@ -37,12 +38,12 @@ export function PromptPreview({ taskId, onClose }: PromptPreviewProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Clipboard API may fail in insecure contexts
+      // clipboard may be unavailable
     }
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 flex w-[36rem] flex-col border-l border-border bg-surface shadow-xl">
+    <div className="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border bg-surface shadow-xl sm:w-[36rem]">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <h2 className="text-sm font-semibold text-text-primary">Execution Prompt</h2>
         <div className="flex items-center gap-2">

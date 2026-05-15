@@ -9,11 +9,25 @@ interface QuestionRendererProps {
   initialValue?: string;
   onSubmit: (value: string) => void;
   onSkip: () => void;
+  showTips?: boolean;
 }
 
-export function QuestionRenderer({ question, initialValue, onSubmit, onSkip }: QuestionRendererProps) {
+const AGENT_TIPS = [
+  "Consider edge cases: empty states, error states, boundary conditions",
+  "Think about security: input validation, authentication, data protection",
+  "Check dependencies: how does this connect to other parts of the system?",
+];
+
+export function QuestionRenderer({
+  question,
+  initialValue,
+  onSubmit,
+  onSkip,
+  showTips: defaultShowTips = false,
+}: QuestionRendererProps) {
   const [value, setValue] = useState(initialValue ?? "");
   const [error, setError] = useState("");
+  const [tipsOpen, setTipsOpen] = useState(defaultShowTips);
 
   const handleSubmit = () => {
     if (question.required && !value.trim()) {
@@ -34,7 +48,10 @@ export function QuestionRenderer({ question, initialValue, onSubmit, onSkip }: Q
         <h2 className="text-lg font-semibold text-text-primary">{question.text}</h2>
         {question.helpText && <p className="mt-1 text-sm text-text-secondary">{question.helpText}</p>}
         {question.validation?.maxLength && (
-          <p className="mt-1 text-xs text-text-secondary">Max {question.validation.maxLength} characters</p>
+          <p className="mt-1 text-xs text-text-secondary">
+            Max {question.validation.maxLength} characters
+            {value.length > 0 && ` · ${value.length}/${question.validation.maxLength}`}
+          </p>
         )}
       </div>
 
@@ -42,12 +59,12 @@ export function QuestionRenderer({ question, initialValue, onSubmit, onSkip }: Q
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <button
           onClick={handleSubmit}
           className="rounded-lg bg-orchestra-600 px-6 py-2 text-sm font-medium text-white hover:bg-orchestra-700 focus:outline-none focus:ring-2 focus:ring-orchestra-500 focus:ring-offset-2"
         >
-          {question.required ? "Submit answer" : "Skip"}
+          {question.required ? "Submit answer" : "Save"}
         </button>
         {!question.required && (
           <button
@@ -56,6 +73,25 @@ export function QuestionRenderer({ question, initialValue, onSubmit, onSkip }: Q
           >
             Skip
           </button>
+        )}
+      </div>
+
+      <div>
+        <button
+          type="button"
+          onClick={() => setTipsOpen(!tipsOpen)}
+          className="flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary"
+        >
+          <span>{tipsOpen ? "▼" : "▶"} Tips for answering</span>
+        </button>
+        {tipsOpen && (
+          <ul className="mt-2 space-y-1 rounded-lg border border-border bg-surface-secondary p-3">
+            {AGENT_TIPS.map((tip, i) => (
+              <li key={i} className="text-xs text-text-secondary">
+                {tip}
+              </li>
+            ))}
+          </ul>
         )}
       </div>
     </div>

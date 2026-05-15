@@ -13,6 +13,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; dot: str
 
 export interface TaskData {
   id: string;
+  planId?: string;
   phaseType: string;
   title: string;
   type: string;
@@ -21,6 +22,8 @@ export interface TaskData {
   order: number;
   dependencies: { taskId: string; type: string }[];
   acceptanceCriteria?: string[];
+  failureReason?: string | null;
+  estimatedPromptRounds?: number;
 }
 
 interface TaskNodeProps {
