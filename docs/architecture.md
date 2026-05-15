@@ -68,17 +68,68 @@ Nine core domains are defined in `apps/api/src/domains/`:
 
 Only projects has working CRUD routes. The remaining eight domains have their database schemas, Zod types, and route stubs in place but return 501 Not Implemented.
 
+## Planning Engine Workflow
+
+The planning engine transforms a raw idea into a structured project blueprint through a deterministic, multi-stage pipeline:
+
+```
+Idea text
+    │
+    ▼
+POST /api/v1/projects  ──►  Project created + draft session
+    │
+    ▼
+POST /api/v1/interviews/:id/start  ──►  Session: draft → in_progress
+    │
+    ▼
+GET  /api/v1/interviews/:id/next   ──►  Next question (server-driven)
+    │                                        │
+    ▼                                        ▼
+PUT  /api/v1/interviews/:id/answers  ──►  Answer stored (normalized, versioned)
+    │
+    ◄── repeat until all questions answered ──►
+    │
+    ▼
+Session: in_progress → ready_for_generation
+    │
+    ▼
+POST /api/v1/interviews/:id/generate  ──►  BlueprintGenerator produces 12-phase output
+    │                                           ├── Phase summaries
+    │                                           ├── Confidence scores per phase
+    │                                           ├── Ambiguity flags (missing, vague, conflicting)
+    │                                           ├── Structured assumptions, constraints, risks
+    │                                           └── Overall confidence metric
+    │
+    ▼
+Session: ready_for_generation → completed
+Blueprint stored as versioned artifact
+```
+
+### Key design properties
+
+- **Server-driven flow**: The backend determines which question to serve next based on prior answers, dependency rules, and current phase.
+- **Deterministic generation**: Blueprints are computed from explicit heuristics — no AI calls, no randomness.
+- **Versioned outputs**: Each `generate` call creates a new plan version. Prior versions and their blueprints are preserved.
+- **Answer editing**: Answers can be re-submitted. The engine normalizes text, increments the version, and marks affected plans/blueprints as stale.
+- **Draft resume**: Sessions can be reopened. The `/resume` endpoint returns all answers and the next unanswered question.
+
+### Logging
+
+Every major step emits a structured JSON log entry:
+
+- `project.created`, `question.served`, `answer.submitted`, `session.ready_for_generation`
+- `blueprint.generation_started`, `blueprint.generated`, `blueprint.completed`, `blueprint.generation_failed`
+- `ambiguity.detected` (with `byType` breakdown)
+
 ## Not Yet Built
 
 These features are intentionally deferred:
 
 - **AI provider integration** — the app has no AI calls yet. Provider routing and prompt generation domains are defined but not wired.
-- **Interview engine** — the structured Q&A flow that refines raw ideas is not implemented. Questions and answers tables exist but have no logic.
-- **Planning engine** — the 12-phase lifecycle generation, blueprint creation, and roadmap generation are not implemented.
 - **Task graph** — dependency resolution and task ordering are not implemented. The `dependency_ids` column on subphases is ready.
 - **Authentication** — no user auth. The `users` table exists for future auth integration.
 - **Background worker** — `apps/worker` is a placeholder. Job queues, AI prompt execution, and exports will run here later.
-- **Testing** — only 3 test files covering error classes, schemas, and a shared utility. No integration tests.
+- **Integration tests** — API endpoints have no automated tests against the database.
 - **Monitoring** — Pino logging is configured. Sentry setup is documented but not installed.
 
 ## Conventions

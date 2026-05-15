@@ -59,6 +59,8 @@ pnpm dev          # start api, web & worker in watch mode
 | `pnpm db:stop`    | Stop PostgreSQL                                      |
 | `pnpm db:reset`   | Drop and recreate the local database                 |
 | `pnpm db:status`  | Show Docker Compose service status                   |
+| `pnpm db:seed`    | Seed question definitions into the database          |
+| `pnpm demo:seed`  | Load demo project ("TeamSync") into in-memory store  |
 
 ## Architecture
 

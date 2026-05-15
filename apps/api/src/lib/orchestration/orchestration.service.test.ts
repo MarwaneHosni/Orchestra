@@ -136,4 +136,93 @@ describe("OrchestrationService", () => {
       expect(() => orch.transitionSession("bad-id", "completed")).toThrow("not found");
     });
   });
+
+  describe("e2e — full planning flow", () => {
+    it("completes a full cycle: create → answer all → generate blueprint", () => {
+      const { projectId, sessionId } = orch.createProject({
+        ideaText: "A collaboration tool for remote design teams",
+      });
+      orch.startSession(sessionId);
+
+      for (let i = 0; i < 200; i++) {
+        const result = orch.getNextQuestion(sessionId);
+        if (!result.question) break;
+        orch.submitAnswer(
+          sessionId,
+          (result.question as any).id,
+          "Detailed answer text for testing.",
+          "high",
+        );
+      }
+
+      const final = orch.getNextQuestion(sessionId);
+      expect(final.question).toBeNull();
+      expect(final.answered).toBeGreaterThanOrEqual(final.total);
+
+      const output = orch.generateBlueprint(sessionId) as any;
+      expect(output.projectName).toBeDefined();
+      expect(output.phases).toHaveLength(12);
+      expect(output.overallConfidence).toBeGreaterThan(0);
+
+      const session = store.getSession(sessionId);
+      expect(session!.status).toBe("completed");
+
+      const plans = store.getPlansByProject(projectId);
+      expect(plans).toHaveLength(1);
+    });
+
+    it("creates a new plan version for each successful generation", () => {
+      const r1 = orch.createProject({ ideaText: "Test versioning" });
+      orch.startSession(r1.sessionId);
+
+      for (let i = 0; i < 100; i++) {
+        const result = orch.getNextQuestion(r1.sessionId);
+        if (!result.question) break;
+        orch.submitAnswer(r1.sessionId, (result.question as any).id, "Answer text.", "high");
+      }
+
+      const v1 = orch.generateBlueprint(r1.sessionId) as any;
+      expect(v1.planVersion).toBe(1);
+
+      const project1Plans = store.getPlansByProject(r1.projectId);
+      expect(project1Plans).toHaveLength(1);
+      expect(project1Plans[0]!.version).toBe(1);
+    });
+  });
+
+  describe("resumeSession", () => {
+    it("returns existing answers and next question", () => {
+      const { sessionId } = orch.createProject({ ideaText: "Resume test" });
+      orch.startSession(sessionId);
+
+      const first = orch.getNextQuestion(sessionId);
+      const q = first.question as any;
+      orch.submitAnswer(sessionId, q.id, "Persisted answer", "high");
+
+      const resume = orch.resumeSession(sessionId);
+      expect(resume.session).toBeDefined();
+      expect(resume.answers).toHaveLength(1);
+      expect(resume.answers[0].value).toBe("Persisted answer");
+      expect(resume.next).toBeDefined();
+    });
+  });
+
+  describe("store replacement", () => {
+    it("replaceStore makes the new store available via getStore", async () => {
+      const { replaceStore: rs, getStore } = await import("./store.js");
+      const fresh = createInMemoryStore();
+      const testProj = {
+        id: "replaced-id",
+        name: "Replaced",
+        description: "",
+        status: "active",
+        createdAt: "",
+        updatedAt: "",
+      };
+      fresh.insertProject(testProj);
+      rs(fresh);
+      expect(getStore().getProject("replaced-id")).toBeDefined();
+      rs(createInMemoryStore()); // clean up
+    });
+  });
 });

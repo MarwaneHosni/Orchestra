@@ -159,6 +159,25 @@ Once the API server is implemented, it will expose a `GET /health` endpoint. The
 
 ---
 
+## Planning Engine
+
+The planning engine transforms an idea into a structured blueprint through a deterministic pipeline. See the full specification in [docs/interview-spec.md](interview-spec.md).
+
+### Demo project
+
+A pre-seeded demo project ("TeamSync") with answers to all 44 questions is available:
+
+```bash
+pnpm --filter @orchestra/api exec tsx src/db/demo-seed.ts
+```
+
+After seeding, start the API and visit:
+
+- `http://localhost:3001/projects/new` to create your own project
+- Or generate a blueprint from the seeded session by calling `POST /api/v1/interviews/:sessionId/generate`
+
+---
+
 ## Quality Toolchain
 
 ### Linting (ESLint)
