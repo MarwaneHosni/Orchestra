@@ -25,6 +25,11 @@ export const TransitionSchema = z.object({
 export class OrchestrationService {
   constructor(private store: SessionStore) {}
 
+  private log(step: string, meta?: Record<string, unknown>) {
+    const entry = { step, ...meta, timestamp: new Date().toISOString() };
+    console.log(JSON.stringify(entry));
+  }
+
   createProject(input: CreateProjectInput): { projectId: string; sessionId: string } {
     const projectId = crypto.randomUUID();
     const sessionId = crypto.randomUUID();
@@ -33,6 +38,8 @@ export class OrchestrationService {
     const name =
       input.projectName ??
       input.ideaText.slice(0, 60).replace(/\n/g, " ") + (input.ideaText.length > 60 ? "..." : "");
+
+    this.log("project.created", { projectId, sessionId });
 
     this.store.insertProject({
       id: projectId,
@@ -139,6 +146,11 @@ export class OrchestrationService {
     }
 
     if (!nextQuestion) {
+      this.log("session.ready_for_generation", {
+        sessionId,
+        total: totalQuestions,
+        answered: answeredIds.size,
+      });
       const updated = transitionState(state, "ready_for_generation");
       this.store.updateSession(sessionId, { status: updated.status });
       return {
@@ -151,9 +163,16 @@ export class OrchestrationService {
       };
     }
 
+    const questionRef = `${nextQuestion.phaseType}.${nextQuestion.order}`;
+    this.log("question.served", {
+      sessionId,
+      questionRef,
+      answered: answeredIds.size,
+      total: totalQuestions,
+    });
     return {
       question: {
-        id: nextQuestion.phaseType + "." + nextQuestion.order,
+        id: questionRef,
         phaseType: nextQuestion.phaseType,
         order: nextQuestion.order,
         text: nextQuestion.text,
@@ -200,7 +219,8 @@ export class OrchestrationService {
     }
 
     const normalized = normalizeText(value);
-
+    const changed = isEdit && normalized !== existing?.value;
+    this.log("answer.submitted", { sessionId, questionId, isEdit, changed, length: normalized.length });
     const answer: AnswerRecord = {
       id: crypto.randomUUID(),
       questionId,
@@ -255,6 +275,13 @@ export class OrchestrationService {
 
     const answers = this.store.getLatestAnswersBySession(sessionId);
     const existingPlans = this.store.getPlansByProject(project.id);
+
+    this.log("blueprint.generation_started", {
+      sessionId,
+      projectId: project.id,
+      existingPlanCount: existingPlans.length,
+    });
+
     const planVersion = existingPlans.length + 1;
 
     const plan: PlanRecord = {
@@ -268,25 +295,55 @@ export class OrchestrationService {
     };
     this.store.insertPlan(plan);
 
-    const generator = new BlueprintGenerator();
-    const output = generator.generate(project, session, answers, plan.id, planVersion);
+    try {
+      const generator = new BlueprintGenerator();
+      const output = generator.generate(project, session, answers, plan.id, planVersion);
+      const flagCount = output.ambiguityFlags.length;
 
-    this.store.insertBlueprint({
-      id: crypto.randomUUID(),
-      planId: plan.id,
-      projectId: project.id,
-      content: JSON.stringify(output),
-      format: "json",
-      version: planVersion,
-      status: "complete",
-      staleAt: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
+      if (flagCount > 0) {
+        const byType: Record<string, number> = {};
+        for (const f of output.ambiguityFlags) {
+          byType[f.type] = (byType[f.type] ?? 0) + 1;
+        }
+        this.log("ambiguity.detected", { sessionId, total: flagCount, byType });
+      }
 
-    this.transitionSession(sessionId, "completed");
+      this.log("blueprint.generated", {
+        sessionId,
+        planId: plan.id,
+        planVersion,
+        phases: output.phases.length,
+        confidence: output.overallConfidence,
+        flags: flagCount,
+      });
 
-    return output;
+      this.store.insertBlueprint({
+        id: crypto.randomUUID(),
+        planId: plan.id,
+        projectId: project.id,
+        content: JSON.stringify(output),
+        format: "json",
+        version: planVersion,
+        status: "complete",
+        staleAt: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+
+      this.transitionSession(sessionId, "completed");
+      this.log("blueprint.completed", { sessionId, planVersion });
+
+      return output;
+    } catch (err) {
+      this.log("blueprint.generation_failed", {
+        sessionId,
+        planVersion,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      // Session stays in ready_for_generation for retry;
+      // orphan plan row is acceptable — next retry creates a new version.
+      throw err;
+    }
   }
 
   transitionSession(sessionId: string, toStatus: string): SessionRecord {

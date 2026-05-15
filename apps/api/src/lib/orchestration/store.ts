@@ -120,3 +120,7 @@ export function getStore(): SessionStore {
   if (!_store) _store = createInMemoryStore();
   return _store;
 }
+
+export function replaceStore(store: SessionStore): void {
+  _store = store;
+}
