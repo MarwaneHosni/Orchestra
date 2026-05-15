@@ -50,8 +50,9 @@ pnpm build
 pnpm dev
 ```
 
-Open `http://localhost:3000` once the API server is wired (not yet implemented).
+Open [http://localhost:3000/health](http://localhost:3000/health) to verify the API is running, and [http://localhost:3001](http://localhost:3001) for the frontend.
 
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for contribution workflow, code style, and testing.
 See [docs/deployment.md](deployment.md) for CI/CD, secrets management, and production configuration.
 
 ---

@@ -6,24 +6,25 @@ AI Software Development Orchestrator — transform a raw software idea into a st
 
 ```
 ├── apps/
-│   ├── api/          HTTP API server (framework TBD)
-│   ├── web/          Next.js frontend (port 3001)
-│   └── worker/       Background job processor (AI prompts, exports)
+│   ├── api/          Fastify HTTP API server (port 3000)
+│   ├── web/          Next.js + Tailwind CSS frontend (port 3001)
+│   └── worker/       Background job processor (placeholder)
 ├── packages/
 │   ├── shared/       Shared types, utilities, and domain models
-│   └── config/       Shared configuration helpers (env, providers)
+│   └── config/       Shared configuration helpers (placeholder)
 ├── docs/
-│   ├── decisions/    Architecture decision records
+│   ├── decisions/    7 architecture decision records
 │   ├── architecture.md  System overview and conventions
-│   └── development.md   Local setup & configuration guide
-├── .github/
-│   └── workflows/    CI (ci.yml) and deployment (deploy.yml) pipelines
-├── scripts/          Development helper scripts
-├── .env.example      Template for environment variables
-├── docker-compose.yml  Local PostgreSQL service
+│   ├── deployment.md    CI/CD, secrets, production config
+│   ├── development.md   Local setup and configuration guide
+│   └── schema.md        Database schema documentation
+├── .github/workflows/  CI (ci.yml) and deploy (deploy.yml) pipelines
+├── scripts/            Development helper scripts
+├── .env.example        Template for environment variables
+├── docker-compose.yml  Local PostgreSQL 16 service
 ├── pnpm-workspace.yaml
 ├── tsconfig.base.json
-└── tsconfig.json     IDE root config (extends base, no emit)
+└── tsconfig.json       IDE root config (extends base, no emit)
 ```
 
 ## Quick Start
@@ -35,11 +36,9 @@ pnpm setup        # copies .env, starts DB, installs deps, builds
 pnpm dev          # start api, web & worker in watch mode
 ```
 
-Open [http://localhost:3001](http://localhost:3001) for the frontend.
-
-See [docs/development.md](docs/development.md) for a detailed walkthrough, environment configuration, database management, and troubleshooting.
-
-See [docs/deployment.md](docs/deployment.md) for CI/CD, secrets management, and production deployment.
+- Frontend: [http://localhost:3001](http://localhost:3001)
+- API health: [http://localhost:3000/health](http://localhost:3000/health)
+- API status: [http://localhost:3000/api/v1/status](http://localhost:3000/api/v1/status)
 
 ## Scripts
 
@@ -61,6 +60,26 @@ See [docs/deployment.md](docs/deployment.md) for CI/CD, secrets management, and 
 | `pnpm db:reset`   | Drop and recreate the local database                 |
 | `pnpm db:status`  | Show Docker Compose service status                   |
 
+## Architecture
+
+```
+┌─────────────┐     ┌──────────────┐     ┌──────────────┐
+│  Frontend   │────▶│  Fastify API │────▶│   Worker     │
+│ (Next.js)   │     │  (apps/api)  │     │ (placeholder)│
+└─────────────┘     └──────┬───────┘     └──────────────┘
+                           │
+                    ┌──────▼───────┐
+                    │  PostgreSQL  │
+                    │   (Docker)   │
+                    └──────────────┘
+```
+
+- **Modular monolith** — API, worker, and frontend are separate processes that can be deployed independently when needed.
+- **9 domain modules** — users, projects, ideas, plans, phases, subphases, questions, answers, generations — each with Drizzle ORM schema, Zod validation, and route stubs.
+- **12-phase SDLC lifecycle** — the platform maps projects through fixed phases (ideation → requirements → architecture → ... → monitoring), with AI-generated content per phase.
+- **Dependency-aware task graph** — subphases store dependency IDs for ordered execution.
+- **Bring-your-own-key** — AI providers are configured via env vars; no API keys are stored in the application.
+
 ## Platform Support
 
 All development scripts are cross-platform (Windows, macOS, Linux).
@@ -72,3 +91,9 @@ All development scripts are cross-platform (Windows, macOS, Linux).
 - **Dependency-aware planning** — tasks know what they depend on.
 - **Regeneratable and versioned outputs** — nothing is one-shot.
 - **Optimized for autonomous AI agent reliability** — explicit assumptions, constraints, and validation in every prompt.
+
+## Next Steps
+
+- **New to the project?** Read [docs/development.md](docs/development.md) for setup, [CONTRIBUTING.md](CONTRIBUTING.md) for contribution workflow.
+- **Deploying?** See [docs/deployment.md](docs/deployment.md) for CI/CD and secrets management.
+- **Architecture?** See [docs/architecture.md](docs/architecture.md) for conventions and design decisions.
