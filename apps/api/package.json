@@ -13,11 +13,15 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
+    "@fastify/cors": "^11.2.0",
     "@orchestra/config": "workspace:*",
-    "@orchestra/shared": "workspace:*"
+    "@orchestra/shared": "workspace:*",
+    "fastify": "^5.8.5",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^25.8.0",
+    "pino-pretty": "^13.1.3",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0"
   }

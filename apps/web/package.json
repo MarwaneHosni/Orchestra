@@ -4,17 +4,30 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "echo 'web dev: not yet configured'",
-    "build": "echo 'web build: not yet configured'",
+    "dev": "next dev --port 3001",
+    "build": "next build",
+    "start": "next start --port 3000",
     "typecheck": "tsc --noEmit",
-    "lint": "echo 'lint: no linter configured yet'",
-    "test": "echo 'test: no test runner configured yet'",
-    "clean": "rimraf dist"
+    "lint": "next lint",
+    "clean": "rimraf .next"
   },
   "dependencies": {
-    "@orchestra/shared": "workspace:*"
+    "@orchestra/shared": "workspace:*",
+    "@radix-ui/react-slot": "^1.2.4",
+    "clsx": "^2.1.1",
+    "next": "^15.3.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tailwind-merge": "^3.2.0"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.0",
+    "@types/node": "^22.15.2",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^4.1.4",
     "typescript": "^5.6.0"
   }
 }

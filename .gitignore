@@ -1,8 +1,12 @@
 node_modules/
 dist/
+.next/
+tsconfig.tsbuildinfo
 .env
 .env.local
 *.log
 .turbo
 coverage/
 .DS_Store
+data/
+docker-data/

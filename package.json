@@ -5,13 +5,18 @@
   "description": "AI Software Development Orchestrator — transform raw ideas into structured, execution-ready development plans",
   "license": "MIT",
   "scripts": {
+    "setup": "node scripts/setup.mjs",
     "dev": "node scripts/dev.mjs",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
     "clean": "pnpm -r clean",
-    "clean:all": "pnpm -r clean && rimraf node_modules"
+    "clean:all": "pnpm -r clean && rimraf node_modules",
+    "db:start": "docker compose up -d",
+    "db:stop": "docker compose down",
+    "db:reset": "node scripts/reset-db.mjs",
+    "db:status": "docker compose ps"
   },
   "engines": {
     "node": ">=20.0.0"

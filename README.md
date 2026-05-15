@@ -7,45 +7,52 @@ AI Software Development Orchestrator — transform a raw software idea into a st
 ```
 ├── apps/
 │   ├── api/          HTTP API server (framework TBD)
-│   ├── web/          Frontend application (framework TBD)
+│   ├── web/          Next.js frontend (port 3001)
 │   └── worker/       Background job processor (AI prompts, exports)
 ├── packages/
 │   ├── shared/       Shared types, utilities, and domain models
 │   └── config/       Shared configuration helpers (env, providers)
 ├── docs/
 │   ├── decisions/    Architecture decision records
-│   └── architecture.md  System overview and conventions
+│   ├── architecture.md  System overview and conventions
+│   └── development.md   Local setup & configuration guide
 ├── scripts/          Development helper scripts
 ├── .env.example      Template for environment variables
+├── docker-compose.yml  Local PostgreSQL service
 ├── pnpm-workspace.yaml
 ├── tsconfig.base.json
 └── tsconfig.json     IDE root config (extends base, no emit)
 ```
 
-## Prerequisites
+## Quick Start
 
-- **Node.js** >= 20
-- **pnpm** >= 9
-
-## Getting Started
+Requires **Node.js >= 20**, **pnpm >= 9**, and **Docker**.
 
 ```bash
-pnpm install
-pnpm build
-pnpm dev
+pnpm setup        # copies .env, starts DB, installs deps, builds
+pnpm dev          # start api, web & worker in watch mode
 ```
+
+Open [http://localhost:3001](http://localhost:3001) for the frontend.
+
+See [docs/development.md](docs/development.md) for a detailed walkthrough, environment configuration, database management, and troubleshooting.
 
 ## Scripts
 
 | Command | Description |
 |---------|-------------|
-| `pnpm dev`        | Start api & worker in parallel (web not yet configured) |
+| `pnpm setup`      | Bootstrap a fresh clone: .env → DB → install → build |
+| `pnpm dev`        | Start api, web & worker in parallel |
 | `pnpm build`      | Build all workspaces |
+| `pnpm typecheck`  | Type-check all workspaces |
 | `pnpm lint`       | Lint all workspaces |
 | `pnpm test`       | Run all tests |
-| `pnpm typecheck`  | Type-check all workspaces |
 | `pnpm clean`      | Remove build artifacts from all workspaces |
 | `pnpm clean:all`  | Remove build artifacts and `node_modules` |
+| `pnpm db:start`   | Start PostgreSQL via Docker Compose |
+| `pnpm db:stop`    | Stop PostgreSQL |
+| `pnpm db:reset`   | Drop and recreate the local database |
+| `pnpm db:status`  | Show Docker Compose service status |
 
 ## Platform Support
 
