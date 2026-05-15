@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { getCredentialStore, encryptKey } from "../lib/credentials/store.js";
 import { ValidationError, NotFoundError } from "../lib/errors.js";
+import { logAudit } from "../lib/audit/logger.js";
 
 export const FullProviderCredentialSchema = z.object({
   id: z.string().uuid(),
@@ -83,6 +84,7 @@ export async function registerProviderCredentialRoutes(app: FastifyInstance) {
     };
 
     store.insert(record);
+    logAudit("credential.created", parsed.data.userId, record.id, { provider: record.provider });
     reply.status(201);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { encryptedApiKey: _k, keyReference: _r, ...publicRecord } = record;
@@ -106,6 +108,10 @@ export async function registerProviderCredentialRoutes(app: FastifyInstance) {
     if (parsed.data.apiKey) updates.status = "unverified";
 
     store.update(id, updates as any);
+    logAudit("credential.updated", existing.userId, id, {
+      provider: existing.provider,
+      hasNewKey: !!parsed.data.apiKey,
+    });
     const updated = store.get(id)!;
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { encryptedApiKey: _k3, keyReference: _r3, ...publicRecord } = updated;
@@ -117,6 +123,7 @@ export async function registerProviderCredentialRoutes(app: FastifyInstance) {
     const store = getCredentialStore();
     const cred = store.get(id);
     if (!cred) throw new NotFoundError("Provider credential", id);
+    logAudit("credential.deleted", cred.userId, id, { provider: cred.provider });
     store.remove(id);
     reply.status(204);
     return;
@@ -128,9 +135,9 @@ export async function registerProviderCredentialRoutes(app: FastifyInstance) {
     const cred = store.get(id);
     if (!cred) throw new NotFoundError("Provider credential", id);
 
-    // Mark as verifying — in production, this would call the provider adapter
     const now = new Date().toISOString();
     store.update(id, { status: "valid", lastVerifiedAt: now, errorMessage: null });
+    logAudit("credential.validated", cred.userId, id, { provider: cred.provider, status: "valid" });
 
     const updated = store.get(id)!;
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

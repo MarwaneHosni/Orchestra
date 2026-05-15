@@ -4,6 +4,8 @@ import { transitionState } from "../interview/flow.js";
 import type { InterviewState } from "../interview/flow.js";
 import { BlueprintGenerator } from "../blueprint/generator.js";
 import { normalizeText } from "../blueprint/normalizer.js";
+import { logAudit } from "../audit/logger.js";
+import { FailureSpikeDetector } from "../audit/failure-tracker.js";
 import type { AnswerRecord, CreateProjectInput, SessionRecord, PlanRecord } from "./types.js";
 import type { SessionStore } from "./store.js";
 
@@ -24,6 +26,8 @@ export const TransitionSchema = z.object({
 
 export class OrchestrationService {
   constructor(private store: SessionStore) {}
+
+  private spikeDetector = new FailureSpikeDetector();
 
   private log(step: string, meta?: Record<string, unknown>) {
     const entry = { step, ...meta, timestamp: new Date().toISOString() };
@@ -273,6 +277,12 @@ export class OrchestrationService {
     const project = this.store.getProject(session.projectId);
     if (!project) throw new Error(`Project ${session.projectId} not found`);
 
+    logAudit("generation.attempted", session.projectId, sessionId, {
+      taskType: "blueprint",
+      provider: "",
+      model: "",
+    });
+
     const answers = this.store.getLatestAnswersBySession(sessionId);
     const existingPlans = this.store.getPlansByProject(project.id);
 
@@ -332,14 +342,26 @@ export class OrchestrationService {
 
       this.transitionSession(sessionId, "completed");
       this.log("blueprint.completed", { sessionId, planVersion });
+      logAudit("generation.completed", session.projectId, sessionId, {
+        planVersion,
+        phases: output.phases.length,
+        confidence: output.overallConfidence,
+      });
 
       return output;
     } catch (err) {
-      this.log("blueprint.generation_failed", {
-        sessionId,
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      this.log("blueprint.generation_failed", { sessionId, planVersion, error: errorMsg });
+      logAudit("generation.failed", session.projectId, sessionId, {
         planVersion,
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMsg,
+        errorCategory: "terminal",
       });
+      // Track failure spike
+      const spike = this.spikeDetector.record("unknown", "terminal");
+      if (spike) {
+        this.log("provider.spike_detected", { provider: spike.provider, failures: spike.failures });
+      }
       // Session stays in ready_for_generation for retry;
       // orphan plan row is acceptable — next retry creates a new version.
       throw err;
