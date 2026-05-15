@@ -71,6 +71,22 @@ export async function startInterview(sessionId: string): Promise<{ sessionId: st
   return request(`/api/v1/interviews/${sessionId}/start`, { method: "POST", body: "{}" });
 }
 
+export interface ResumeResult {
+  session: { id: string; status: string; currentPhaseIndex: number; currentQuestionIndex: number };
+  answers: { id: string; questionId: string; value: string; version: number }[];
+  next: QuestionPayload | null;
+}
+
+export async function resumeSession(sessionId: string): Promise<ResumeResult> {
+  return request(`/api/v1/interviews/${sessionId}/resume`);
+}
+
+export async function getSessionAnswers(
+  sessionId: string,
+): Promise<{ data: { questionId: string; value: string }[] }> {
+  return request(`/api/v1/interviews/${sessionId}/answers`);
+}
+
 export async function getNextQuestion(sessionId: string): Promise<NextQuestionResult> {
   return request(`/api/v1/interviews/${sessionId}/next`);
 }
@@ -80,7 +96,7 @@ export async function submitAnswer(
   questionId: string,
   value: string,
   confidence?: string,
-): Promise<{ answer: { id: string }; next: QuestionPayload | null }> {
+): Promise<{ answer: { id: string }; next: QuestionPayload | null; edited: boolean }> {
   return request(`/api/v1/interviews/${sessionId}/answers`, {
     method: "POST",
     body: JSON.stringify({ questionId, value, confidence }),

@@ -10,6 +10,7 @@ import {
   startInterview,
   transitionSession,
   generateBlueprint,
+  resumeSession,
 } from "@/lib/api";
 import type { QuestionPayload } from "@/lib/api";
 
@@ -59,6 +60,19 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
   useEffect(() => {
     const init = async () => {
       try {
+        const resume = await resumeSession(sessionId);
+
+        if (resume.session.status === "completed" || resume.session.status === "ready_for_generation") {
+          const result = await getNextQuestion(sessionId);
+          setQuestion(result.question);
+          setPhaseIndex(result.phaseIndex);
+          setTotal(result.total);
+          setAnswered(result.answered);
+          if (!result.question) setFinished(true);
+          setLoading(false);
+          return;
+        }
+
         await startInterview(sessionId);
         await loadNext();
       } catch (e) {
@@ -74,8 +88,12 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
     setSubmitting(true);
     setError("");
     try {
-      await submitAnswer(sessionId, question.id, value);
+      const result = await submitAnswer(sessionId, question.id, value);
       setHistory((prev) => [...prev, { question, value }]);
+      if (result.edited) {
+        setHistory((prev) => prev.slice(0, -1));
+        setHistory((prev) => [...prev, { question, value }]);
+      }
       await loadNext();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save answer");
@@ -148,6 +166,12 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
   return (
     <div className="mx-auto max-w-2xl space-y-8">
       <ProgressBar currentPhaseIndex={phaseIndex} total={total} answered={answered} />
+
+      {history.length > 0 && (
+        <p className="text-xs text-text-secondary">
+          {answered} question{answered !== 1 ? "s" : ""} answered, {history.length} in this session
+        </p>
+      )}
 
       {finished ? (
         <div className="rounded-xl border-2 border-dashed border-orchestra-200 bg-orchestra-50 p-8 text-center">

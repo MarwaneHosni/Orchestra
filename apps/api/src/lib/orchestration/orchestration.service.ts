@@ -3,6 +3,7 @@ import { QUESTIONS, PHASE_ORDER, findQuestionByRef } from "../interview/question
 import { transitionState } from "../interview/flow.js";
 import type { InterviewState } from "../interview/flow.js";
 import { BlueprintGenerator } from "../blueprint/generator.js";
+import { normalizeText } from "../blueprint/normalizer.js";
 import type { AnswerRecord, CreateProjectInput, SessionRecord, PlanRecord } from "./types.js";
 import type { SessionStore } from "./store.js";
 
@@ -97,23 +98,23 @@ export class OrchestrationService {
     const session = this.store.getSession(sessionId);
     if (!session) throw new Error(`Session ${sessionId} not found`);
     if (session.status === "completed" || session.status === "ready_for_generation") {
-      const answers = this.store.getAnswersBySession(sessionId);
-      const total = QUESTIONS.filter((q) => this.isQuestionEligible(q, answers)).length;
+      const latest = this.store.getLatestAnswersBySession(sessionId);
+      const total = QUESTIONS.filter((q) => this.isQuestionEligible(q, latest)).length;
       return {
         question: null,
         phaseIndex: 0,
         questionIndex: 0,
         phaseName: "",
         total,
-        answered: answers.length,
+        answered: new Set(latest.map((a) => a.questionId)).size,
       };
     }
 
-    const answers = this.store.getAnswersBySession(sessionId);
+    const latest = this.store.getLatestAnswersBySession(sessionId);
     const state = this.toState(session);
-    const answeredIds = new Set(answers.map((a) => a.questionId));
+    const answeredIds = new Set(latest.map((a) => a.questionId));
 
-    const eligibleQuestions = QUESTIONS.filter((q) => this.isQuestionEligible(q, answers));
+    const eligibleQuestions = QUESTIONS.filter((q) => this.isQuestionEligible(q, latest));
     const totalQuestions = eligibleQuestions.length;
 
     let nextQuestion: (typeof eligibleQuestions)[number] | undefined;
@@ -175,7 +176,7 @@ export class OrchestrationService {
     questionId: string,
     value: string,
     confidence?: string,
-  ): { answer: AnswerRecord; next: object | null } {
+  ): { answer: AnswerRecord; next: object | null; edited: boolean } {
     const session = this.store.getSession(sessionId);
     if (!session) throw new Error(`Session ${sessionId} not found`);
     if (session.status === "completed" || session.status === "ready_for_generation") {
@@ -183,24 +184,61 @@ export class OrchestrationService {
     }
 
     const state = this.toState(session);
-    const updated = transitionState(state, "in_progress");
+    if (state.status === "waiting_for_answers") {
+      const updated = transitionState(state, "in_progress");
+      this.store.updateSession(sessionId, { status: updated.status });
+    }
+
+    const existing = this.store.getLatestAnswersBySession(sessionId).find((a) => a.questionId === questionId);
+    const isEdit = !!existing;
+    const nextVersion = existing ? existing.version + 1 : 1;
+
+    if (isEdit) {
+      this.store.supersedeAnswer(sessionId, questionId);
+      this.store.markPlansStaleBySession(sessionId);
+      this.store.markBlueprintsStaleBySession(sessionId);
+    }
+
+    const normalized = normalizeText(value);
 
     const answer: AnswerRecord = {
       id: crypto.randomUUID(),
       questionId,
       projectId: session.projectId,
       sessionId,
-      value,
+      value: normalized,
       confidence: confidence ?? "high",
       provenance: "user",
+      version: nextVersion,
+      isLatest: true,
       createdAt: new Date().toISOString(),
+      supersededAt: null,
     };
 
     this.store.insertAnswer(answer);
-    this.store.updateSession(sessionId, { status: updated.status });
 
     const next = this.getNextQuestion(sessionId);
-    return { answer, next: next.question };
+    return { answer, next: next.question, edited: isEdit };
+  }
+
+  resumeSession(sessionId: string): {
+    session: SessionRecord;
+    answers: AnswerRecord[];
+    next: object | null;
+  } {
+    const session = this.store.getSession(sessionId);
+    if (!session) throw new Error(`Session ${sessionId} not found`);
+
+    const answers = this.store.getLatestAnswersBySession(sessionId);
+    const next = this.getNextQuestion(sessionId);
+
+    return { session, answers, next: next.question };
+  }
+
+  getSessionAnswers(sessionId: string): AnswerRecord[] {
+    const session = this.store.getSession(sessionId);
+    if (!session) throw new Error(`Session ${sessionId} not found`);
+    return this.store.getLatestAnswersBySession(sessionId);
   }
 
   generateBlueprint(sessionId: string): object {
@@ -215,7 +253,7 @@ export class OrchestrationService {
     const project = this.store.getProject(session.projectId);
     if (!project) throw new Error(`Project ${session.projectId} not found`);
 
-    const answers = this.store.getAnswersBySession(sessionId);
+    const answers = this.store.getLatestAnswersBySession(sessionId);
     const existingPlans = this.store.getPlansByProject(project.id);
     const planVersion = existingPlans.length + 1;
 
@@ -224,6 +262,7 @@ export class OrchestrationService {
       projectId: project.id,
       version: planVersion,
       status: "complete",
+      staleAt: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -240,6 +279,7 @@ export class OrchestrationService {
       format: "json",
       version: planVersion,
       status: "complete",
+      staleAt: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });

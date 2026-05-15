@@ -38,7 +38,10 @@ export interface AnswerRecord {
   value: string;
   confidence: string;
   provenance: string;
+  version: number;
+  isLatest: boolean;
   createdAt: string;
+  supersededAt: string | null;
 }
 
 export interface PlanRecord {
@@ -46,6 +49,7 @@ export interface PlanRecord {
   projectId: string;
   version: number;
   status: string;
+  staleAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -58,6 +62,7 @@ export interface BlueprintRecord {
   format: string;
   version: number;
   status: string;
+  staleAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

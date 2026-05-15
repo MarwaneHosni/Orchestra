@@ -47,6 +47,16 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
     },
   );
 
+  app.get("/api/v1/interviews/:id/resume", async (request) => {
+    const result = orch.resumeSession((request.params as { id: string }).id);
+    return result;
+  });
+
+  app.get("/api/v1/interviews/:id/answers", async (request) => {
+    const answers = orch.getSessionAnswers((request.params as { id: string }).id);
+    return { data: answers };
+  });
+
   app.get("/api/v1/interviews/:id/next", async (request) => {
     const result = orch.getNextQuestion((request.params as { id: string }).id);
     return result;

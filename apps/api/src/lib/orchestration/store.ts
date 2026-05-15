@@ -17,10 +17,14 @@ export interface SessionStore {
   getSessionsByProject(projectId: string): SessionRecord[];
   insertAnswer(a: AnswerRecord): void;
   getAnswersBySession(sessionId: string): AnswerRecord[];
+  getLatestAnswersBySession(sessionId: string): AnswerRecord[];
+  supersedeAnswer(sessionId: string, questionId: string): void;
   insertPlan(p: PlanRecord): void;
   getPlansByProject(projectId: string): PlanRecord[];
+  markPlansStaleBySession(sessionId: string): void;
   insertBlueprint(b: BlueprintRecord): void;
   getBlueprintsByProject(projectId: string): BlueprintRecord[];
+  markBlueprintsStaleBySession(sessionId: string): void;
 }
 
 export function createInMemoryStore(): SessionStore {
@@ -63,17 +67,49 @@ export function createInMemoryStore(): SessionStore {
     getAnswersBySession(sessionId) {
       return a.filter((r) => r.sessionId === sessionId);
     },
+    getLatestAnswersBySession(sessionId) {
+      return a.filter((r) => r.sessionId === sessionId && r.isLatest);
+    },
+    supersedeAnswer(sessionId, questionId) {
+      const now = new Date().toISOString();
+      for (const ans of a) {
+        if (ans.sessionId === sessionId && ans.questionId === questionId && ans.isLatest) {
+          ans.isLatest = false;
+          ans.supersededAt = now;
+        }
+      }
+    },
     insertPlan(r) {
       plans.push(r);
     },
     getPlansByProject(projectId) {
       return plans.filter((r) => r.projectId === projectId);
     },
+    markPlansStaleBySession(sessionId) {
+      const session = s.find((r) => r.id === sessionId);
+      if (!session) return;
+      const now = new Date().toISOString();
+      for (const plan of plans) {
+        if (plan.projectId === session.projectId && !plan.staleAt) {
+          plan.staleAt = now;
+        }
+      }
+    },
     insertBlueprint(r) {
       blueprints.push(r);
     },
     getBlueprintsByProject(projectId) {
       return blueprints.filter((r) => r.projectId === projectId);
+    },
+    markBlueprintsStaleBySession(sessionId) {
+      const session = s.find((r) => r.id === sessionId);
+      if (!session) return;
+      const now = new Date().toISOString();
+      for (const bp of blueprints) {
+        if (bp.projectId === session.projectId && !bp.staleAt) {
+          bp.staleAt = now;
+        }
+      }
     },
   };
 }
