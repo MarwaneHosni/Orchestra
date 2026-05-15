@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { generateTasks, createInMemoryGraphStore } from "../lib/task-graph/generator.js";
+import { generateTasks, deriveGraph, createInMemoryGraphStore } from "../lib/task-graph/generator.js";
 import { assemblePrompt, createInMemoryPromptStore } from "../lib/prompt/index.js";
 import { NotFoundError } from "../lib/errors.js";
 import type { PhaseInput } from "../lib/task-graph/types.js";
@@ -30,100 +30,121 @@ export type ExecutionTask = z.infer<typeof ExecutionTaskSchema>;
 const graphStore = createInMemoryGraphStore();
 const promptStore = createInMemoryPromptStore();
 
+function defaultPhases(): PhaseInput[] {
+  return [
+    {
+      phaseType: "ideation",
+      phaseName: "Ideation",
+      status: "sufficient",
+      confidence: 0.8,
+      summary: "Project scaffold",
+    },
+    {
+      phaseType: "requirements",
+      phaseName: "Requirements",
+      status: "sufficient",
+      confidence: 0.8,
+      summary: "User stories",
+    },
+    {
+      phaseType: "architecture",
+      phaseName: "Architecture",
+      status: "sufficient",
+      confidence: 0.8,
+      summary: "System design",
+    },
+    {
+      phaseType: "security",
+      phaseName: "Security",
+      status: "sufficient",
+      confidence: 0.7,
+      summary: "Auth & encryption",
+    },
+    {
+      phaseType: "database",
+      phaseName: "Database",
+      status: "sufficient",
+      confidence: 0.8,
+      summary: "Schema design",
+    },
+    {
+      phaseType: "backend",
+      phaseName: "Backend",
+      status: "sufficient",
+      confidence: 0.8,
+      summary: "API implementation",
+    },
+    {
+      phaseType: "frontend",
+      phaseName: "Frontend",
+      status: "sufficient",
+      confidence: 0.8,
+      summary: "UI components",
+    },
+    {
+      phaseType: "core-features",
+      phaseName: "Core Features",
+      status: "sufficient",
+      confidence: 0.7,
+      summary: "Feature modules",
+    },
+    {
+      phaseType: "ai-systems",
+      phaseName: "AI Systems",
+      status: "sufficient",
+      confidence: 0.6,
+      summary: "AI integration",
+    },
+    {
+      phaseType: "testing",
+      phaseName: "Testing",
+      status: "sufficient",
+      confidence: 0.8,
+      summary: "Test suites",
+    },
+    {
+      phaseType: "deployment",
+      phaseName: "Deployment",
+      status: "sufficient",
+      confidence: 0.7,
+      summary: "CI/CD config",
+    },
+    {
+      phaseType: "monitoring",
+      phaseName: "Monitoring",
+      status: "sufficient",
+      confidence: 0.6,
+      summary: "Observability",
+    },
+  ];
+}
+
 export async function registerExecutionTaskRoutes(app: FastifyInstance) {
   app.get("/api/v1/plans/:planId/tasks", async (request) => {
     const { planId } = request.params as { planId: string };
+    const query = request.query as { version?: string };
+    const requestedVersion = query.version ? parseInt(query.version, 10) : 1;
 
-    let graph = graphStore.getGraph(planId, 1);
+    if (isNaN(requestedVersion) || requestedVersion < 1) {
+      throw new Error("version must be a positive integer");
+    }
+
+    let graph = graphStore.getGraph(planId, requestedVersion);
 
     if (!graph) {
-      const phases: PhaseInput[] = [
-        {
-          phaseType: "ideation",
-          phaseName: "Ideation",
-          status: "sufficient",
-          confidence: 0.8,
-          summary: "Project scaffold",
-        },
-        {
-          phaseType: "requirements",
-          phaseName: "Requirements",
-          status: "sufficient",
-          confidence: 0.8,
-          summary: "User stories",
-        },
-        {
-          phaseType: "architecture",
-          phaseName: "Architecture",
-          status: "sufficient",
-          confidence: 0.8,
-          summary: "System design",
-        },
-        {
-          phaseType: "security",
-          phaseName: "Security",
-          status: "sufficient",
-          confidence: 0.7,
-          summary: "Auth & encryption",
-        },
-        {
-          phaseType: "database",
-          phaseName: "Database",
-          status: "sufficient",
-          confidence: 0.8,
-          summary: "Schema design",
-        },
-        {
-          phaseType: "backend",
-          phaseName: "Backend",
-          status: "sufficient",
-          confidence: 0.8,
-          summary: "API implementation",
-        },
-        {
-          phaseType: "frontend",
-          phaseName: "Frontend",
-          status: "sufficient",
-          confidence: 0.8,
-          summary: "UI components",
-        },
-        {
-          phaseType: "core-features",
-          phaseName: "Core Features",
-          status: "sufficient",
-          confidence: 0.7,
-          summary: "Feature modules",
-        },
-        {
-          phaseType: "ai-systems",
-          phaseName: "AI Systems",
-          status: "sufficient",
-          confidence: 0.6,
-          summary: "AI integration",
-        },
-        {
-          phaseType: "testing",
-          phaseName: "Testing",
-          status: "sufficient",
-          confidence: 0.8,
-          summary: "Test suites",
-        },
-        {
-          phaseType: "deployment",
-          phaseName: "Deployment",
-          status: "sufficient",
-          confidence: 0.7,
-          summary: "CI/CD config",
-        },
-        {
-          phaseType: "monitoring",
-          phaseName: "Monitoring",
-          status: "sufficient",
-          confidence: 0.6,
-          summary: "Observability",
-        },
-      ];
-      graph = generateTasks(planId, 1, phases);
+      const existingGraphs = graphStore.getGraphsByPlan(planId);
+      const phases = defaultPhases();
+
+      if (requestedVersion === 1) {
+        graph = generateTasks(planId, 1, phases);
+      } else if (existingGraphs.length === 0) {
+        graph = generateTasks(planId, requestedVersion, phases);
+      } else {
+        const sourceVersion = Math.max(...existingGraphs.map((g) => g.planVersion));
+        const sourceGraph = existingGraphs.find((g) => g.planVersion === sourceVersion)!;
+        graph = deriveGraph(planId, requestedVersion, phases, sourceGraph);
+      }
+
       graphStore.saveGraph(graph);
 
       const allTasks = graph.tasks;
@@ -137,6 +158,7 @@ export async function registerExecutionTaskRoutes(app: FastifyInstance) {
             phaseSummary: task.phaseType,
           },
           promptStore,
+          graph.planVersion,
         );
       }
     }
@@ -153,10 +175,17 @@ export async function registerExecutionTaskRoutes(app: FastifyInstance) {
 
   app.get("/api/v1/plans/:planId/prompts/export", async (request) => {
     const { planId } = request.params as { planId: string };
-    const graph = graphStore.getGraph(planId, 1);
+    const query = request.query as { version?: string };
+    const requestedVersion = query.version ? parseInt(query.version, 10) : 1;
+
+    if (isNaN(requestedVersion) || requestedVersion < 1) {
+      throw new Error("version must be a positive integer");
+    }
+
+    const graph = graphStore.getGraph(planId, requestedVersion);
     if (!graph) throw new NotFoundError("Plan", planId);
 
-    const prompts = promptStore.getByPlan(planId, 1);
+    const prompts = promptStore.getByPlan(planId, requestedVersion);
     const tasks = graph.tasks;
 
     const missingPrompts = tasks.filter((t) => !prompts.find((p) => p.taskId === t.id));
@@ -177,7 +206,8 @@ export async function registerExecutionTaskRoutes(app: FastifyInstance) {
       exportFormat: "orchestra-prompt-bundle-v1",
       exportedAt: new Date().toISOString(),
       planId,
-      planVersion: 1,
+      planVersion: graph.planVersion,
+      derivedFromPlanVersion: graph.derivedFromPlanVersion ?? null,
       taskCount: tasks.length,
       promptCount: prompts.length,
       warnings: warnings.length > 0 ? warnings : undefined,
@@ -193,11 +223,13 @@ export async function registerExecutionTaskRoutes(app: FastifyInstance) {
           dependencies: t.dependencies,
           acceptanceCriteria: t.acceptanceCriteria,
           promptText: prompt?.promptText ?? null,
+          promptValidationStatus: prompt?.status ?? null,
+          promptFailureReason: prompt?.failureReason ?? null,
         };
       }),
       metadata: {
         generatedAt: prompts[0]?.createdAt ?? null,
-        graphVersion: 1,
+        graphVersion: graph.planVersion,
       },
     };
 

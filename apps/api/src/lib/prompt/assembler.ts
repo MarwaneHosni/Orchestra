@@ -1,5 +1,6 @@
 import type { PromptSection, AgentTips, PromptArtifact, PromptStore } from "./types.js";
 import { formatPrompt } from "./templates.js";
+import { validatePrompt } from "./validator.js";
 import type { TaskNode } from "../task-graph/types.js";
 
 export interface TaskContext {
@@ -10,7 +11,7 @@ export interface TaskContext {
   phaseSummary: string;
 }
 
-export function assemblePrompt(context: TaskContext, store?: PromptStore): PromptArtifact {
+export function assemblePrompt(context: TaskContext, store?: PromptStore, planVersion = 1): PromptArtifact {
   const sections = buildSections(context);
   const promptText = formatPrompt(sections);
 
@@ -18,13 +19,23 @@ export function assemblePrompt(context: TaskContext, store?: PromptStore): Promp
     id: crypto.randomUUID(),
     taskId: context.task.id,
     planId: context.task.planId,
-    planVersion: 1,
+    planVersion,
     promptText,
     sections,
     version: 1,
     status: "complete",
+    failureReason: null,
     createdAt: new Date().toISOString(),
   };
+
+  const validation = validatePrompt(artifact);
+  if (!validation.valid) {
+    artifact.status = "failed";
+    artifact.failureReason = validation.errors.join("; ");
+  } else if (validation.warnings.length > 0) {
+    artifact.status = "needs_review";
+    artifact.failureReason = validation.warnings.join("; ");
+  }
 
   if (store) store.save(artifact);
 

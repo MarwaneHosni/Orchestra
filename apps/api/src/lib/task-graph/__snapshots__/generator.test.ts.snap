@@ -1,0 +1,144 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`TaskGraphGenerator - snapshot stability > formatPrompt output is deterministic 1`] = `
+{
+  "failureReason": null,
+  "headingStructure": [
+    "Execution Prompt",
+    "Objective",
+    "Context",
+    "Constraints",
+    "Expected Output",
+    "Validation Criteria",
+    "Architectural Alignment",
+    "Agent Tips",
+    "Security",
+    "Edge Cases",
+    "Dependency Warnings",
+    "Common Bugs",
+  ],
+  "sections": [
+    "objective length: 29",
+    "context length: 255",
+    "constraints count: 5",
+    "expectedOutput length: 177",
+    "validationCriteria count: 2",
+    "architecturalAlignment length: 255",
+    "agentTips security: 4",
+    "agentTips edgeCases: 3",
+    "agentTips dependencyWarnings: 3",
+    "agentTips commonBugs: 6",
+  ],
+  "status": "complete",
+  "totalLength": 2236,
+}
+`;
+
+exports[`TaskGraphGenerator - snapshot stability > graph shape is consistent for missing/insufficient phases 1`] = `
+[
+  {
+    "hasFailureReason": true,
+    "phaseType": "ideation",
+    "status": "needs_review",
+    "type": "review",
+  },
+  {
+    "hasFailureReason": false,
+    "phaseType": "requirements",
+    "status": "blocked",
+    "type": "config",
+  },
+  {
+    "hasFailureReason": true,
+    "phaseType": "requirements",
+    "status": "needs_review",
+    "type": "pending_input",
+  },
+]
+`;
+
+exports[`TaskGraphGenerator - snapshot stability > graph structure snapshot is stable for same inputs (IDs excluded) 1`] = `
+{
+  "depTypes": {
+    "blocks": 1,
+  },
+  "phaseCounts": {
+    "ideation": 1,
+    "requirements": 1,
+  },
+  "statusCounts": {
+    "blocked": 1,
+    "ready": 1,
+  },
+  "totalDeps": 1,
+  "totalTasks": 2,
+  "typeCounts": {
+    "config": 2,
+  },
+}
+`;
+
+exports[`TaskGraphGenerator - snapshot stability > prompt section content is deterministic 1`] = `
+{
+  "agentTips": {
+    "commonBugs": [
+      "Off-by-one errors in loops and array indexing",
+      "Race conditions in async operations without proper synchronization",
+      "Silent error swallowing — ensure errors are logged or propagated",
+      "Inconsistent naming or type mismatches between related modules",
+      "Unhandled promise rejections in async code",
+      "Memory leaks from unclosed connections or listeners",
+    ],
+    "dependencyWarnings": [
+      "Ensure all imported modules and packages are declared in the project",
+      "Check that type definitions match between interfaces and implementations",
+      "Verify that environment variables referenced in this task are documented",
+    ],
+    "edgeCases": [
+      "Consider empty states: what happens when there is no data?",
+      "Consider error states: what happens when a dependency fails?",
+      "Consider boundary conditions: maximum input sizes, concurrent access",
+    ],
+    "security": [
+      "Validate all inputs and sanitize outputs",
+      "Do not hardcode secrets, API keys, or credentials",
+      "Use parameterized queries to prevent injection attacks",
+      "Apply least-privilege principles to any permissions",
+    ],
+  },
+  "architecturalAlignment": "This task is part of the "backend" phase.
+The overall project "SnapshotTest" follows the architecture defined in the project blueprint.
+This task contributes to: API error handling
+Implementation tasks build the core functionality specified in this phase.",
+  "constraints": [
+    "Task must be completable within 2 prompt round(s)",
+    "Output must be coherent and independently verifiable",
+    "Follow the existing project conventions and code style",
+    "Implementation must handle error cases and edge conditions",
+    "Follow the Single Responsibility Principle",
+  ],
+  "context": "Phase: backend
+Task type: code
+Priority: high
+
+Phase summary: Backend error handling
+
+Predecessor outputs:
+- Middleware created
+
+Related tasks:
+No related tasks.
+
+This task is the first task — no dependencies and is estimated to require 2 prompt round(s).",
+  "expectedOutput": "Complete the following work:
+
+1. API error handling
+2. Ensure the output meets the acceptance criteria below
+3. If applicable, update or create the relevant files in the project",
+  "objective": "Implement: API error handling",
+  "validationCriteria": [
+    "Errors are caught and logged",
+    "Stack traces never leak",
+  ],
+}
+`;

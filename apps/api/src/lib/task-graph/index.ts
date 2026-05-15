@@ -1,4 +1,5 @@
-export { generateTasks, createInMemoryGraphStore } from "./generator.js";
+export { generateTasks, createInMemoryGraphStore, deriveGraph, validatePhases } from "./generator.js";
+export type { GraphStore, PhaseValidationResult } from "./generator.js";
 export type {
   TaskGraph,
   TaskNode,

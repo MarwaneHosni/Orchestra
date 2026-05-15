@@ -15,6 +15,7 @@ export interface TaskNode {
   dependencies: { taskId: string; type: DepType }[];
   acceptanceCriteria: string[];
   estimatedPromptRounds: number;
+  failureReason?: string;
 }
 
 export interface DependencyEdge {
@@ -28,6 +29,7 @@ export interface TaskGraph {
   planVersion: number;
   tasks: TaskNode[];
   dependencies: DependencyEdge[];
+  derivedFromPlanVersion?: number;
 }
 
 export interface PhaseInput {

@@ -41,6 +41,7 @@ describe("assemblePrompt", () => {
     expect(artifact.promptText).toBeDefined();
     expect(artifact.promptText.length).toBeGreaterThan(200);
     expect(artifact.status).toBe("complete");
+    expect(artifact.failureReason).toBeNull();
   });
 
   it("includes all required sections in prompt text", () => {
@@ -89,6 +90,36 @@ describe("assemblePrompt", () => {
     const ctx = makeContext({ task: makeTask({ type: "code" }) });
     const artifact = assemblePrompt(ctx);
     expect(artifact.sections.agentTips.commonBugs.some((b) => b.includes("promise"))).toBe(true);
+  });
+
+  it("accepts planVersion parameter", () => {
+    const artifact = assemblePrompt(makeContext(), undefined, 3);
+    expect(artifact.planVersion).toBe(3);
+  });
+});
+
+describe("assemblePrompt - validation integration", () => {
+  it("sets status = needs_review when prompt exceeds length threshold", () => {
+    const ctx = makeContext({
+      predecessorOutputs: [
+        "A".repeat(800),
+        "B".repeat(800),
+        "C".repeat(800),
+        "D".repeat(800),
+        "E".repeat(800),
+        "F".repeat(800),
+      ],
+    });
+    const artifact = assemblePrompt(ctx);
+    expect(artifact.promptText.length).toBeGreaterThan(5000);
+    expect(artifact.status).toBe("needs_review");
+    expect(artifact.failureReason).toContain("long");
+  });
+
+  it("sets status = complete for well-formed prompts", () => {
+    const artifact = assemblePrompt(makeContext());
+    expect(artifact.status).toBe("complete");
+    expect(artifact.failureReason).toBeNull();
   });
 });
 

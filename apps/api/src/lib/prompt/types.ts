@@ -33,7 +33,8 @@ export interface PromptArtifact {
   promptText: string;
   sections: PromptSection;
   version: number;
-  status: "pending" | "complete" | "failed";
+  status: "pending" | "complete" | "failed" | "needs_review";
+  failureReason: string | null;
   createdAt: string;
 }
 

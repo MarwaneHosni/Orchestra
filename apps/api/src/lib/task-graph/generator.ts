@@ -11,6 +11,8 @@ export function createInMemoryGraphStore(): GraphStore {
   const graphs: TaskGraph[] = [];
   return {
     saveGraph(g) {
+      const existing = graphs.find((x) => x.planId === g.planId && x.planVersion === g.planVersion);
+      if (existing) throw new Error(`Graph already exists for plan ${g.planId} version ${g.planVersion}`);
       graphs.push(g);
     },
     getGraph(planId, version) {
@@ -22,10 +24,57 @@ export function createInMemoryGraphStore(): GraphStore {
   };
 }
 
+export interface PhaseValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+export function validatePhases(phases: PhaseInput[]): PhaseValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  if (!phases || phases.length === 0) {
+    errors.push("At least one phase is required");
+    return { valid: false, errors, warnings };
+  }
+
+  const seen = new Set<string>();
+  for (const phase of phases) {
+    if (!phase.phaseType || phase.phaseType.trim().length === 0) {
+      errors.push("Phase type is required");
+      continue;
+    }
+    if (!PHASE_ORDER.includes(phase.phaseType)) {
+      errors.push(`Unknown phase type: "${phase.phaseType}"`);
+    }
+    if (seen.has(phase.phaseType)) {
+      errors.push(`Duplicate phase type: "${phase.phaseType}"`);
+    }
+    seen.add(phase.phaseType);
+
+    if (!phase.phaseName || phase.phaseName.trim().length === 0) {
+      errors.push(`Phase "${phase.phaseType}" has no name`);
+    }
+    if (phase.confidence < 0 || phase.confidence > 1) {
+      errors.push(`Phase "${phase.phaseType}" confidence must be between 0 and 1, got ${phase.confidence}`);
+    }
+    if (!phase.summary || phase.summary.trim().length < 5) {
+      errors.push(`Phase "${phase.phaseType}" summary is too short (min 5 chars)`);
+    }
+    if (phase.status === "sufficient" && phase.confidence < 0.4) {
+      warnings.push(
+        `Phase "${phase.phaseType}" is marked sufficient but confidence is very low (${phase.confidence})`,
+      );
+    }
+  }
+  return { valid: errors.length === 0, errors, warnings };
+}
+
 export function generateTasks(planId: string, planVersion: number, phases: PhaseInput[]): TaskGraph {
+  const validation = validatePhases(phases);
   if (!planId) throw new Error("planId is required");
   if (planVersion < 1) throw new Error("planVersion must be >= 1");
-  if (!phases || phases.length === 0) throw new Error("At least one phase is required");
+  if (!validation.valid) throw new Error(`Invalid phases: ${validation.errors.join("; ")}`);
 
   const tasks: TaskNode[] = [];
   const dependencies: DependencyEdge[] = [];
@@ -48,6 +97,7 @@ export function generateTasks(planId: string, planVersion: number, phases: Phase
         dependencies: [],
         acceptanceCriteria: [`Provide sufficient input for ${phase.phaseName}`],
         estimatedPromptRounds: 1,
+        failureReason: `Phase "${phase.phaseName}" has status "missing" — cannot decompose into tasks`,
       };
       tasks.push(task);
       continue;
@@ -61,7 +111,6 @@ export function generateTasks(planId: string, planVersion: number, phases: Phase
       tasks.push(task);
     }
 
-    // For insufficient phases, add a pending_input task
     if (phase.status === "insufficient") {
       const pendingTask: TaskNode = {
         id: crypto.randomUUID(),
@@ -75,6 +124,7 @@ export function generateTasks(planId: string, planVersion: number, phases: Phase
         dependencies: [],
         acceptanceCriteria: [`Provide missing details for ${phase.phaseName}`],
         estimatedPromptRounds: 1,
+        failureReason: `Phase "${phase.phaseName}" has status "insufficient" — some tasks may lack full context`,
       };
       tasks.push(pendingTask);
     }
@@ -87,6 +137,17 @@ export function generateTasks(planId: string, planVersion: number, phases: Phase
   return graph;
 }
 
+export function deriveGraph(
+  planId: string,
+  newPlanVersion: number,
+  phases: PhaseInput[],
+  fromGraph: TaskGraph,
+): TaskGraph {
+  const graph = generateTasks(planId, newPlanVersion, phases);
+  graph.derivedFromPlanVersion = fromGraph.planVersion;
+  return graph;
+}
+
 function createTask(
   planId: string,
   phaseType: string,
@@ -96,20 +157,16 @@ function createTask(
   order: number,
 ): TaskNode {
   const isCore = index > 0 && index < total - 1;
-
   const isFirst = index === 0;
   const isLast = index === total - 1 && total > 1;
-
   const title = isFirst
     ? `Set up ${phase.phaseName} foundations`
     : isCore
       ? `Implement ${phase.phaseName} core logic`
       : `Verify ${phase.phaseName} implementation`;
-
   const type: TaskType = isFirst ? "config" : isLast ? "test" : "code";
   const priority: TaskPriority = isFirst || index <= 1 ? "high" : "medium";
   const estimatedRounds = isFirst ? 1 : isCore ? 3 : 2;
-
   return {
     id: crypto.randomUUID(),
     planId,
@@ -132,10 +189,8 @@ function computeDependencies(tasks: TaskNode[], dependencies: DependencyEdge[]):
     list.push(t);
     phaseGroups.set(t.phaseType, list);
   }
-
   const phaseOrder = PHASE_ORDER.filter((p) => phaseGroups.has(p));
 
-  // Within-phase: sequential dependencies (prereq → core → verification)
   for (const [, group] of phaseGroups) {
     group.sort((a, b) => a.order - b.order);
     for (let i = 1; i < group.length; i++) {
@@ -147,7 +202,6 @@ function computeDependencies(tasks: TaskNode[], dependencies: DependencyEdge[]):
     }
   }
 
-  // Cross-phase: last task of phase N blocks first task of phase N+1
   for (let i = 1; i < phaseOrder.length; i++) {
     const prevPhase = phaseGroups.get(phaseOrder[i - 1]!)!;
     const currPhase = phaseGroups.get(phaseOrder[i]!)!;
@@ -158,25 +212,20 @@ function computeDependencies(tasks: TaskNode[], dependencies: DependencyEdge[]):
 }
 
 function computeStatuses(tasks: TaskNode[], dependencies: DependencyEdge[]): void {
-  // Never overwrite status of review-type tasks (they are explicitly set)
   const depMap = new Map<string, string[]>();
   for (const dep of dependencies) {
     const list = depMap.get(dep.taskId) ?? [];
     list.push(dep.dependsOnTaskId);
     depMap.set(dep.taskId, list);
   }
-
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
-
   for (const task of tasks) {
-    if (task.type === "review" || task.status === "needs_review") continue; // preserve explicitly set status
-
+    if (task.type === "review" || task.status === "needs_review") continue;
     const prereqs = depMap.get(task.id);
     if (!prereqs || prereqs.length === 0) {
       task.status = "ready";
       continue;
     }
-
     const allComplete = prereqs.every((pid) => {
       const t = taskMap.get(pid);
       return t && t.status === "complete";
@@ -185,7 +234,6 @@ function computeStatuses(tasks: TaskNode[], dependencies: DependencyEdge[]): voi
       const t = taskMap.get(pid);
       return t && t.type === "review";
     });
-
     if (anyBlocked || !allComplete) {
       task.status = "blocked";
     } else {
