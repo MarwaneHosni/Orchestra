@@ -1,78 +1,90 @@
-# Phase 2 — Handoff Notes for Phase 3
+# Phase 3 — Handoff Notes for Phase 4
 
 ## Completed Work
 
-The core planning engine is implemented and tested:
+### Provider Infrastructure
 
-- **14 database tables** covering users, projects, ideas, interview_sessions, questions, answers, plans, phases, subphases, assumptions, constraints, risks, blueprints, generations
-- **44 structured questions** across 12 lifecycle phases with dependency rules and validation
-- **Orchestration service** managing project creation, session lifecycle, answer submission, and blueprint generation
-- **Blueprint generator** producing 12-phase output with confidence scores, ambiguity flags, and structured items
-- **Answer versioning** — edits create new versions, old versions preserved, plans marked stale
-- **Draft resume** — sessions reopen with prior answers intact
-- **Demo seed** — "TeamSync" project with 44 pre-populated answers
-- **Frontend** — idea intake, interview flow with progress bar, answer editing, draft summary
-- **Quality toolchain** — ESLint, Prettier, Vitest, Husky, lint-staged
-- **CI/CD** — GitHub Actions workflows for PR checks and deployment
+- **Provider adapters**: OpenAI, Anthropic, OpenRouter — each with `validate()`, `listModels()`, `generate()` with 30s timeout and typed `ProviderRequestError`
+- **Credential encryption**: AES-256-GCM via `ENCRYPTION_KEY` env var, `src/lib/secrets/encryption.ts`
+- **Credential CRUD**: `POST/GET/PUT/DELETE /api/v1/provider-credentials` — keys encrypted at rest, never returned in responses
+- **Routing service**: 5 task types (clarification, roadmap, architecture, prompt_generation, summary) with tiered model selection + fallback chains + explainable decisions
+- **Budget enforcement**: Project + user-level budget (max cost, max generations/month, max tokens/month) + `checkGeneration()` pre-validation
+- **Rate limiting**: Sliding-window in-memory per-key limiter
+- **Failure handling**: `classifyFailure()` — retryable (5xx, network), fallback-eligible (429), terminal (401, 400, unknown)
+- **Usage accounting**: `usage_records` table + `estimateCost()` + `buildSummary()` with by-model/by-task-type/by-provider breakdowns
+- **Audit logging**: 10 event types with auto-redaction + `FailureSpikeDetector` (3 failures in 5 minutes → alert)
+- **Log redaction**: By field name, by regex pattern, headers, URLs — enforced in code via `createAuditEntry()`
 
-## Test Coverage
+### Frontend
 
-- **60 tests** across 5 test files
-- E2E flow: create → answer all → generate → verify blueprint structure
-- Retry versioning: each generation creates a new plan version
-- Resume: answers persist across session reopens
-- Store replacement: demo seed integrates with server store
-- Individual unit tests for errors, schemas, normalization, ambiguity, confidence
+- **BYOK settings page**: Add/verify/remove provider credentials, status badges (6 states), default model selector, cost estimate table
+- **Cost estimate display**: Before-generation estimate on interview completion screen
+
+### Database — 16 tables
+
+users, projects, ideas, interview_sessions, questions, answers, plans, phases, subphases, assumptions, constraints, risks, blueprints, generations, provider_credentials, usage_records
+
+## Test Coverage — 167 tests, 12 files
+
+| File                                          | Tests | What it covers                                                              |
+| --------------------------------------------- | ----- | --------------------------------------------------------------------------- |
+| `e2e/byok-e2e.test.ts`                        | 10    | Full BYOK flow: credentials → routing → budget → usage → audit → generation |
+| `provider/provider.test.ts`                   | 12    | Adapter interface, error handling                                           |
+| `router/router.test.ts`                       | 16    | Routing policies, fallback, quality thresholds                              |
+| `accounting/accounting.test.ts`               | 15    | Cost estimates, usage recording, summaries                                  |
+| `budget/budget.test.ts`                       | 10    | Budget enforcement, rate limiting, failure classification                   |
+| `audit/audit.test.ts`                         | 18    | Redaction rules, audit logging, spike detection                             |
+| `encryption`                                  | 8     | AES-256-GCM roundtrip, wrong key, serialization                             |
+| `orchestration/orchestration.service.test.ts` | 24    | E2E planning flow, versioning, resume                                       |
+| `blueprint/generator.test.ts`                 | 16    | Phase generation, ambiguity, confidence                                     |
+| `errors`, `schemas`, `shared`                 | 38    | Error classes, pagination, utilities                                        |
 
 ## Known Limitations
 
-### 1. In-memory store (no database persistence)
+### 1. In-memory stores (no database persistence)
 
-All project, session, answer, and blueprint data lives in an in-memory store. Restarting the server loses all data. The database schema and Drizzle ORM are configured, but the orchestration service doesn't use them yet.
+All stores (projects, sessions, credentials, usage, audit) are in-memory. Server restart loses all data. Drizzle ORM schemas exist for all 16 tables but the service layer doesn't use them yet.
 
-**Impact:** Demo data must be re-seeded after every server restart.
+### 2. Provider adapters are untested against real APIs
 
-### 2. No AI provider integration
+Adapters make real HTTP calls, but the test environment uses invalid keys (which return 401/403). No integration test verifies end-to-end against a live provider.
 
-The blueprint generator uses deterministic heuristics only. There are no AI calls to OpenAI, Anthropic, or any LLM. The prompt generation domain is defined but not wired.
+### 3. No worker process
 
-**Impact:** Blueprints are summaries and confidence scores, not AI-generated architecture documents.
-
-### 3. No task graph / dependency resolution
-
-The `subphases.dependency_ids` column exists but is never populated. Subphases are listed in order but have no automated dependency resolution.
+`apps/worker` is a placeholder. Generation runs synchronously. Long-running AI generations will need a job queue.
 
 ### 4. No authentication
 
-The `users` table exists but no auth is implemented. The `user_id` on projects is auto-assigned. All data is shared.
+`user_id` fields exist but no auth is implemented. All data is shared. The credential routes use a hardcoded user ID.
 
-### 5. No worker process
+### 5. Rate limiter is in-memory, single-process
 
-`apps/worker` is a placeholder. Generation runs synchronously in the request-response cycle. Long-running AI generations will need a job queue.
+The sliding-window rate limiter resets on server restart. Multi-process deployment would need a shared store (Redis).
 
-### 6. No integration tests
+### 6. Budget state resets on restart
 
-API endpoints are tested only through unit tests of the orchestration service. No HTTP-level integration tests exist.
+In-memory budget state is lost when the server restarts. Monthly counters reset mid-cycle.
 
-### 7. Frontend state on hard refresh
+### 7. Audit log is in-memory
 
-The interview UI relies on client-side history state for back-navigation. A hard page refresh loses the in-session edit history (answers are preserved on the backend, but the back button state is reset).
+Audit entries are lost on restart. Production would need persistent audit storage.
 
-### 8. No monitoring in production
+### 8. No production monitoring
 
-Pino logging is configured for structured output. Sentry is documented but not installed. No production alerting.
+Pino logging is configured. Sentry is documented but not installed. Alerting from `FailureSpikeDetector` is log-only — no notification channel.
 
-### 9. Blueprint content is text-only
+### 9. No CI integration tests
 
-The `blueprints.content` column stores JSON text. Blueprints are not rendered in a structured UI — the summary page shows raw JSON-derived data.
+PR checks run unit tests only. No HTTP-level tests against the running API.
 
-## Open Decisions for Phase 3
+## Open Decisions for Phase 4
 
-1. **Database integration** — Wire the orchestration service's `SessionStore` to use Drizzle ORM + PostgreSQL instead of the in-memory store.
-2. **AI provider** — Choose and integrate an AI provider (OpenAI, Anthropic) for the prompt generation and planning engine.
-3. **Job queue** — Choose a queue library (BullMQ, pg-boss) for asynchronous blueprint generation.
-4. **Auth strategy** — Choose an authentication approach (session-based, JWT, OAuth).
-5. **Integration test framework** — Choose an approach for HTTP-level API tests (Supertest, Vitest with Fastify injection).
+1. **Database persistence** — Wire all in-memory stores (orchestration, credentials, usage, budget, audit) to use Drizzle ORM + PostgreSQL.
+2. **Real provider integration** — Complete the provider adapter layer with live API testing.
+3. **Worker process** — Choose a queue library (BullMQ, pg-boss) for async generation.
+4. **Auth** — Implement user authentication + session management.
+5. **Production monitoring** — Install and configure Sentry or equivalent.
+6. **Shared rate limiting** — Move from in-memory to Redis-backed for multi-process deployments.
 
 ## Documentation Map
 
@@ -85,5 +97,6 @@ The `blueprints.content` column stores JSON text. Blueprints are not rendered in
 | `docs/architecture.md`   | Architects   | System design, domain status, planning engine workflow |
 | `docs/schema.md`         | Developers   | Database tables, columns, indexes                      |
 | `docs/interview-spec.md` | Developers   | Question taxonomy, flow specification                  |
+| `docs/logging.md`        | Operators    | Log streams, redaction rules, spike detection          |
 | `docs/runbook.md`        | Operators    | Common failures, log inspection, recovery              |
 | `docs/decisions/*.md`    | Everyone     | Design rationale for all major choices                 |
