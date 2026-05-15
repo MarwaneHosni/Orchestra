@@ -121,6 +121,10 @@ CREATE TABLE "questions" (
 	"text" text NOT NULL,
 	"type" varchar(20) NOT NULL,
 	"options" text,
+	"required" boolean DEFAULT true NOT NULL,
+	"dependency_rules" text,
+	"validation_rules" text,
+	"capture_as" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint

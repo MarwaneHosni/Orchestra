@@ -13,6 +13,7 @@
     "clean": "rimraf dist",
     "db:generate": "dotenv -e ../../.env -- drizzle-kit generate",
     "db:migrate": "dotenv -e ../../.env -- tsx src/db/migrate.ts",
+    "db:seed": "dotenv -e ../../.env -- tsx src/db/seed.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {

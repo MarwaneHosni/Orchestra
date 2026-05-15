@@ -1,5 +1,5 @@
 {
-  "id": "e6825d2c-6993-4746-834d-f9823a46bb50",
+  "id": "a38d6071-8322-4697-bcea-c144422187f9",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1203,6 +1203,31 @@
         },
         "options": {
           "name": "options",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "required": {
+          "name": "required",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "dependency_rules": {
+          "name": "dependency_rules",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "validation_rules": {
+          "name": "validation_rules",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "capture_as": {
+          "name": "capture_as",
           "type": "text",
           "primaryKey": false,
           "notNull": false
