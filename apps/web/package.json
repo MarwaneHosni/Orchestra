@@ -1,0 +1,20 @@
+{
+  "name": "@orchestra/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "echo 'web dev: not yet configured'",
+    "build": "echo 'web build: not yet configured'",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'lint: no linter configured yet'",
+    "test": "echo 'test: no test runner configured yet'",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@orchestra/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}

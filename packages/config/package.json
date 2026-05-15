@@ -1,0 +1,19 @@
+{
+  "name": "@orchestra/config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'lint: no linter configured yet'",
+    "test": "echo 'test: no test runner configured yet'",
+    "clean": "rimraf dist"
+  },
+  "devDependencies": {
+    "@types/node": "^25.8.0",
+    "typescript": "^5.6.0"
+  }
+}

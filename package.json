@@ -1,0 +1,23 @@
+{
+  "name": "orchestra",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI Software Development Orchestrator — transform raw ideas into structured, execution-ready development plans",
+  "license": "MIT",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "clean": "pnpm -r clean",
+    "clean:all": "pnpm -r clean && rimraf node_modules"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "pnpm@9.15.4",
+  "devDependencies": {
+    "rimraf": "^6.1.3"
+  }
+}
