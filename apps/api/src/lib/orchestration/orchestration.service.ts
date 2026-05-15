@@ -1,0 +1,251 @@
+import { z } from "zod";
+import { QUESTIONS, PHASE_ORDER, findQuestionByRef } from "../interview/questions.js";
+import { transitionState } from "../interview/flow.js";
+import type { InterviewState } from "../interview/flow.js";
+import type { AnswerRecord, CreateProjectInput, SessionRecord } from "./types.js";
+import type { SessionStore } from "./store.js";
+
+export const CreateProjectSchema = z.object({
+  ideaText: z.string().min(10, "Idea description must be at least 10 characters").max(5000),
+  projectName: z.string().min(1).max(200).optional(),
+});
+
+export const SubmitAnswerSchema = z.object({
+  questionId: z.string().uuid(),
+  value: z.string().min(1, "Answer cannot be empty"),
+  confidence: z.enum(["high", "medium", "low"]).optional(),
+});
+
+export const TransitionSchema = z.object({
+  toStatus: z.enum(["draft", "in_progress", "waiting_for_answers", "ready_for_generation", "completed"]),
+});
+
+export class OrchestrationService {
+  constructor(private store: SessionStore) {}
+
+  createProject(input: CreateProjectInput): { projectId: string; sessionId: string } {
+    const projectId = crypto.randomUUID();
+    const sessionId = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    const name =
+      input.projectName ??
+      input.ideaText.slice(0, 60).replace(/\n/g, " ") + (input.ideaText.length > 60 ? "..." : "");
+
+    this.store.insertProject({
+      id: projectId,
+      name,
+      description: input.ideaText,
+      status: "active",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    this.store.insertIdea({
+      id: crypto.randomUUID(),
+      projectId,
+      rawDescription: input.ideaText,
+      refinedDescription: null,
+      status: "raw",
+      provenance: "user",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    this.store.insertSession({
+      id: sessionId,
+      projectId,
+      status: "draft",
+      currentPhaseIndex: 0,
+      currentQuestionIndex: 0,
+      startedAt: null,
+      completedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return { projectId, sessionId };
+  }
+
+  startSession(sessionId: string): SessionRecord {
+    const session = this.store.getSession(sessionId);
+    if (!session) throw new Error(`Session ${sessionId} not found`);
+
+    if (session.status === "in_progress" || session.status === "waiting_for_answers") {
+      return session;
+    }
+
+    const state = this.toState(session);
+    const updated = transitionState(state, "in_progress");
+    this.store.updateSession(sessionId, {
+      status: updated.status,
+      startedAt: updated.startedAt?.toISOString() ?? null,
+    });
+
+    return { ...session, status: updated.status, startedAt: updated.startedAt?.toISOString() ?? null };
+  }
+
+  getNextQuestion(sessionId: string): {
+    question: object | null;
+    phaseIndex: number;
+    questionIndex: number;
+    phaseName: string;
+    total: number;
+    answered: number;
+  } {
+    const session = this.store.getSession(sessionId);
+    if (!session) throw new Error(`Session ${sessionId} not found`);
+    if (session.status === "completed" || session.status === "ready_for_generation") {
+      const answers = this.store.getAnswersBySession(sessionId);
+      const total = QUESTIONS.filter((q) => this.isQuestionEligible(q, answers)).length;
+      return {
+        question: null,
+        phaseIndex: 0,
+        questionIndex: 0,
+        phaseName: "",
+        total,
+        answered: answers.length,
+      };
+    }
+
+    const answers = this.store.getAnswersBySession(sessionId);
+    const state = this.toState(session);
+    const answeredIds = new Set(answers.map((a) => a.questionId));
+
+    const eligibleQuestions = QUESTIONS.filter((q) => this.isQuestionEligible(q, answers));
+    const totalQuestions = eligibleQuestions.length;
+
+    let nextQuestion: (typeof eligibleQuestions)[number] | undefined;
+
+    for (let p = state.currentPhaseIndex; p < PHASE_ORDER.length; p++) {
+      const phaseType = PHASE_ORDER[p];
+      const phaseQuestions = eligibleQuestions.filter((q) => q.phaseType === phaseType);
+      for (let qi = 0; qi < phaseQuestions.length; qi++) {
+        const q = phaseQuestions[qi];
+        if (!q) break;
+        if (!answeredIds.has(q.phaseType + "." + q.order)) {
+          nextQuestion = q;
+          this.store.updateSession(sessionId, {
+            currentPhaseIndex: p,
+            currentQuestionIndex: qi,
+            status: "waiting_for_answers",
+          });
+          break;
+        }
+      }
+      if (nextQuestion) break;
+    }
+
+    if (!nextQuestion) {
+      const updated = transitionState(state, "ready_for_generation");
+      this.store.updateSession(sessionId, { status: updated.status });
+      return {
+        question: null,
+        phaseIndex: 0,
+        questionIndex: 0,
+        phaseName: "",
+        total: totalQuestions,
+        answered: answeredIds.size,
+      };
+    }
+
+    return {
+      question: {
+        id: nextQuestion.phaseType + "." + nextQuestion.order,
+        phaseType: nextQuestion.phaseType,
+        order: nextQuestion.order,
+        text: nextQuestion.text,
+        type: nextQuestion.type,
+        options: nextQuestion.options ?? [],
+        required: nextQuestion.required,
+        validation: nextQuestion.validation ?? null,
+        helpText: nextQuestion.helpText ?? null,
+      },
+      phaseIndex: state.currentPhaseIndex,
+      questionIndex: state.currentQuestionIndex,
+      phaseName: PHASE_ORDER[state.currentPhaseIndex] ?? "",
+      total: totalQuestions,
+      answered: answeredIds.size,
+    };
+  }
+
+  submitAnswer(
+    sessionId: string,
+    questionId: string,
+    value: string,
+    confidence?: string,
+  ): { answer: AnswerRecord; next: object | null } {
+    const session = this.store.getSession(sessionId);
+    if (!session) throw new Error(`Session ${sessionId} not found`);
+    if (session.status === "completed" || session.status === "ready_for_generation") {
+      throw new Error("Session is no longer accepting answers");
+    }
+
+    const state = this.toState(session);
+    const updated = transitionState(state, "in_progress");
+
+    const answer: AnswerRecord = {
+      id: crypto.randomUUID(),
+      questionId,
+      projectId: session.projectId,
+      sessionId,
+      value,
+      confidence: confidence ?? "high",
+      provenance: "user",
+      createdAt: new Date().toISOString(),
+    };
+
+    this.store.insertAnswer(answer);
+    this.store.updateSession(sessionId, { status: updated.status });
+
+    const next = this.getNextQuestion(sessionId);
+    return { answer, next: next.question };
+  }
+
+  transitionSession(sessionId: string, toStatus: string): SessionRecord {
+    const session = this.store.getSession(sessionId);
+    if (!session) throw new Error(`Session ${sessionId} not found`);
+
+    const state = this.toState(session);
+    const updated = transitionState(state, toStatus as any);
+    this.store.updateSession(sessionId, {
+      status: updated.status,
+      startedAt: updated.startedAt?.toISOString() ?? null,
+      completedAt: updated.completedAt?.toISOString() ?? null,
+    });
+
+    return {
+      ...session,
+      ...updated,
+      startedAt: updated.startedAt?.toISOString() ?? null,
+      completedAt: updated.completedAt?.toISOString() ?? null,
+    };
+  }
+
+  private isQuestionEligible(
+    question: { dependsOn?: { questionRef: string; expectedValue: string | string[] } },
+    answers: AnswerRecord[],
+  ): boolean {
+    const rule = question.dependsOn;
+    if (!rule) return true;
+    const resolved = findQuestionByRef(rule.questionRef);
+    if (!resolved) return true;
+    const prior = answers.find((a) => a.questionId === rule.questionRef);
+    if (!prior) return false;
+    const expected = rule.expectedValue;
+    return Array.isArray(expected) ? expected.includes(prior.value) : prior.value === expected;
+  }
+
+  private toState(session: SessionRecord): InterviewState {
+    return {
+      sessionId: session.id,
+      projectId: session.projectId,
+      status: session.status,
+      currentPhaseIndex: session.currentPhaseIndex,
+      currentQuestionIndex: session.currentQuestionIndex,
+      answeredQuestionIds: [],
+      startedAt: session.startedAt ? new Date(session.startedAt) : null,
+      completedAt: session.completedAt ? new Date(session.completedAt) : null,
+    };
+  }
+}

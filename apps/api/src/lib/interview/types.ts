@@ -44,7 +44,12 @@ export interface QuestionDefinition {
   helpText?: string;
 }
 
-export type InterviewStatus = "draft" | "in_progress" | "paused" | "complete" | "cancelled";
+export type InterviewStatus =
+  | "draft"
+  | "in_progress"
+  | "waiting_for_answers"
+  | "ready_for_generation"
+  | "completed";
 
 export interface FlowTransition {
   from: InterviewStatus[];
@@ -54,10 +59,15 @@ export interface FlowTransition {
 
 export const FLOW_TRANSITIONS: FlowTransition[] = [
   { from: ["draft"], to: "in_progress", condition: "User starts the interview" },
-  { from: ["in_progress"], to: "paused", condition: "User pauses (optional)" },
-  { from: ["paused"], to: "in_progress", condition: "User resumes" },
-  { from: ["in_progress"], to: "complete", condition: "All required questions answered" },
-  { from: ["in_progress", "draft"], to: "cancelled", condition: "User abandons" },
+  { from: ["in_progress"], to: "waiting_for_answers", condition: "Question presented to user" },
+  { from: ["waiting_for_answers"], to: "in_progress", condition: "User submits an answer" },
+  { from: ["in_progress"], to: "ready_for_generation", condition: "All required questions answered" },
+  { from: ["ready_for_generation"], to: "completed", condition: "Plan generated from session" },
+  {
+    from: ["draft", "in_progress", "waiting_for_answers"],
+    to: "completed",
+    condition: "User cancels / abandons",
+  },
 ];
 
 export function canTransition(from: InterviewStatus, to: InterviewStatus): boolean {

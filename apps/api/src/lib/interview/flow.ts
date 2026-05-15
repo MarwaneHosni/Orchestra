@@ -28,8 +28,7 @@ export function createInitialState(sessionId: string, projectId: string): Interv
 export function transitionState(state: InterviewState, to: InterviewStatus): InterviewState {
   if (!canTransition(state.status, to)) {
     throw new Error(
-      `Cannot transition from ${state.status} to ${to}. ` +
-        `Allowed transitions: ${listTransitionsFrom(state.status)}`,
+      `Cannot transition from ${state.status} to ${to}. ` + `Allowed: ${listTransitionsFrom(state.status)}`,
     );
   }
 
@@ -38,7 +37,7 @@ export function transitionState(state: InterviewState, to: InterviewStatus): Int
     ...state,
     status: to,
     startedAt: to === "in_progress" && !state.startedAt ? now : state.startedAt,
-    completedAt: to === "complete" ? now : state.completedAt,
+    completedAt: to === "completed" ? now : state.completedAt,
   };
 }
 
@@ -49,9 +48,9 @@ function listTransitionsFrom(status: InterviewStatus): string {
 }
 
 export function isInterviewComplete(state: InterviewState): boolean {
-  return state.status === "complete";
+  return state.status === "completed" || state.status === "ready_for_generation";
 }
 
 export function isInterviewActive(state: InterviewState): boolean {
-  return state.status === "in_progress";
+  return state.status === "in_progress" || state.status === "waiting_for_answers";
 }
