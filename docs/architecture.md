@@ -126,11 +126,17 @@ Every major step emits a structured JSON log entry:
 These features are intentionally deferred:
 
 - **AI provider integration** — the app has no AI calls yet. Provider routing and prompt generation domains are defined but not wired.
-- **Task graph** — dependency resolution and task ordering are not implemented. The `dependency_ids` column on subphases is ready.
 - **Authentication** — no user auth. The `users` table exists for future auth integration.
 - **Background worker** — `apps/worker` is a placeholder. Job queues, AI prompt execution, and exports will run here later.
 - **Integration tests** — API endpoints have no automated tests against the database.
 - **Monitoring** — Pino logging is configured. Sentry setup is documented but not installed.
+
+**Recently built (Phase 4):**
+
+- **Task graph** — in-memory `generateTasks()` decomposes 12 phases into 20–40 tasks with sequential + cross-phase dependencies, status computation (ready/blocked/needs_review), and failure states for missing/insufficient phases. See `apps/api/src/lib/task-graph/` and [task-decomposition.md](task-decomposition.md).
+- **Prompt generation** — `assemblePrompt()` builds versioned prompt artifacts from task context with deterministic Markdown rendering, validation, and failureReason propagation. See `apps/api/src/lib/prompt/`.
+- **Export pipeline** — bundle exports via `GET /api/v1/plans/:planId/prompts/export` produce `orchestra-prompt-bundle-v1` JSON with full lineage metadata.
+- **Regeneration** — `deriveGraph()` creates new versioned task graphs from existing ones, preserving old versions and tracking `derivedFromPlanVersion`.
 
 ## Conventions
 

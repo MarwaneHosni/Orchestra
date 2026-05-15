@@ -1,258 +1,390 @@
-# Task Decomposition Specification
+# Task Decomposition & Prompt Generation
 
 ## Overview
 
-The decomposition engine transforms a structured plan (phases + subphases + blueprints) into an ordered, dependency-aware task graph suitable for AI coding agents. This document defines the deterministic rules for that transformation.
+The decomposition engine transforms a structured plan (phases from a blueprint) into an ordered, dependency-aware task graph. Each task then produces a versioned prompt artifact suitable for AI coding agents. This document describes the **implemented** behavior — not aspirational design.
 
 ---
 
-## 1. Derivation Rules
+## 1. Task Graph Model
 
-### 1.1 Phase-to-Task Mapping
+### 1.1 Core Types
 
-Each of the 12 lifecycle phases produces 1–5 tasks based on its phase summary (`PhaseBlueprint.summary`, `PhaseBlueprint.status`).
+```typescript
+interface TaskNode {
+  id: string; // UUID
+  planId: string;
+  phaseType: string; // One of 12 lifecycle phases
+  title: string; // Short actionable title
+  type: "code" | "config" | "test" | "docs" | "review" | "deploy" | "pending_input" | "other";
+  priority: "low" | "medium" | "high" | "critical";
+  status: "pending" | "blocked" | "ready" | "in_progress" | "complete" | "needs_review";
+  order: number; // Global execution order
+  dependencies: { taskId: string; type: "blocks" | "triggers" | "input_from" }[];
+  acceptanceCriteria: string[];
+  estimatedPromptRounds: number; // 1–3
+  failureReason?: string; // Present when decomposition failed
+}
 
-| Phase         | Typical task count | Derivation logic                                       |
-| ------------- | ------------------ | ------------------------------------------------------ |
-| Ideation      | 1–2                | Project scaffold, environment setup                    |
-| Requirements  | 1–2                | User stories, acceptance criteria                      |
-| Architecture  | 2–4                | Service definitions, API contracts, data flow diagrams |
-| Security      | 1–3                | Auth middleware, encryption setup, compliance checks   |
-| Database      | 2–4                | Schema definition, migration creation, seed data       |
-| Backend       | 3–5                | Route handlers, business logic, background jobs        |
-| Frontend      | 3–5                | Component tree, page routing, API integration          |
-| Core Features | 2–4                | Feature modules, integration wiring                    |
-| AI / Advanced | 1–3                | Model integration, prompt templates                    |
-| Testing       | 2–3                | Unit tests, integration tests, E2E tests               |
-| Deployment    | 1–2                | CI/CD pipeline, Docker config                          |
-| Monitoring    | 1–2                | Health checks, logging, alert setup                    |
-| **Total**     | **20–40**          |                                                        |
+interface TaskGraph {
+  planId: string;
+  planVersion: number;
+  tasks: TaskNode[];
+  dependencies: DependencyEdge[];
+  derivedFromPlanVersion?: number; // Lineage: which version this was regenerated from
+}
 
-### 1.2 Phase Status Handling
-
-| Phase status   | Decomposition behavior                                                                                      |
-| -------------- | ----------------------------------------------------------------------------------------------------------- |
-| `sufficient`   | Full decomposition — generate tasks from summary                                                            |
-| `insufficient` | Partial decomposition — generate tasks for answered questions only; remaining fields marked `pending_input` |
-| `missing`      | No tasks generated. Marked as `manual_review`. The entire phase is a single `manual_review` task.           |
-
-### 1.3 Subphase-to-Task Mapping
-
-When a phase has subphases (from the existing `subphases` table), each subphase generates 1–2 tasks:
-
-- If subphase has `ai_prompt` → 1 task using that prompt
-- If subphase has `acceptance_criteria` → 1 task per criterion (up to 3)
-- If subphase has `dependency_ids` → tasks inherit those dependency references
-
----
-
-## 2. Granularity Rules
-
-### 2.1 Right-Sizing Heuristics
-
-A task is at the right granularity when it satisfies ALL of:
-
-- **Single output**: Task produces one coherent output (one file, one config, one test suite)
-- **1–3 prompt rounds**: An AI agent can complete the task in 1–3 interactions
-- **Independent verification**: The task's acceptance criteria can be checked without running other tasks
-- **Clear boundary**: Task does not span multiple architectural layers (e.g., "build the API and frontend" should be split)
-
-### 2.2 When to Split
-
-Split a task when it has:
-
-- Multiple distinct output files (split by file)
-- Cross-layer concerns (split by layer: API, DB, frontend)
-- Sequential dependency within (split by dependency ordering)
-- Estimated > 3 prompt rounds (split into smaller units)
-
-### 2.3 When to Merge
-
-Merge adjacent tasks when they:
-
-- Operate on the same file or tightly coupled files
-- Have sequential dependencies with no other work in between
-- Cannot be independently verified (one's output is meaningless without the other)
-- Together produce a single coherent feature
-
-**Hard limit**: No single task should require more than 5 prompt rounds or produce more than 3 files.
-
----
-
-## 3. Dependency Types
-
-### 3.1 Edge Types
-
-| Type         | Symbol  | Meaning                            | Example                                                 |
-| ------------ | ------- | ---------------------------------- | ------------------------------------------------------- |
-| `blocks`     | A →→ B  | A must complete before B can start | Schema must be created before writing queries           |
-| `triggers`   | A ──▶ B | B becomes ready when A starts      | CI pipeline triggers deployment                         |
-| `input_from` | A ──▶ B | B uses A's output as input         | API spec from architecture feeds backend implementation |
-
-### 3.2 Direction
-
-Dependencies are always directional:
-
-```
-A ──blocks──► B   (A blocks B)
-A ──blocks──► C   (A also blocks C)
-B ──input_from──► D  (D needs B's output)
+interface DependencyEdge {
+  taskId: string;
+  dependsOnTaskId: string;
+  dependencyType: "blocks" | "triggers" | "input_from";
+}
 ```
 
-The graph is a DAG (Directed Acyclic Graph). Cycle detection is a mandatory preprocessing step.
+### 1.2 Phase-to-Task Mapping
 
----
+Each of the 12 lifecycle phases produces 1–5 tasks based on `PhaseInput.status` and `TASK_COUNTS[phaseType]`:
 
-## 4. Ordering & Priority Logic
-
-### 4.1 Phase Ordering
-
-Tasks are ordered first by phase index (0–11):
-
-```
-Ideation (0) → Requirements (1) → Architecture (2) → Security (3) → ... → Monitoring (11)
-```
+| Phase          | Min tasks | Max tasks | Typical types      |
+| -------------- | --------- | --------- | ------------------ |
+| Ideation       | 1         | 2         | config, test       |
+| Requirements   | 1         | 2         | config, test       |
+| Architecture   | 2         | 4         | config, code, test |
+| Security       | 1         | 3         | config, code, test |
+| Database       | 2         | 4         | config, code, test |
+| Backend        | 3         | 5         | config, code, test |
+| Frontend       | 3         | 5         | config, code, test |
+| Core Features  | 2         | 4         | config, code, test |
+| AI Systems     | 1         | 3         | config, code, test |
+| Testing        | 2         | 3         | config, code, test |
+| Deployment     | 1         | 2         | config, test       |
+| Monitoring     | 1         | 2         | config, test       |
+| **Total (12)** | **20**    | **40**    |                    |
 
 Within each phase, tasks follow this order:
 
-1. **Prerequisites** (config, setup, scaffolding)
-2. **Core implementation** (business logic, features)
-3. **Verification** (tests, validation, documentation)
+1. **Prerequisite** (config, type=config) — "Set up {Phase} foundations"
+2. **Core implementation** (code, type=code) — "Implement {Phase} core logic"
+3. **Verification** (test, type=test) — "Verify {Phase} implementation"
 
-### 4.2 Priority Assignment
+### 1.3 Phase Status Handling
 
-| Condition                                               | Priority   |
-| ------------------------------------------------------- | ---------- |
-| Task is on the critical path (longest dependency chain) | `critical` |
-| Task blocks 3+ other tasks                              | `high`     |
-| Task is a prerequisite for the next phase               | `high`     |
-| Standard task                                           | `medium`   |
-| Optional enhancement, documentation                     | `low`      |
+| Phase status   | Decomposition behavior                                                                               |
+| -------------- | ---------------------------------------------------------------------------------------------------- |
+| `sufficient`   | Full decomposition — generate full task count                                                        |
+| `insufficient` | Reduced task count (min − 1) + a `pending_input` task with `needs_review` status and `failureReason` |
+| `missing`      | Single `review` task with `needs_review` status and `failureReason`                                  |
 
-### 4.3 Parallelization
+### 1.4 Dependency Computation
 
-Tasks with no dependency path between them are parallelizable:
+**Within-phase:** Sequential `blocks` edges — prerequisite → core → verification.
 
-```
-A ──blocks──► B
-C             (C has no relationship to A or B → runs in parallel)
-```
+**Cross-phase:** The last task of phase N blocks the first task of phase N+1 using a `blocks` dependency.
 
-The decomposition engine marks parallelizable tasks so the execution engine can run them concurrently.
+Dependency direction: `A —blocks—► B` means "A must complete before B can start."
+
+### 1.5 Status Computation
+
+- **Ready:** First task in the graph, or all dependencies are `complete`.
+- **Blocked:** At least one dependency is not `complete`, or any dependency is a `review`-type task.
+- **Needs review:** Tasks of type `review` or `pending_input` (non-decomposable phases).
+- **Pending:** Default status for newly created tasks that are not yet evaluated.
 
 ---
 
-## 5. Graph Representation
+## 2. Prompt Assembly
 
-### 5.1 Minimum Task Metadata
-
-Every task in the graph must have:
+### 2.1 Prompt Artifact Schema
 
 ```typescript
-interface ExecutionTask {
-  id: string;
-  planId: string;
-  phaseType: string; // Which lifecycle phase
-  title: string; // Short actionable title
-  type: TaskType; // code, config, test, docs, review, deploy, other
-  priority: Priority; // low, medium, high, critical
-  status: TaskStatus; // pending, blocked, ready, in_progress, complete
-  order: number; // Display/execution order within phase
-  dependencies: {
-    // Resolved dependency list
-    taskId: string;
-    type: DependencyType; // blocks, triggers, input_from
-  }[];
-  acceptanceCriteria: string[]; // Verifiable conditions
-  estimatedPromptRounds: number; // 1–5
-}
-```
-
-### 5.2 Cross-Phase References
-
-A task in phase N can depend on a task in phase M (M < N):
-
-```
-Architecture phase ──► produce API spec ──input_from──► Backend phase ──► implement endpoint
-```
-
-Cross-phase dependencies use the `input_from` type and reference the upstream task's output artifact.
-
-### 5.3 Output Artifacts
-
-Each completed task produces an output artifact reference:
-
-```typescript
-interface TaskOutput {
+interface PromptArtifact {
+  id: string; // UUID
   taskId: string;
-  description: string; // What was produced
-  artifactType: string; // file, config, test, doc, deploy
-  downstreamTaskIds: string[]; // Tasks that use this as input
+  planId: string;
+  planVersion: number;
+  promptText: string; // Full rendered markdown
+  sections: PromptSection; // Structured sections
+  version: number; // Always 1 (append-only per task)
+  status: "pending" | "complete" | "failed" | "needs_review";
+  failureReason: string | null; // Set when status != "complete"
+  createdAt: string; // ISO 8601
+}
+
+interface PromptSection {
+  objective: string;
+  context: string;
+  constraints: string[];
+  expectedOutput: string;
+  validationCriteria: string[];
+  architecturalAlignment: string;
+  agentTips: AgentTips;
 }
 ```
 
-Output artifacts are stored in `prompt_artifacts.result_text` and referenced by `task_dependencies.dependency_type = 'input_from'`.
+### 2.2 Prompt Rendering
+
+`formatPrompt()` renders `PromptSection` into deterministic Markdown:
+
+```
+# Execution Prompt
+
+## Objective
+{objective}
+
+## Context
+{context}
+
+## Constraints
+- {constraint 1}
+- {constraint 2}
+
+## Expected Output
+{expectedOutput}
+
+## Validation Criteria
+- {criterion 1}
+- {criterion 2}
+
+## Architectural Alignment
+{architecturalAlignment}
+
+## Agent Tips
+### Security
+- {tip}
+
+### Edge Cases
+- {tip}
+
+### Dependency Warnings
+- {tip}
+
+### Common Bugs
+- {tip}
+```
+
+Agent Tips subsections are only included when their arrays are non-empty.
+
+### 2.3 Validation
+
+Every prompt artifact is validated after assembly:
+
+| Condition                                             | Result         |
+| ----------------------------------------------------- | -------------- |
+| All 7 required sections present with content          | `complete`     |
+| Missing section, empty array, or text under 200 chars | `failed`       |
+| Prompt text exceeds 5000 chars                        | `needs_review` |
+| Agent tips all empty                                  | `failed`       |
+| Objective under 10 chars or expectedOutput under 20   | `failed`       |
+
+### 2.4 Agent Tips Usage
+
+The `agentTips` section provides explicit guidance for AI coding agents:
+
+| Subsection              | Purpose                                         | Included tips (count)     |
+| ----------------------- | ----------------------------------------------- | ------------------------- |
+| **Security**            | Common security pitfalls and requirements       | 4 base + task-type extras |
+| **Edge Cases**          | Boundary conditions, error states, empty states | 3                         |
+| **Dependency Warnings** | Import/type/config integration warnings         | 3                         |
+| **Common Bugs**         | Frequently introduced defects in similar tasks  | 4 base + task-type extras |
+
+**Task-type-specific extras:**
+
+- `code` type: adds "Unhandled promise rejections" and "Memory leaks" to commonBugs
+- `config` type: adds secret-in-config warning to security, default-value warning to commonBugs
 
 ---
 
-## 6. Fallback Rules
+## 3. Export Format
 
-### 6.1 Insufficient Input
+### 3.1 Bundle Format
 
-When a phase summary has insufficient content (confidence < 0.3 or status = `missing`):
+Endpoint: `GET /api/v1/plans/:planId/prompts/export?version=N`
 
-1. Create a single `manual_review` task with `type: "review"` and `priority: "high"`
-2. Include the phase name and available context in the task description
-3. Set `status: "blocked"` — waiting for human input
-4. Downstream tasks that depend on this phase's output are also blocked
+```json
+{
+  "exportFormat": "orchestra-prompt-bundle-v1",
+  "exportedAt": "2026-05-15T23:30:00.000Z",
+  "planId": "uuid",
+  "planVersion": 1,
+  "derivedFromPlanVersion": null,
+  "taskCount": 20,
+  "promptCount": 20,
+  "warnings": ["2 task(s) have no prompt artifact"],
+  "tasks": [
+    {
+      "order": 0,
+      "phaseType": "ideation",
+      "title": "Set up Ideation foundations",
+      "type": "config",
+      "priority": "high",
+      "status": "ready",
+      "dependencies": [],
+      "acceptanceCriteria": ["..."],
+      "promptText": "# Execution Prompt\n\n## Objective\n...",
+      "promptValidationStatus": "complete",
+      "promptFailureReason": null
+    }
+  ],
+  "metadata": {
+    "generatedAt": "2026-05-15T23:29:00.000Z",
+    "graphVersion": 1
+  }
+}
+```
 
-### 6.2 Cycle Detection
+Key properties:
 
-Before finalizing the graph, run cycle detection:
+- `warnings` array (omitted if empty) — includes missing/null prompt artifacts
+- `promptValidationStatus` — per-task status of the prompt artifact
+- `promptFailureReason` — per-task failure reason
+- `derivedFromPlanVersion` — lineage of the graph version used
 
-1. Build adjacency list from `blocks` and `input_from` edges
-2. Run DFS-based cycle detection
-3. If a cycle is found, break it by:
-   a. Identify the lowest-priority task in the cycle
-   b. Remove its outgoing dependency edge
-   c. Mark that task as `manual_review` with a note explaining the conflict
+### 3.2 Export Flows
 
-### 6.3 Overly Broad Task
-
-If a phase would produce more than 5 tasks, apply merge rules (section 2.3) until ≤ 5. If merging cannot reduce the count below 5:
-
-1. Group tasks into sub-groups by concern
-2. Create a parent task (`parent_task_id`) for each group
-3. Set child task count to 3–5 per group
-
-### 6.4 Unknown Task Type
-
-If a task's type cannot be determined from its content:
-
-1. Default to `type: "other"`
-2. Set `priority: "medium"`
-3. Flag with an ambiguity flag so the UI can prompt for clarification
+| Flow               | Trigger                                         | Output                                      |
+| ------------------ | ----------------------------------------------- | ------------------------------------------- |
+| Single prompt copy | "Copy" button in PromptPreview                  | Clipboard (`navigator.clipboard.writeText`) |
+| Bundle download    | "Export bundle" button in TaskGraphView toolbar | JSON file download (`prompts-{id}.json`)    |
 
 ---
 
-## 7. Deterministic Ordering Summary
+## 4. Regeneration & Version Lineage
 
-```
-1. Order phases by lifecycle index (0–11)
-2. Within each phase:
-   a. Prerequisites → core → verification
-   b. Sort by dependency count (most depended-on first)
-3. Assign priorities:
-   - critical path → critical
-   - blocks 3+ tasks → high
-   - prerequisite for next phase → high
-   - default → medium
-   - optional → low
-4. Mark blocked tasks:
-   - Any task with unresolved `blocks` dependencies → status = blocked
-   - Any task with all dependencies resolved → status = ready
-5. Parallelize: tasks with no dependency path between them are parallelizable
-6. Validate: check for cycles, overly broad phases, unknown types
-```
+### 4.1 Deriving a New Version
 
-The resulting graph is a DAG where every task has a clear reason for existence, explicit dependencies, and an unambiguous status.
+Function: `deriveGraph(planId, newPlanVersion, phases, fromGraph)`
+
+- Creates a fresh `TaskGraph` at `newPlanVersion` with all-new UUIDs for tasks
+- Sets `derivedFromPlanVersion` on the result to `fromGraph.planVersion`
+- Old graph and its prompt artifacts remain untouched in the store
+
+### 4.2 Route Behavior
+
+`GET /api/v1/plans/:planId/tasks?version=N`
+
+| Scenario                             | Behavior                                                            |
+| ------------------------------------ | ------------------------------------------------------------------- |
+| Version 1, no cache                  | `generateTasks(planId, 1, phases)`, cache, assemble prompts         |
+| Version N (>1), prior version exists | `deriveGraph` from latest existing version, cache, assemble prompts |
+| Version N (>1), no prior version     | `generateTasks(planId, N, phases)`, cache, assemble prompts         |
+| Version N already cached             | Return cached graph (no regeneration)                               |
+
+### 4.3 Lineage Preservation
+
+- Old `TaskGraph` objects remain in the `GraphStore` — accessible by `getGraph(planId, version)`
+- Old `PromptArtifact` objects remain in the `PromptStore` — accessible by `getByPlan(planId, planVersion)`
+- Bundle export includes `derivedFromPlanVersion` for auditability
+- Each graph version is uniquely identified by `(planId, planVersion)` — the store rejects duplicate saves
+
+---
+
+## 5. Failure States
+
+### 5.1 Non-Decomposable Tasks
+
+| Scenario                    | Task type       | Status         | failureReason                                                                 |
+| --------------------------- | --------------- | -------------- | ----------------------------------------------------------------------------- |
+| Phase status = missing      | `review`        | `needs_review` | `Phase "{name}" has status "missing" — cannot decompose into tasks`           |
+| Phase status = insufficient | `pending_input` | `needs_review` | `Phase "{name}" has status "insufficient" — some tasks may lack full context` |
+
+### 5.2 Prompt Validation Failures
+
+| Scenario                 | Artifact status | failureReason                         |
+| ------------------------ | --------------- | ------------------------------------- |
+| Missing required section | `failed`        | `Missing required section: {section}` |
+| Section empty            | `failed`        | `Section "{section}" is empty`        |
+| Prompt too short (<200)  | `failed`        | `Prompt is too short ({n} chars)`     |
+| No agent tips            | `failed`        | `Agent tips section is empty`         |
+| Prompt too long (>5000)  | `needs_review`  | `Prompt is very long ({n} chars)`     |
+
+### 5.3 Phase Validation
+
+`validatePhases(phases)` checks:
+
+| Check                          | Error/Warning |
+| ------------------------------ | ------------- |
+| Unknown phase type             | Error         |
+| Duplicate phase type           | Error         |
+| Empty phase name               | Error         |
+| Confidence out of [0, 1] range | Error         |
+| Summary < 5 characters         | Error         |
+| Sufficient + low confidence    | Warning       |
+
+---
+
+## 6. GraphStore & PromptStore
+
+Both are in-memory stores (not persisted to database):
+
+| Store       | Key                                   | Operations                                 |
+| ----------- | ------------------------------------- | ------------------------------------------ |
+| GraphStore  | `(planId, planVersion)`               | `saveGraph`, `getGraph`, `getGraphsByPlan` |
+| PromptStore | `(taskId)` or `(planId, planVersion)` | `save`, `getByTask`, `getByPlan`           |
+
+Constraints:
+
+- `saveGraph` rejects duplicate `(planId, planVersion)` with an error
+- `save` always appends to the prompt list
+
+---
+
+## 7. UI Surface
+
+### 7.1 Task Graph Display
+
+Tasks are grouped by phase and rendered as cards in a grid. Each card shows:
+
+- Title, type badge, priority badge
+- Status dot + border color (red=blocked, amber=needs_review, green=ready, gray=pending, blue=in_progress)
+- Dependency count label
+
+### 7.2 Task Detail Panel
+
+Right-side slide-over showing:
+
+- Task metadata (title, phase, type, priority, order)
+- Status badge
+- Dependencies list (linked task titles)
+- Blocked-by section (upstream blockers in red)
+- Acceptance criteria
+- "View Prompt" button
+
+### 7.3 Prompt Preview Panel
+
+Right-side slide-over showing:
+
+- Full prompt text in monospace `<pre>` block
+- "Copy" button with "Copied!" confirmation
+
+### 7.4 Export Button
+
+"Export bundle" in the task graph toolbar:
+
+- Fetches `GET /api/v1/plans/:planId/prompts/export`
+- Downloads as `prompts-{sessionId[:8]}.json`
+- "Exporting..." loading state
+- Error banner on failure
+
+---
+
+## 8. API Routes Summary
+
+| Method | Path                                             | Description                          |
+| ------ | ------------------------------------------------ | ------------------------------------ |
+| GET    | `/api/v1/plans/:planId/tasks`                    | Get task graph (generates if needed) |
+| GET    | `/api/v1/plans/:planId/tasks?version=N`          | Get specific version of task graph   |
+| GET    | `/api/v1/plans/:planId/tasks/:taskId/prompt`     | Get single prompt artifact           |
+| GET    | `/api/v1/plans/:planId/prompts/export`           | Export full prompt bundle            |
+| GET    | `/api/v1/plans/:planId/prompts/export?version=N` | Export prompts for specific version  |
+
+---
+
+## 9. Snapshot Tests
+
+Three snapshot families guard against accidental regressions:
+
+1. **Graph structure** — phase counts, type counts, status counts, dependency types (no UUIDs)
+2. **Missing/insufficient shape** — structural summary of non-decomposable task outputs
+3. **Prompt output** — heading structure, section lengths, total text length, raw sections object
+
+Snapshots are intentionally structural (counts, lengths, headings) rather than raw text to avoid brittleness from formatting shifts.
