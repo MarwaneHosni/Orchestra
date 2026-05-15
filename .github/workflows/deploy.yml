@@ -1,0 +1,70 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: preview
+        type: choice
+        options:
+          - preview
+          - production
+
+env:
+  NODE_VERSION: "20"
+  PNPM_VERSION: "9"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'preview' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm build
+
+      - name: Deploy API
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          if [ -n "$RAILWAY_TOKEN" ]; then
+            npx @railway/cli up --service api
+          else
+            echo "RAILWAY_TOKEN not set — skipping API deploy"
+          fi
+
+      - name: Deploy Web
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          if [ -n "$RAILWAY_TOKEN" ]; then
+            npx @railway/cli up --service web
+          else
+            echo "RAILWAY_TOKEN not set — skipping Web deploy"
+          fi
+
+      - name: Run database migrations
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          if [ -n "$RAILWAY_TOKEN" ]; then
+            npx @railway/cli run "pnpm --filter @orchestra/api db:migrate"
+          else
+            echo "RAILWAY_TOKEN not set — skipping migrations"
+          fi

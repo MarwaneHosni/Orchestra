@@ -52,6 +52,8 @@ pnpm dev
 
 Open `http://localhost:3000` once the API server is wired (not yet implemented).
 
+See [docs/deployment.md](deployment.md) for CI/CD, secrets management, and production configuration.
+
 ---
 
 ## Environment Configuration

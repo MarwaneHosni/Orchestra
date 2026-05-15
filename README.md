@@ -16,6 +16,8 @@ AI Software Development Orchestrator — transform a raw software idea into a st
 │   ├── decisions/    Architecture decision records
 │   ├── architecture.md  System overview and conventions
 │   └── development.md   Local setup & configuration guide
+├── .github/
+│   └── workflows/    CI (ci.yml) and deployment (deploy.yml) pipelines
 ├── scripts/          Development helper scripts
 ├── .env.example      Template for environment variables
 ├── docker-compose.yml  Local PostgreSQL service
@@ -36,6 +38,8 @@ pnpm dev          # start api, web & worker in watch mode
 Open [http://localhost:3001](http://localhost:3001) for the frontend.
 
 See [docs/development.md](docs/development.md) for a detailed walkthrough, environment configuration, database management, and troubleshooting.
+
+See [docs/deployment.md](docs/deployment.md) for CI/CD, secrets management, and production deployment.
 
 ## Scripts
 
