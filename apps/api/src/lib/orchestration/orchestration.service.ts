@@ -2,7 +2,8 @@ import { z } from "zod";
 import { QUESTIONS, PHASE_ORDER, findQuestionByRef } from "../interview/questions.js";
 import { transitionState } from "../interview/flow.js";
 import type { InterviewState } from "../interview/flow.js";
-import type { AnswerRecord, CreateProjectInput, SessionRecord } from "./types.js";
+import { BlueprintGenerator } from "../blueprint/generator.js";
+import type { AnswerRecord, CreateProjectInput, SessionRecord, PlanRecord } from "./types.js";
 import type { SessionStore } from "./store.js";
 
 export const CreateProjectSchema = z.object({
@@ -11,7 +12,7 @@ export const CreateProjectSchema = z.object({
 });
 
 export const SubmitAnswerSchema = z.object({
-  questionId: z.string().uuid(),
+  questionId: z.string().min(1, "Question ID is required"),
   value: z.string().min(1, "Answer cannot be empty"),
   confidence: z.enum(["high", "medium", "low"]).optional(),
 });
@@ -200,6 +201,52 @@ export class OrchestrationService {
 
     const next = this.getNextQuestion(sessionId);
     return { answer, next: next.question };
+  }
+
+  generateBlueprint(sessionId: string): object {
+    const session = this.store.getSession(sessionId);
+    if (!session) throw new Error(`Session ${sessionId} not found`);
+    if (session.status !== "ready_for_generation" && session.status !== "completed") {
+      throw new Error(
+        `Session must be ready_for_generation before generating a blueprint (current: ${session.status})`,
+      );
+    }
+
+    const project = this.store.getProject(session.projectId);
+    if (!project) throw new Error(`Project ${session.projectId} not found`);
+
+    const answers = this.store.getAnswersBySession(sessionId);
+    const existingPlans = this.store.getPlansByProject(project.id);
+    const planVersion = existingPlans.length + 1;
+
+    const plan: PlanRecord = {
+      id: crypto.randomUUID(),
+      projectId: project.id,
+      version: planVersion,
+      status: "complete",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.store.insertPlan(plan);
+
+    const generator = new BlueprintGenerator();
+    const output = generator.generate(project, session, answers, plan.id, planVersion);
+
+    this.store.insertBlueprint({
+      id: crypto.randomUUID(),
+      planId: plan.id,
+      projectId: project.id,
+      content: JSON.stringify(output),
+      format: "json",
+      version: planVersion,
+      status: "complete",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    this.transitionSession(sessionId, "completed");
+
+    return output;
   }
 
   transitionSession(sessionId: string, toStatus: string): SessionRecord {

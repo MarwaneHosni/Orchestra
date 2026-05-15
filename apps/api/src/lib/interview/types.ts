@@ -61,7 +61,11 @@ export const FLOW_TRANSITIONS: FlowTransition[] = [
   { from: ["draft"], to: "in_progress", condition: "User starts the interview" },
   { from: ["in_progress"], to: "waiting_for_answers", condition: "Question presented to user" },
   { from: ["waiting_for_answers"], to: "in_progress", condition: "User submits an answer" },
-  { from: ["in_progress"], to: "ready_for_generation", condition: "All required questions answered" },
+  {
+    from: ["in_progress", "waiting_for_answers"],
+    to: "ready_for_generation",
+    condition: "All required questions answered",
+  },
   { from: ["ready_for_generation"], to: "completed", condition: "Plan generated from session" },
   {
     from: ["draft", "in_progress", "waiting_for_answers"],

@@ -41,6 +41,27 @@ export interface AnswerRecord {
   createdAt: string;
 }
 
+export interface PlanRecord {
+  id: string;
+  projectId: string;
+  version: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BlueprintRecord {
+  id: string;
+  planId: string;
+  projectId: string;
+  content: string;
+  format: string;
+  version: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CreateProjectInput {
   ideaText: string;
   projectName?: string;

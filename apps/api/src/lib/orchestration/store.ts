@@ -1,4 +1,11 @@
-import type { ProjectRecord, IdeaRecord, SessionRecord, AnswerRecord } from "./types.js";
+import type {
+  ProjectRecord,
+  IdeaRecord,
+  SessionRecord,
+  AnswerRecord,
+  PlanRecord,
+  BlueprintRecord,
+} from "./types.js";
 
 export interface SessionStore {
   insertProject(p: ProjectRecord): void;
@@ -10,6 +17,10 @@ export interface SessionStore {
   getSessionsByProject(projectId: string): SessionRecord[];
   insertAnswer(a: AnswerRecord): void;
   getAnswersBySession(sessionId: string): AnswerRecord[];
+  insertPlan(p: PlanRecord): void;
+  getPlansByProject(projectId: string): PlanRecord[];
+  insertBlueprint(b: BlueprintRecord): void;
+  getBlueprintsByProject(projectId: string): BlueprintRecord[];
 }
 
 export function createInMemoryStore(): SessionStore {
@@ -17,6 +28,8 @@ export function createInMemoryStore(): SessionStore {
   const i: IdeaRecord[] = [];
   const s: SessionRecord[] = [];
   const a: AnswerRecord[] = [];
+  const plans: PlanRecord[] = [];
+  const blueprints: BlueprintRecord[] = [];
 
   return {
     insertProject(r) {
@@ -49,6 +62,18 @@ export function createInMemoryStore(): SessionStore {
     },
     getAnswersBySession(sessionId) {
       return a.filter((r) => r.sessionId === sessionId);
+    },
+    insertPlan(r) {
+      plans.push(r);
+    },
+    getPlansByProject(projectId) {
+      return plans.filter((r) => r.projectId === projectId);
+    },
+    insertBlueprint(r) {
+      blueprints.push(r);
+    },
+    getBlueprintsByProject(projectId) {
+      return blueprints.filter((r) => r.projectId === projectId);
     },
   };
 }

@@ -36,10 +36,16 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
     return { sessionId, status: "draft" };
   });
 
-  app.post("/api/v1/interviews/:id/start", async (request) => {
-    const session = orch.startSession((request.params as { id: string }).id);
-    return { sessionId: session.id, status: session.status };
-  });
+  app.post(
+    "/api/v1/interviews/:id/start",
+    {
+      schema: { body: { type: "object", properties: {}, additionalProperties: false } },
+    },
+    async (request) => {
+      const session = orch.startSession((request.params as { id: string }).id);
+      return { sessionId: session.id, status: session.status };
+    },
+  );
 
   app.get("/api/v1/interviews/:id/next", async (request) => {
     const result = orch.getNextQuestion((request.params as { id: string }).id);
@@ -55,6 +61,17 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
     const result = orch.submitAnswer((request.params as { id: string }).id, questionId, value, confidence);
     return result;
   });
+
+  app.post(
+    "/api/v1/interviews/:id/generate",
+    {
+      schema: { body: { type: "object", properties: {}, additionalProperties: false } },
+    },
+    async (request) => {
+      const output = orch.generateBlueprint((request.params as { id: string }).id);
+      return output;
+    },
+  );
 
   app.post("/api/v1/interviews/:id/transition", async (request) => {
     const parsed = TransitionSchema.safeParse(request.body);
