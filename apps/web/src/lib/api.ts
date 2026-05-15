@@ -1,0 +1,102 @@
+const BASE = "http://localhost:3000";
+
+export interface CreateProjectResult {
+  projectId: string;
+  sessionId: string;
+}
+
+export interface QuestionPayload {
+  id: string;
+  phaseType: string;
+  order: number;
+  text: string;
+  type: "text" | "select" | "multi_select" | "boolean" | "scale";
+  options: string[];
+  required: boolean;
+  validation: { minLength?: number; maxLength?: number } | null;
+  helpText: string | null;
+}
+
+export interface NextQuestionResult {
+  question: QuestionPayload | null;
+  phaseIndex: number;
+  questionIndex: number;
+  phaseName: string;
+  total: number;
+  answered: number;
+}
+
+export interface BlueprintResult {
+  projectId: string;
+  sessionId: string;
+  planVersion: number;
+  generatedAt: string;
+  projectName: string;
+  projectDescription: string;
+  phases: {
+    phaseType: string;
+    phaseName: string;
+    summary: string;
+    status: "sufficient" | "insufficient" | "missing";
+    confidence: number;
+    ambiguityFlags: { type: string; message: string; severity: string }[];
+  }[];
+  assumptions: { description: string; source: string }[];
+  constraints: { description: string; source: string }[];
+  risks: { description: string; source: string }[];
+  overallConfidence: number;
+  ambiguityFlags: { type: string; message: string; severity: string }[];
+}
+
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    headers: { "Content-Type": "application/json" },
+    ...options,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.error?.message ?? `Request failed: ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+export async function createProject(ideaText: string, projectName?: string): Promise<CreateProjectResult> {
+  return request<CreateProjectResult>("/api/v1/projects", {
+    method: "POST",
+    body: JSON.stringify({ ideaText, projectName }),
+  });
+}
+
+export async function startInterview(sessionId: string): Promise<{ sessionId: string; status: string }> {
+  return request(`/api/v1/interviews/${sessionId}/start`, { method: "POST", body: "{}" });
+}
+
+export async function getNextQuestion(sessionId: string): Promise<NextQuestionResult> {
+  return request(`/api/v1/interviews/${sessionId}/next`);
+}
+
+export async function submitAnswer(
+  sessionId: string,
+  questionId: string,
+  value: string,
+  confidence?: string,
+): Promise<{ answer: { id: string }; next: QuestionPayload | null }> {
+  return request(`/api/v1/interviews/${sessionId}/answers`, {
+    method: "POST",
+    body: JSON.stringify({ questionId, value, confidence }),
+  });
+}
+
+export async function transitionSession(
+  sessionId: string,
+  toStatus: string,
+): Promise<{ sessionId: string; status: string }> {
+  return request(`/api/v1/interviews/${sessionId}/transition`, {
+    method: "POST",
+    body: JSON.stringify({ toStatus }),
+  });
+}
+
+export async function generateBlueprint(sessionId: string): Promise<BlueprintResult> {
+  return request(`/api/v1/interviews/${sessionId}/generate`, { method: "POST", body: "{}" });
+}
