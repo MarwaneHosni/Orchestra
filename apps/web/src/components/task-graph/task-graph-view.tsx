@@ -205,7 +205,10 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
         <TaskDetail
           task={selectedTask}
           allTasks={graph.tasks}
-          onClose={() => setSelectedTask(null)}
+          onClose={() => {
+            setSelectedTask(null);
+            setPromptTaskId(null);
+          }}
           onShowPrompt={(id) => {
             setPromptTaskId(id);
             setSelectedTask(null);
@@ -214,7 +217,13 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
       )}
 
       {promptTaskId && (
-        <PromptPreview taskId={promptTaskId} sessionId={sessionId} onClose={() => setPromptTaskId(null)} />
+        <PromptPreview
+          taskId={promptTaskId}
+          sessionId={sessionId}
+          onClose={() => {
+            setPromptTaskId(null);
+          }}
+        />
       )}
     </div>
   );

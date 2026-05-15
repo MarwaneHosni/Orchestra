@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { QuestionRenderer } from "./question-renderer";
 import { ProgressBar } from "./progress-bar";
 import { PhaseNotice } from "./phase-notice";
 import { StepIndicator } from "@/components/ui/step-indicator";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { LiveAnnouncer } from "@/components/ui/live-announcer";
 import {
   getNextQuestion,
   submitAnswer,
@@ -71,6 +72,10 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
   const [generating, setGenerating] = useState(false);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [dismissedPhaseNotices, setDismissedPhaseNotices] = useState<Set<string>>(new Set());
+  const [announcement, setAnnouncement] = useState("");
+  const questionHeadingRef = useRef<HTMLHeadingElement>(null);
+  const finishedHeadingRef = useRef<HTMLHeadingElement>(null);
+  const backButtonRef = useRef<HTMLButtonElement>(null);
 
   const loadNext = useCallback(async () => {
     setLoading(true);
@@ -85,6 +90,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
       setAnswered(result.answered);
       if (!result.question) {
         setFinished(true);
+        setAnnouncement("All questions answered. Review your answers or generate the plan.");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load question");
@@ -119,6 +125,18 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
     init();
   }, [sessionId, loadNext]);
 
+  useEffect(() => {
+    if (!loading && question && questionHeadingRef.current) {
+      questionHeadingRef.current.focus();
+    }
+  }, [question, loading]);
+
+  useEffect(() => {
+    if (finished && finishedHeadingRef.current) {
+      finishedHeadingRef.current.focus();
+    }
+  }, [finished]);
+
   const handleAnswer = async (value: string) => {
     if (!question) return;
     setSubmitting(true);
@@ -130,9 +148,11 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
         setHistory((prev) => prev.slice(0, -1));
         setHistory((prev) => [...prev, { question, value }]);
       }
+      setAnnouncement("Answer saved");
       await loadNext();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save answer");
+      setAnnouncement("Failed to save answer");
     } finally {
       setSubmitting(false);
     }
@@ -144,6 +164,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
     try {
       await submitAnswer(sessionId, question.id, "");
       setHistory((prev) => [...prev, { question, value: "" }]);
+      setAnnouncement("Question skipped");
       await loadNext();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to skip");
@@ -160,6 +181,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
     setInitialValue(prev.value);
     setFinished(false);
     setPhaseIndex(Math.max(0, phaseIndex - 1));
+    setAnnouncement(`Returned to previous question: ${prev.question.text}`);
   };
 
   const handleGenerate = async () => {
@@ -188,7 +210,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-2xl space-y-6">
+      <div className="mx-auto max-w-2xl space-y-6" role="status" aria-label="Loading interview">
         <div className="h-5 w-48 animate-pulse rounded bg-gray-200" />
         <div className="h-2 w-full animate-pulse rounded-full bg-gray-200" />
         <div className="h-6 w-64 animate-pulse rounded bg-gray-200" />
@@ -201,7 +223,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
   if (error && !question) {
     return (
       <div className="mx-auto max-w-2xl py-16">
-        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center" role="alert">
           <p className="text-red-800">{error}</p>
           <button
             onClick={loadNext}
@@ -218,6 +240,8 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
+      <LiveAnnouncer message={announcement} />
+
       <Breadcrumb items={[{ label: "Projects", href: "/projects" }, { label: "Interview" }]} />
 
       <StepIndicator current="interview" compact />
@@ -233,7 +257,9 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
             {PHASE_LABELS[currentPhaseType] ?? currentPhaseType}
           </span>
           {question && (
-            <span className="ml-auto text-xs text-text-secondary">Question {questionIndex + 1}</span>
+            <span className="ml-auto text-xs text-text-secondary" aria-hidden="true">
+              Question {questionIndex + 1}
+            </span>
           )}
         </div>
       )}
@@ -254,14 +280,24 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
       )}
 
       {history.length > 0 && !finished && (
-        <button onClick={handleBack} className="text-sm text-orchestra-600 hover:text-orchestra-700">
+        <button
+          ref={backButtonRef}
+          onClick={handleBack}
+          className="text-sm text-orchestra-600 hover:text-orchestra-700"
+        >
           &larr; Back to previous question
         </button>
       )}
 
       {finished ? (
-        <div className="rounded-xl border-2 border-orchestra-200 bg-orchestra-50 p-8 text-center">
-          <h2 className="text-xl font-semibold text-text-primary">All questions answered</h2>
+        <div
+          className="rounded-xl border-2 border-orchestra-200 bg-orchestra-50 p-8 text-center"
+          role="region"
+          aria-label="Interview complete"
+        >
+          <h2 ref={finishedHeadingRef} className="text-xl font-semibold text-text-primary" tabIndex={-1}>
+            All questions answered
+          </h2>
           <p className="mt-2 text-sm text-text-secondary">
             You&apos;ve answered all available questions. Review a summary below, then generate your project
             plan.
@@ -269,25 +305,27 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
 
           <div className="mx-auto mt-6 max-w-sm space-y-3 text-left">
             <p className="text-xs font-medium uppercase tracking-wide text-text-secondary">Phase summary</p>
-            {INTERVIEW_PHASES.map((phase) => {
-              const phaseQ = history.filter((h) => h.question.phaseType === phase);
-              const isEmpty = phaseQ.length === 0;
-              return (
-                <div
-                  key={phase}
-                  className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${
-                    isEmpty
-                      ? "border-gray-200 bg-gray-50 text-gray-400"
-                      : "border-green-200 bg-green-50 text-green-800"
-                  }`}
-                >
-                  <span>{PHASE_LABELS[phase] ?? phase}</span>
-                  <span className="text-xs">
-                    {isEmpty ? "No answers" : `${phaseQ.length} answer${phaseQ.length !== 1 ? "s" : ""}`}
-                  </span>
-                </div>
-              );
-            })}
+            <ul className="space-y-3">
+              {INTERVIEW_PHASES.map((phase) => {
+                const phaseQ = history.filter((h) => h.question.phaseType === phase);
+                const isEmpty = phaseQ.length === 0;
+                return (
+                  <li
+                    key={phase}
+                    className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${
+                      isEmpty
+                        ? "border-gray-200 bg-gray-50 text-gray-400"
+                        : "border-green-200 bg-green-50 text-green-800"
+                    }`}
+                  >
+                    <span>{PHASE_LABELS[phase] ?? phase}</span>
+                    <span className="text-xs">
+                      {isEmpty ? "No answers" : `${phaseQ.length} answer${phaseQ.length !== 1 ? "s" : ""}`}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
 
           <div className="mt-6 flex justify-center gap-3">
@@ -302,23 +340,45 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
             <button
               onClick={handleGenerate}
               disabled={generating}
+              aria-busy={generating}
               className="rounded-lg bg-orchestra-600 px-6 py-2 text-sm font-medium text-white hover:bg-orchestra-700 disabled:opacity-50"
             >
               {generating ? "Generating..." : "Generate project plan"}
             </button>
           </div>
-          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+          {error && (
+            <p className="mt-2 text-sm text-red-600" role="alert">
+              {error}
+            </p>
+          )}
         </div>
       ) : question ? (
         <div className="rounded-xl border border-border bg-surface p-6">
+          {history.length > 0 && (
+            <button
+              onClick={handleBack}
+              className="mb-4 text-sm font-medium text-orchestra-600 hover:text-orchestra-700"
+            >
+              &larr; Back to previous question
+            </button>
+          )}
           <QuestionRenderer
             question={question}
             initialValue={initialValue}
             onSubmit={handleAnswer}
             onSkip={handleSkip}
+            headingRef={questionHeadingRef}
           />
-          {submitting && <p className="mt-3 text-sm text-text-secondary">Saving...</p>}
-          {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+          {submitting && (
+            <p className="mt-3 text-sm text-text-secondary" role="status" aria-label="Saving answer">
+              Saving...
+            </p>
+          )}
+          {error && (
+            <p className="mt-3 text-sm text-red-600" role="alert">
+              {error}
+            </p>
+          )}
         </div>
       ) : null}
     </div>

@@ -38,7 +38,7 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-3xl space-y-6">
+      <div className="mx-auto max-w-3xl space-y-6" role="status" aria-label="Loading blueprint">
         <div className="h-5 w-48 animate-pulse rounded bg-gray-200" />
         <div className="h-8 w-64 animate-pulse rounded bg-gray-200" />
         <div className="grid grid-cols-3 gap-4">

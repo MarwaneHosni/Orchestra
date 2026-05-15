@@ -60,32 +60,36 @@ export default function ProjectsPage() {
         </Button>
       </div>
 
-      <div className="space-y-2">
+      <ul className="space-y-2">
         {MOCK_PROJECTS.map((project) => {
           const badge = STATUS_BADGES[project.status] ?? STATUS_BADGES.draft;
           const dotColor = STATUS_DOTS[project.status] ?? "bg-gray-400";
+          const statusLabel = STATUS_BADGES[project.status]?.label ?? "Draft";
           return (
-            <Link
-              key={project.id}
-              href={`/projects/${project.id}/interview`}
-              className="flex items-center gap-4 rounded-xl border border-border bg-surface px-5 py-4 transition-colors hover:bg-gray-50"
-            >
-              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotColor}`} />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-text-primary">{project.name}</p>
-                <p className="text-xs text-text-secondary">{project.createdAt}</p>
-              </div>
-              <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.className}`}>
-                {badge.label}
-              </span>
-              <span className="text-sm text-orchestra-600">
-                {project.status === "draft" ? "Start interview" : "Continue"}
-                &nbsp;&rarr;
-              </span>
-            </Link>
+            <li key={project.id}>
+              <Link
+                href={`/projects/${project.id}/interview`}
+                className="flex items-center gap-4 rounded-xl border border-border bg-surface px-5 py-4 transition-colors hover:bg-gray-50"
+                aria-label={`${project.name}, ${statusLabel}`}
+              >
+                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotColor}`} aria-hidden="true" />
+                <span className="sr-only">Status: {statusLabel}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-text-primary">{project.name}</p>
+                  <p className="text-xs text-text-secondary">{project.createdAt}</p>
+                </div>
+                <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.className}`}>
+                  {badge.label}
+                </span>
+                <span className="text-sm text-orchestra-600" aria-hidden="true">
+                  {project.status === "draft" ? "Start interview" : "Continue"}
+                  &nbsp;&rarr;
+                </span>
+              </Link>
+            </li>
           );
         })}
-      </div>
+      </ul>
     </div>
   );
 }

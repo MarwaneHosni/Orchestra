@@ -39,19 +39,24 @@ export function TaskNodeView({ task, phaseIndex: _phaseIndex, isSelected, onSele
   return (
     <button
       onClick={() => onSelect(task)}
+      aria-pressed={isSelected}
+      aria-label={`${task.title} — ${cfg.label} — ${task.dependencies.length} dep${task.dependencies.length !== 1 ? "s" : ""}`}
       className={cn(
-        "w-full rounded-lg border-2 px-3 py-2 text-left transition-all hover:shadow-sm",
+        "w-full rounded-lg border-2 px-3 py-2 text-left transition-all hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-orchestra-500 focus:ring-offset-1",
         cfg.className,
         isSelected && "ring-2 ring-orchestra-500 ring-offset-1",
       )}
     >
       <div className="flex items-center gap-2">
-        <span className={cn("h-2 w-2 shrink-0 rounded-full", cfg.dot)} />
+        <span className={cn("h-2 w-2 shrink-0 rounded-full", cfg.dot)} aria-hidden="true" />
+        <span className="sr-only">{cfg.label}</span>
         <span className="truncate text-xs font-medium text-text-primary">{task.title}</span>
       </div>
       <div className="mt-1 flex items-center gap-2 text-xs text-text-secondary">
         <span className="rounded bg-white/60 px-1 py-0.5">{task.type}</span>
-        <span>
+        <span
+          aria-label={`${task.dependencies.length} dependenc${task.dependencies.length !== 1 ? "ies" : "y"}`}
+        >
           {task.dependencies.length} dep{task.dependencies.length !== 1 ? "s" : ""}
         </span>
       </div>

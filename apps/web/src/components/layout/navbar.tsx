@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const navLinks = [
   { href: "/", label: "Dashboard" },
@@ -16,6 +16,19 @@ const navLinks = [
 export function Navbar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const firstLinkRef = useRef<HTMLAnchorElement>(null);
+
+  useEffect(() => {
+    if (mobileOpen && firstLinkRef.current) {
+      firstLinkRef.current.focus();
+    }
+  }, [mobileOpen]);
+
+  const handleLinkClick = () => {
+    setMobileOpen(false);
+    toggleRef.current?.focus();
+  };
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/80">
@@ -49,9 +62,11 @@ export function Navbar() {
         </nav>
 
         <button
+          ref={toggleRef}
           className="inline-flex md:hidden items-center justify-center rounded-lg p-2 text-text-secondary hover:bg-gray-100"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-expanded={mobileOpen}
+          aria-controls="mobile-nav"
           aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
         >
           {mobileOpen ? "✕" : "☰"}
@@ -59,16 +74,21 @@ export function Navbar() {
       </div>
 
       {mobileOpen && (
-        <nav className="border-t border-border bg-surface md:hidden" aria-label="Mobile navigation">
+        <nav
+          id="mobile-nav"
+          className="border-t border-border bg-surface md:hidden"
+          aria-label="Mobile navigation"
+        >
           <div className="space-y-1 px-4 py-3">
-            {navLinks.map((link) => {
+            {navLinks.map((link, i) => {
               const isActive =
                 pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
               return (
                 <Link
                   key={link.href}
+                  ref={i === 0 ? firstLinkRef : undefined}
                   href={link.href}
-                  onClick={() => setMobileOpen(false)}
+                  onClick={handleLinkClick}
                   className={cn(
                     "block rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                     isActive

@@ -1,42 +1,38 @@
-import { type ReactNode, useId } from "react";
-import { cn } from "@/lib/utils";
+import { useId, type ReactNode } from "react";
 
 interface FormFieldProps {
   label: string;
-  error?: string;
   description?: string;
   required?: boolean;
+  error?: string;
   children: (id: string, errorId: string, descriptionId: string) => ReactNode;
-  className?: string;
 }
 
-export function FormField({ label, error, description, required, children, className }: FormFieldProps) {
-  const generatedId = useId();
-  const inputId = `field-${generatedId}`;
-  const errorId = `error-${generatedId}`;
-  const descriptionId = `desc-${generatedId}`;
+export function FormField({ label, description, required, error, children }: FormFieldProps) {
+  const id = useId();
+  const errorId = useId();
+  const descriptionId = useId();
 
   return (
-    <div className={cn("space-y-1.5", className)}>
-      <label htmlFor={inputId} className="block text-sm font-medium text-text-primary">
-        {label}
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1">
+        <label htmlFor={id} className="text-sm font-medium text-text-primary">
+          {label}
+        </label>
         {required && (
-          <span className="ml-1 text-red-500" aria-hidden="true">
+          <span className="text-red-500" aria-hidden="true">
             *
           </span>
         )}
-      </label>
-
+      </div>
       {description && (
         <p id={descriptionId} className="text-sm text-text-secondary">
           {description}
         </p>
       )}
-
-      {children(inputId, errorId, descriptionId)}
-
+      {children(id, errorId, descriptionId)}
       {error && (
-        <p id={errorId} role="alert" className="text-sm text-red-600">
+        <p id={errorId} className="text-sm text-red-600" role="alert">
           {error}
         </p>
       )}

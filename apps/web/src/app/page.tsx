@@ -24,14 +24,14 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
-          <Card key={stat.label}>
-            <p className="text-sm text-text-secondary">{stat.label}</p>
-            <p className="mt-1 text-3xl font-semibold text-text-primary">{stat.value}</p>
-          </Card>
+          <div key={stat.label} className="rounded-xl border border-border bg-surface p-4">
+            <dt className="text-sm text-text-secondary">{stat.label}</dt>
+            <dd className="mt-1 text-3xl font-semibold text-text-primary">{stat.value}</dd>
+          </div>
         ))}
-      </div>
+      </dl>
 
       <Card>
         <CardHeader>
@@ -40,9 +40,12 @@ export default function DashboardPage() {
             Describe your software idea and let Orchestra build a complete development plan.
           </CardDescription>
         </CardHeader>
-        <div className="space-y-4">
-          <div className="flex items-start gap-4 rounded-lg bg-surface-secondary p-4">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orchestra-100 text-sm font-semibold text-orchestra-700">
+        <ol className="space-y-4">
+          <li className="flex items-start gap-4 rounded-lg bg-surface-secondary p-4">
+            <span
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orchestra-100 text-sm font-semibold text-orchestra-700"
+              aria-hidden="true"
+            >
               1
             </span>
             <div>
@@ -51,9 +54,12 @@ export default function DashboardPage() {
                 Give your idea a name and a short description.
               </p>
             </div>
-          </div>
-          <div className="flex items-start gap-4 rounded-lg bg-surface-secondary p-4">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orchestra-100 text-sm font-semibold text-orchestra-700">
+          </li>
+          <li className="flex items-start gap-4 rounded-lg bg-surface-secondary p-4">
+            <span
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orchestra-100 text-sm font-semibold text-orchestra-700"
+              aria-hidden="true"
+            >
               2
             </span>
             <div>
@@ -62,9 +68,12 @@ export default function DashboardPage() {
                 Answer structured questions to flesh out requirements, architecture, and constraints.
               </p>
             </div>
-          </div>
-          <div className="flex items-start gap-4 rounded-lg bg-surface-secondary p-4">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orchestra-100 text-sm font-semibold text-orchestra-700">
+          </li>
+          <li className="flex items-start gap-4 rounded-lg bg-surface-secondary p-4">
+            <span
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orchestra-100 text-sm font-semibold text-orchestra-700"
+              aria-hidden="true"
+            >
               3
             </span>
             <div>
@@ -73,8 +82,8 @@ export default function DashboardPage() {
                 Receive a complete blueprint, roadmap, and dependency-aware task graph.
               </p>
             </div>
-          </div>
-        </div>
+          </li>
+        </ol>
       </Card>
     </div>
   );

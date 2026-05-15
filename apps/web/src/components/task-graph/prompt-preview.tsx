@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useFocusTrap, useEscapeToClose } from "@/lib/use-focus-trap";
+import { LiveAnnouncer } from "@/components/ui/live-announcer";
 
 interface PromptPreviewProps {
   taskId: string;
@@ -9,10 +11,16 @@ interface PromptPreviewProps {
 }
 
 export function PromptPreview({ taskId, sessionId, onClose }: PromptPreviewProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
   const [prompt, setPrompt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [announcement, setAnnouncement] = useState("");
+
+  const close = useCallback(() => onClose(), [onClose]);
+  useFocusTrap(panelRef, true);
+  useEscapeToClose(close, true);
 
   useEffect(() => {
     const load = async () => {
@@ -22,8 +30,10 @@ export function PromptPreview({ taskId, sessionId, onClose }: PromptPreviewProps
         if (!res.ok) throw new Error("Failed to load prompt");
         const data = await res.json();
         setPrompt(data.promptText);
+        setAnnouncement("Prompt loaded");
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load");
+        setAnnouncement("Failed to load prompt");
       } finally {
         setLoading(false);
       }
@@ -36,40 +46,58 @@ export function PromptPreview({ taskId, sessionId, onClose }: PromptPreviewProps
     try {
       await navigator.clipboard.writeText(prompt);
       setCopied(true);
+      setAnnouncement("Prompt copied to clipboard");
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // clipboard may be unavailable
+      setAnnouncement("Could not copy prompt");
     }
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border bg-surface shadow-xl sm:w-[36rem]">
+    <div
+      ref={panelRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Execution prompt"
+      className="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border bg-surface shadow-xl sm:w-[36rem]"
+    >
+      <LiveAnnouncer message={announcement} />
+
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <h2 className="text-sm font-semibold text-text-primary">Execution Prompt</h2>
         <div className="flex items-center gap-2">
           {prompt && (
             <button
               onClick={handleCopy}
-              className="rounded-lg border border-border px-3 py-1 text-xs font-medium text-text-secondary hover:bg-gray-50"
+              aria-label="Copy prompt to clipboard"
+              className="rounded-lg border border-border px-3 py-1 text-xs font-medium text-text-secondary hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orchestra-500"
             >
               {copied ? "Copied!" : "Copy"}
             </button>
           )}
-          <button onClick={onClose} className="text-text-secondary hover:text-text-primary">
-            &times;
+          <button
+            onClick={onClose}
+            aria-label="Close prompt preview"
+            className="rounded-lg p-1 text-text-secondary hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-orchestra-500"
+          >
+            <span aria-hidden="true">&times;</span>
           </button>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
-        {loading ? (
-          <div className="space-y-3">
+        {loading && (
+          <div className="space-y-3" role="status" aria-label="Loading prompt">
             <div className="h-4 w-48 animate-pulse rounded bg-gray-200" />
             <div className="h-32 w-full animate-pulse rounded bg-gray-100" />
           </div>
-        ) : error ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
-        ) : (
+        )}
+        {!loading && error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">
+            {error}
+          </div>
+        )}
+        {!loading && !error && prompt && (
           <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed text-text-primary">
             {prompt}
           </pre>

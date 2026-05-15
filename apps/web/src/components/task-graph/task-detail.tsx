@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef, useCallback } from "react";
+import { useFocusTrap, useEscapeToClose } from "@/lib/use-focus-trap";
 import type { TaskData } from "./task-node";
 
 interface TaskDetailProps {
@@ -19,14 +21,29 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export function TaskDetail({ task, allTasks, onClose, onShowPrompt }: TaskDetailProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
   const depNames = task.dependencies.map((d) => allTasks.find((t) => t.id === d.taskId)).filter(Boolean);
 
+  const close = useCallback(() => onClose(), [onClose]);
+  useFocusTrap(panelRef, true);
+  useEscapeToClose(close, true);
+
   return (
-    <div className="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border bg-surface shadow-xl sm:w-96">
+    <div
+      ref={panelRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Task details: ${task.title}`}
+      className="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border bg-surface shadow-xl sm:w-96"
+    >
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <h2 className="text-sm font-semibold text-text-primary">Task Details</h2>
-        <button onClick={onClose} className="text-text-secondary hover:text-text-primary">
-          &times;
+        <button
+          onClick={onClose}
+          aria-label="Close task details"
+          className="rounded-lg p-1 text-text-secondary hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-orchestra-500"
+        >
+          <span aria-hidden="true">&times;</span>
         </button>
       </div>
 
@@ -45,7 +62,10 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt }: TaskDetail
         </div>
 
         {"failureReason" in task && task.failureReason && (
-          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          <div
+            className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
+            role="alert"
+          >
             <p className="font-medium">Needs Review</p>
             <p className="mt-1 text-xs">{task.failureReason}</p>
           </div>
@@ -58,13 +78,13 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt }: TaskDetail
           {depNames.length === 0 ? (
             <p className="text-sm text-text-secondary">No dependencies — first task in chain.</p>
           ) : (
-            <div className="space-y-1.5">
+            <ul className="space-y-1.5">
               {depNames.map((t) => (
-                <div key={t!.id} className="rounded-lg border border-border bg-gray-50 px-3 py-2 text-sm">
+                <li key={t!.id} className="rounded-lg border border-border bg-gray-50 px-3 py-2 text-sm">
                   {t!.title}
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
         </div>
 
@@ -86,20 +106,20 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt }: TaskDetail
             <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">
               Blocked By
             </h4>
-            <div className="space-y-1.5">
+            <ul className="space-y-1.5">
               {task.dependencies.map((d) => {
                 const depTask = allTasks.find((t) => t.id === d.taskId);
                 return (
-                  <div
+                  <li
                     key={d.taskId}
                     className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm"
                   >
-                    <span className="h-2 w-2 rounded-full bg-red-500" />
+                    <span className="h-2 w-2 rounded-full bg-red-500" aria-hidden="true" />
                     <span className="text-red-700">{depTask?.title ?? d.taskId}</span>
-                  </div>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           </div>
         )}
 
@@ -118,7 +138,7 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt }: TaskDetail
       <div className="border-t border-border p-4">
         <button
           onClick={() => onShowPrompt(task.id)}
-          className="w-full rounded-lg bg-orchestra-600 px-4 py-2 text-sm font-medium text-white hover:bg-orchestra-700"
+          className="w-full rounded-lg bg-orchestra-600 px-4 py-2 text-sm font-medium text-white hover:bg-orchestra-700 focus:outline-none focus:ring-2 focus:ring-orchestra-500 focus:ring-offset-2"
         >
           View Prompt
         </button>

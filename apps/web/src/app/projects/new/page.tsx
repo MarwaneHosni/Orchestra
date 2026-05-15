@@ -61,10 +61,12 @@ export default function NewProjectPage() {
             required
             description="What problem does your software solve? Describe your idea in a few sentences."
           >
-            {(id, _errorId, descriptionId) => (
+            {(id, errorId, descriptionId) => (
               <textarea
                 id={id}
-                aria-describedby={descriptionId}
+                aria-describedby={`${descriptionId} ${error ? errorId : ""}`.trim()}
+                aria-required="true"
+                aria-invalid={!!error}
                 rows={5}
                 placeholder="e.g. A task management tool for remote teams that integrates with Slack and GitHub..."
                 value={ideaText}
@@ -74,7 +76,11 @@ export default function NewProjectPage() {
             )}
           </FormField>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && (
+            <p className="text-sm text-red-600" role="alert">
+              {error}
+            </p>
+          )}
 
           <div className="flex gap-3 pt-2">
             <Button type="submit" disabled={loading || !ideaText.trim()}>
