@@ -5,6 +5,11 @@
 ```
 users ──< projects ──< ideas
                   │──< plans ──< phases ──< subphases
+                  │             │
+                  │             ├──< execution_tasks ──< task_dependencies
+                  │             │         │
+                  │             │         ├──< prompt_artifacts
+                  │             │         └──< generation_versions
                   │──< interview_sessions ──< answers >── questions
                   │──< assumptions
                   │──< constraints
@@ -254,7 +259,90 @@ never returned by standard API responses — only the metadata fields are expose
 | updated_at | `timestamptz` | NOT NULL, `now()` |
 Indexes: `user_id`, `project_id`, `provider`
 
+### execution_tasks
+
+Individual units of work within a plan. Linked to phases and subphases. Supports versioned regeneration via `superseded_by_task_id`.
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | `uuid` | PK, `gen_random_uuid()` |
+| plan_id | `uuid` | NOT NULL → plans.id |
+| phase_id | `uuid` | → phases.id |
+| subphase_id | `uuid` | → subphases.id |
+| parent_task_id | `uuid` | → execution_tasks.id (task grouping) |
+| title | `varchar(200)` | NOT NULL |
+| description | `text` | |
+| type | `varchar(20)` | NOT NULL, DEFAULT 'other' |
+| priority | `varchar(10)` | NOT NULL, DEFAULT 'medium' |
+| status | `varchar(15)` | NOT NULL, DEFAULT 'pending' |
+| order | `integer` | NOT NULL, DEFAULT 0 |
+| version | `integer` | NOT NULL, DEFAULT 1 |
+| superseded_by_task_id | `uuid` | Regeneration lineage |
+| created_at | `timestamptz` | NOT NULL, `now()` |
+| updated_at | `timestamptz` | NOT NULL, `now()` |
+Indexes: `plan_id`, `phase_id`, `status`
+
+### task_dependencies
+
+First-class dependency edges between tasks. Never flattened into JSON — always stored as individual records.
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | `uuid` | PK, `gen_random_uuid()` |
+| task_id | `uuid` | NOT NULL → execution_tasks.id |
+| depends_on_task_id | `uuid` | NOT NULL → execution_tasks.id |
+| dependency_type | `varchar(15)` | NOT NULL, DEFAULT 'blocks' |
+| created_at | `timestamptz` | NOT NULL, `now()` |
+Indexes: `task_id`, `depends_on_task_id`
+
+### prompt_artifacts
+
+The prompt sent to an AI provider for a task and the result received. Versioned for regeneration tracking.
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | `uuid` | PK, `gen_random_uuid()` |
+| task_id | `uuid` | NOT NULL → execution_tasks.id |
+| prompt_text | `text` | NOT NULL |
+| result_text | `text` | |
+| version | `integer` | NOT NULL, DEFAULT 1 |
+| status | `varchar(10)` | NOT NULL, DEFAULT 'pending' |
+| created_at | `timestamptz` | NOT NULL, `now()` |
+| updated_at | `timestamptz` | NOT NULL, `now()` |
+Indexes: `task_id`
+
+### generation_versions
+
+Audit trail for task regeneration events. Links new versions back to the plan context.
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | `uuid` | PK, `gen_random_uuid()` |
+| task_id | `uuid` | NOT NULL → execution_tasks.id |
+| plan_id | `uuid` | NOT NULL → plans.id |
+| version | `integer` | NOT NULL, DEFAULT 1 |
+| changes_summary | `text` | |
+| created_at | `timestamptz` | NOT NULL, `now()` |
+Indexes: `task_id`, `plan_id`
+
 ## Domain Model Summary
+
+### Task Lineage & Regeneration
+
+```
+Plan v1 ──< execution_tasks (version=1)
+                │
+                ├── If task is regenerated:
+                │   task.version = 2
+                │   task.superseded_by_task_id → new task row
+                │   generation_versions records the event
+                │
+                ├── Dependency edges → task_dependencies
+                ├── AI prompts/results → prompt_artifacts
+                └── Dependent tasks check status before starting
+
+Regeneration preserves version history:
+  execution_tasks (v1, id=A) ──superseded_by──► execution_tasks (v2, id=B)
+                                                      │
+                                                      └── prompt_artifacts (v2)
+                                                      └── generation_versions (v2)
+```
 
 ### Planning Workflow
 

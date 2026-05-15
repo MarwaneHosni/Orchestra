@@ -14,3 +14,7 @@ export { risks, riskLikelihoods, riskStatuses } from "./risks.js";
 export { blueprints, blueprintFormats, blueprintStatuses } from "./blueprints.js";
 export { providerCredentials, providerNames, credentialStatuses } from "./provider-credentials.js";
 export { usageRecords, usageRecordStatuses } from "./usage-records.js";
+export { executionTasks, taskStatuses, taskPriorities, taskTypes } from "./execution-tasks.js";
+export { taskDependencies, dependencyTypes } from "./task-dependencies.js";
+export { promptArtifacts, promptStatuses } from "./prompt-artifacts.js";
+export { generationVersions } from "./generation-versions.js";

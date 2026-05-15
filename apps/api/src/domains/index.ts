@@ -15,6 +15,7 @@ import { registerRiskRoutes } from "./risks.js";
 import { registerBlueprintRoutes } from "./blueprints.js";
 import { registerProviderCredentialRoutes } from "./provider-credentials.js";
 import { registerUsageRecordRoutes } from "./usage-records.js";
+import { registerExecutionTaskRoutes } from "./execution-tasks.js";
 
 export async function registerDomainRoutes(app: FastifyInstance) {
   await Promise.all([
@@ -34,5 +35,6 @@ export async function registerDomainRoutes(app: FastifyInstance) {
     registerBlueprintRoutes(app),
     registerProviderCredentialRoutes(app),
     registerUsageRecordRoutes(app),
+    registerExecutionTaskRoutes(app),
   ]);
 }
