@@ -8,6 +8,11 @@ import { registerSubPhaseRoutes } from "./subphases.js";
 import { registerQuestionRoutes } from "./questions.js";
 import { registerAnswerRoutes } from "./answers.js";
 import { registerGenerationRoutes } from "./generations.js";
+import { registerInterviewSessionRoutes } from "./interview-sessions.js";
+import { registerAssumptionRoutes } from "./assumptions.js";
+import { registerConstraintRoutes } from "./constraints.js";
+import { registerRiskRoutes } from "./risks.js";
+import { registerBlueprintRoutes } from "./blueprints.js";
 
 export async function registerDomainRoutes(app: FastifyInstance) {
   await Promise.all([
@@ -20,5 +25,10 @@ export async function registerDomainRoutes(app: FastifyInstance) {
     registerQuestionRoutes(app),
     registerAnswerRoutes(app),
     registerGenerationRoutes(app),
+    registerInterviewSessionRoutes(app),
+    registerAssumptionRoutes(app),
+    registerConstraintRoutes(app),
+    registerRiskRoutes(app),
+    registerBlueprintRoutes(app),
   ]);
 }

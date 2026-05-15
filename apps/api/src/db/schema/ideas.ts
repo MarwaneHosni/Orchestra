@@ -14,6 +14,7 @@ export const ideas = pgTable(
     refinedDescription: text("refined_description"),
     status: varchar("status", { length: 20 }).default("raw").notNull(),
     interviewData: text("interview_data"),
+    provenance: varchar("provenance", { length: 20 }).default("user").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
