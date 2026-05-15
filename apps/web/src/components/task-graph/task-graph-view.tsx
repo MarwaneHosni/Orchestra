@@ -47,6 +47,8 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
   const [error, setError] = useState("");
   const [selectedTask, setSelectedTask] = useState<TaskData | null>(null);
   const [promptTaskId, setPromptTaskId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -94,6 +96,27 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
     );
   }
 
+  const handleExport = async () => {
+    setExporting(true);
+    setExportError("");
+    try {
+      const res = await fetch(`http://localhost:3000/api/v1/plans/${sessionId}/prompts/export`);
+      if (!res.ok) throw new Error("Export failed");
+      const bundle = await res.json();
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `prompts-${sessionId.slice(0, 8)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setExportError(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
@@ -103,7 +126,19 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
             {graph.tasks.length} tasks &middot; {graph.dependencies.length} dependencies &middot; v{1}
           </p>
         </div>
+        <button
+          onClick={handleExport}
+          disabled={exporting}
+          className="rounded-lg bg-orchestra-600 px-4 py-2 text-sm font-medium text-white hover:bg-orchestra-700 disabled:opacity-50"
+        >
+          {exporting ? "Exporting..." : "Export bundle"}
+        </button>
       </div>
+      {exportError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {exportError}
+        </div>
+      )}
 
       <div className="space-y-6">
         {PHASES.filter((p) => graph.tasks.some((t) => t.phaseType === p)).map((phase) => {

@@ -150,4 +150,57 @@ export async function registerExecutionTaskRoutes(app: FastifyInstance) {
     if (!prompt) throw new NotFoundError("Prompt", taskId);
     return prompt;
   });
+
+  app.get("/api/v1/plans/:planId/prompts/export", async (request) => {
+    const { planId } = request.params as { planId: string };
+    const graph = graphStore.getGraph(planId, 1);
+    if (!graph) throw new NotFoundError("Plan", planId);
+
+    const prompts = promptStore.getByPlan(planId, 1);
+    const tasks = graph.tasks;
+
+    const missingPrompts = tasks.filter((t) => !prompts.find((p) => p.taskId === t.id));
+    const tasksWithNullPrompt = tasks.filter((t) => {
+      const p = prompts.find((p) => p.taskId === t.id);
+      return p && !p.promptText;
+    });
+
+    const warnings: string[] = [];
+    if (missingPrompts.length > 0) {
+      warnings.push(`${missingPrompts.length} task(s) have no prompt artifact`);
+    }
+    if (tasksWithNullPrompt.length > 0) {
+      warnings.push(`${tasksWithNullPrompt.length} task(s) have empty prompt text`);
+    }
+
+    const bundle = {
+      exportFormat: "orchestra-prompt-bundle-v1",
+      exportedAt: new Date().toISOString(),
+      planId,
+      planVersion: 1,
+      taskCount: tasks.length,
+      promptCount: prompts.length,
+      warnings: warnings.length > 0 ? warnings : undefined,
+      tasks: tasks.map((t) => {
+        const prompt = prompts.find((p) => p.taskId === t.id);
+        return {
+          order: t.order,
+          phaseType: t.phaseType,
+          title: t.title,
+          type: t.type,
+          priority: t.priority,
+          status: t.status,
+          dependencies: t.dependencies,
+          acceptanceCriteria: t.acceptanceCriteria,
+          promptText: prompt?.promptText ?? null,
+        };
+      }),
+      metadata: {
+        generatedAt: prompts[0]?.createdAt ?? null,
+        graphVersion: 1,
+      },
+    };
+
+    return bundle;
+  });
 }

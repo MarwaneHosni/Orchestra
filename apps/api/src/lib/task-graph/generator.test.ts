@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generateTasks, createInMemoryGraphStore } from "./generator.js";
+import { assemblePrompt, createInMemoryPromptStore } from "../prompt/index.js";
 import type { PhaseInput } from "./types.js";
 
 function makePhase(
@@ -151,5 +152,31 @@ describe("TaskGraphStore", () => {
 
     expect(store.getGraphsByPlan("plan-1")).toHaveLength(2);
     expect(store.getGraphsByPlan("plan-2")).toHaveLength(1);
+  });
+});
+
+describe("Export bundle", () => {
+  it("produces a complete bundle with all prompts", () => {
+    const graphStore = createInMemoryGraphStore();
+    const promptStore = createInMemoryPromptStore();
+    const phases: PhaseInput[] = ["ideation", "requirements"].map((p) => makePhase(p));
+    const graph = generateTasks("plan-export", 1, phases);
+    graphStore.saveGraph(graph);
+
+    const allTasks = graph.tasks;
+    for (const task of allTasks) {
+      assemblePrompt(
+        { task, planName: "ExportTest", allTasks, predecessorOutputs: [], phaseSummary: task.phaseType },
+        promptStore,
+      );
+    }
+
+    const tasks = allTasks;
+    const prompts = promptStore.getByPlan("plan-export", 1);
+    const missing = tasks.filter((t) => !prompts.find((p) => p.taskId === t.id));
+
+    expect(prompts.length).toBe(tasks.length);
+    expect(missing).toHaveLength(0);
+    expect(prompts[0].promptText.length).toBeGreaterThan(200);
   });
 });
