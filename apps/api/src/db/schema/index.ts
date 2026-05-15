@@ -12,3 +12,4 @@ export { assumptions, assumptionConfidences, assumptionStatuses } from "./assump
 export { constraints, constraintTypes, constraintSeverities } from "./constraints.js";
 export { risks, riskLikelihoods, riskStatuses } from "./risks.js";
 export { blueprints, blueprintFormats, blueprintStatuses } from "./blueprints.js";
+export { providerCredentials, providerNames, credentialStatuses } from "./provider-credentials.js";

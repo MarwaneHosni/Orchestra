@@ -13,6 +13,7 @@ import { registerAssumptionRoutes } from "./assumptions.js";
 import { registerConstraintRoutes } from "./constraints.js";
 import { registerRiskRoutes } from "./risks.js";
 import { registerBlueprintRoutes } from "./blueprints.js";
+import { registerProviderCredentialRoutes } from "./provider-credentials.js";
 
 export async function registerDomainRoutes(app: FastifyInstance) {
   await Promise.all([
@@ -30,5 +31,6 @@ export async function registerDomainRoutes(app: FastifyInstance) {
     registerConstraintRoutes(app),
     registerRiskRoutes(app),
     registerBlueprintRoutes(app),
+    registerProviderCredentialRoutes(app),
   ]);
 }

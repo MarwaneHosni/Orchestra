@@ -231,6 +231,29 @@ Audit trail for every AI generation call. Tracks provider, model, token usage, p
 | created_at | `timestamptz` | NOT NULL, `now()` |
 Indexes: `project_id`, `type`
 
+### provider_credentials
+
+Stores encrypted AI provider API keys and metadata. The `encrypted_api_key` and `key_reference` fields are
+never returned by standard API responses — only the metadata fields are exposed.
+| Column | Type | Constraints |
+|--------|------|-------------|
+| id | `uuid` | PK, `gen_random_uuid()` |
+| user_id | `uuid` | NOT NULL → users.id |
+| project_id | `uuid` | → projects.id (nullable — null = user-level) |
+| provider | `varchar(50)` | NOT NULL |
+| display_name | `varchar(100)` | NOT NULL |
+| status | `varchar(20)` | NOT NULL, DEFAULT 'unverified' |
+| encrypted_api_key | `text` | AES-256-GCM encrypted blob (nullable) |
+| key_reference | `text` | External vault reference (nullable) |
+| default_model | `varchar(100)` | Preferred model ID |
+| models_available | `text` | JSON array of available model IDs |
+| last_verified_at | `timestamptz` | Last successful validation |
+| error_message | `text` | Last validation error |
+| metadata | `text` | Provider-specific JSON config |
+| created_at | `timestamptz` | NOT NULL, `now()` |
+| updated_at | `timestamptz` | NOT NULL, `now()` |
+Indexes: `user_id`, `project_id`, `provider`
+
 ## Domain Model Summary
 
 ### Planning Workflow
