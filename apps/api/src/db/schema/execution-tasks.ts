@@ -3,9 +3,25 @@ import { plans } from "./plans.js";
 import { phases } from "./phases.js";
 import { subphases } from "./subphases.js";
 
-export const taskStatuses = ["pending", "blocked", "ready", "in_progress", "complete"] as const;
+export const taskStatuses = [
+  "pending",
+  "blocked",
+  "ready",
+  "in_progress",
+  "complete",
+  "needs_review",
+] as const;
 export const taskPriorities = ["low", "medium", "high", "critical"] as const;
-export const taskTypes = ["code", "config", "test", "docs", "review", "deploy", "other"] as const;
+export const taskTypes = [
+  "code",
+  "config",
+  "test",
+  "docs",
+  "review",
+  "deploy",
+  "pending_input",
+  "other",
+] as const;
 
 export const executionTasks = pgTable(
   "execution_tasks",
