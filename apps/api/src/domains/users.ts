@@ -10,9 +10,7 @@ export const UserSchema = z.object({
 export type User = z.infer<typeof UserSchema>;
 
 export async function registerUserRoutes(app: FastifyInstance) {
-  app.get("/api/v1/users/:id", {
-    schema: { response: { 501: { type: "object", properties: { error: { type: "object" } } } } },
-  }, async () => {
-    return { error: { code: "NOT_IMPLEMENTED", message: "Users not yet implemented" } };
+  app.get("/api/v1/users/:id", async (_request, reply) => {
+    reply.status(501).send({ error: { code: "NOT_IMPLEMENTED", message: "Users not yet implemented" } });
   });
 }
