@@ -8,6 +8,9 @@ interface VersionNodeProps {
   isSelected: boolean;
   onSelect: (id: string) => void;
   isCompareTarget: boolean;
+  parentVersion: number | null;
+  isFirst: boolean;
+  isLast: boolean;
 }
 
 const REASON_LABELS: Record<string, string> = {
@@ -19,58 +22,89 @@ const REASON_LABELS: Record<string, string> = {
   manual: "Manual snapshot",
 };
 
-export function VersionNode({ snapshot, isSelected, onSelect, isCompareTarget }: VersionNodeProps) {
+export function VersionNode({
+  snapshot,
+  isSelected,
+  onSelect,
+  isCompareTarget,
+  parentVersion,
+  isFirst,
+  isLast,
+}: VersionNodeProps) {
   const isPartial = snapshot.affectedPhaseTypes !== null && snapshot.affectedPhaseTypes.length > 0;
   const isFailed = snapshot.status === "failed";
   const reasonLabel = REASON_LABELS[snapshot.reason] ?? snapshot.reason;
 
   return (
-    <button
-      onClick={() => onSelect(snapshot.id)}
-      className={cn(
-        "w-full rounded-lg border-2 px-4 py-3 text-left transition-all hover:shadow-sm",
-        isSelected && "ring-2 ring-orchestra-500 ring-offset-1",
-        isCompareTarget && "ring-2 ring-blue-500 ring-offset-1",
-        isFailed
-          ? "border-red-200 bg-red-50"
-          : isPartial
-            ? "border-amber-200 bg-amber-50"
-            : "border-border bg-surface",
-      )}
-      aria-label={`Version ${snapshot.version}: ${reasonLabel}`}
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold",
-              isFailed && "bg-red-500 text-white",
-              isPartial && "bg-amber-500 text-white",
-              !isFailed && !isPartial && "bg-orchestra-600 text-white",
-            )}
-          >
-            {snapshot.version}
-          </span>
-          <span className="text-sm font-medium text-text-primary">{reasonLabel}</span>
-        </div>
-        {isPartial && (
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-            Partial
-          </span>
-        )}
-        {isFailed && (
-          <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Failed</span>
-        )}
+    <div className="relative flex gap-4">
+      {/* Timeline connector */}
+      <div className="flex flex-col items-center">
+        {!isFirst && <div className="h-2 w-0.5 bg-gray-300" />}
+        <span
+          className={cn(
+            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+            isFailed && "bg-red-500 text-white",
+            isPartial && "bg-amber-500 text-white",
+            !isFailed && !isPartial && "bg-orchestra-600 text-white",
+          )}
+        >
+          {snapshot.version}
+        </span>
+        {!isLast && <div className="flex-1 w-0.5 min-h-[8px] bg-gray-300" />}
       </div>
-      <div className="mt-1.5 flex items-center gap-3 text-xs text-text-secondary">
-        <span>{new Date(snapshot.createdAt).toLocaleDateString()}</span>
-        {snapshot.planVersion && <span>Plan v{snapshot.planVersion}</span>}
-        {snapshot.answerCount > 0 && <span>{snapshot.answerCount} answers</span>}
+
+      {/* Card */}
+      <div className="min-w-0 flex-1 pb-4">
+        <button
+          onClick={() => onSelect(snapshot.id)}
+          className={cn(
+            "w-full rounded-lg border-2 px-4 py-3 text-left transition-all hover:shadow-sm",
+            isSelected && "ring-2 ring-orchestra-500 ring-offset-1",
+            isCompareTarget && "ring-2 ring-blue-500 ring-offset-1",
+            isFailed
+              ? "border-red-200 bg-red-50"
+              : isPartial
+                ? "border-amber-200 bg-amber-50"
+                : "border-border bg-surface",
+          )}
+          aria-label={`Version ${snapshot.version}: ${reasonLabel}`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <span className="text-sm font-medium text-text-primary">{reasonLabel}</span>
+              {parentVersion !== null && (
+                <span className="ml-2 text-xs text-text-secondary">(derived from v{parentVersion})</span>
+              )}
+            </div>
+            <div className="flex shrink-0 gap-1.5">
+              {parentVersion === null && snapshot.version === 1 && (
+                <span className="rounded-full bg-orchestra-100 px-2 py-0.5 text-xs font-medium text-orchestra-700">
+                  Initial
+                </span>
+              )}
+              {isPartial && (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                  Partial
+                </span>
+              )}
+              {isFailed && (
+                <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                  Failed
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="mt-1.5 flex items-center gap-3 text-xs text-text-secondary">
+            <span>{new Date(snapshot.createdAt).toLocaleDateString()}</span>
+            {snapshot.planVersion && <span>Plan v{snapshot.planVersion}</span>}
+            {snapshot.answerCount > 0 && <span>{snapshot.answerCount} answers</span>}
+          </div>
+          {snapshot.changeSummary && (
+            <p className="mt-1 text-xs text-text-secondary line-clamp-1">{snapshot.changeSummary}</p>
+          )}
+          {snapshot.failureReason && <p className="mt-1 text-xs text-red-600">{snapshot.failureReason}</p>}
+        </button>
       </div>
-      {snapshot.changeSummary && (
-        <p className="mt-1 text-xs text-text-secondary line-clamp-1">{snapshot.changeSummary}</p>
-      )}
-      {snapshot.failureReason && <p className="mt-1 text-xs text-red-600">{snapshot.failureReason}</p>}
-    </button>
+    </div>
   );
 }

@@ -139,16 +139,24 @@ export function VersionHistory({ sessionId }: VersionHistoryProps) {
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-5">
-          <div className="space-y-2 lg:col-span-2">
-            {sorted.map((snapshot) => (
-              <VersionNode
-                key={snapshot.id}
-                snapshot={snapshot}
-                isSelected={selectedId === snapshot.id}
-                isCompareTarget={compareId === snapshot.id}
-                onSelect={handleSelect}
-              />
-            ))}
+          <div className="lg:col-span-2">
+            {sorted.map((snapshot, i) => {
+              const parent = snapshot.parentSnapshotId
+                ? sorted.find((s) => s.id === snapshot.parentSnapshotId)
+                : null;
+              return (
+                <VersionNode
+                  key={snapshot.id}
+                  snapshot={snapshot}
+                  isSelected={selectedId === snapshot.id}
+                  isCompareTarget={compareId === snapshot.id}
+                  onSelect={handleSelect}
+                  parentVersion={parent?.version ?? null}
+                  isFirst={i === 0}
+                  isLast={i === sorted.length - 1}
+                />
+              );
+            })}
           </div>
 
           <div className="lg:col-span-3">

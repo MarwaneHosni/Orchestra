@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { TaskNodeView } from "./task-node";
 import { TaskDetail } from "./task-detail";
 import { PromptPreview } from "./prompt-preview";
@@ -44,6 +45,7 @@ interface GraphData {
 }
 
 export function TaskGraphView({ sessionId }: { sessionId: string }) {
+  const router = useRouter();
   const [graph, setGraph] = useState<GraphData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -151,7 +153,7 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => (window.location.href = `/projects/${sessionId}/versions`)}
+            onClick={() => router.push(`/projects/${sessionId}/versions`)}
             className="rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-text-secondary hover:bg-gray-50"
           >
             Version history
