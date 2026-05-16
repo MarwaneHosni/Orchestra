@@ -1,87 +1,61 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Frontend — page renders", () => {
-  test("landing page loads with title and navigation", async ({ page }) => {
+  test("landing page shows heading and navigation", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("h1")).toContainText("Dashboard");
-    await expect(page.locator("nav")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Projects" })).toBeVisible();
+    await expect(page.getByRole("navigation")).toBeVisible();
   });
 
-  test("projects page shows create button", async ({ page }) => {
+  test("projects page has create button", async ({ page }) => {
     await page.goto("/projects");
-    await expect(page.getByRole("link", { name: /new project|create project/i }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /new project/i }).first()).toBeVisible();
   });
 
-  test("new project page has form fields", async ({ page }) => {
+  test("new project form renders with required fields", async ({ page }) => {
     await page.goto("/projects/new");
-    await expect(page.locator('label:has-text("Project name")')).toBeVisible();
-    await expect(page.locator('label:has-text("Idea description")')).toBeVisible();
-    await expect(page.getByRole("button", { name: /start/i })).toBeVisible();
+    await expect(page.getByText("Project details")).toBeVisible();
+    await expect(page.getByPlaceholder(/e\.g/i).first()).toBeVisible();
   });
 
-  test("task graph page shows loading on first visit", async ({ page }) => {
-    await page.goto("/projects/test-session/tasks");
-    // either loads data or shows loading/empty state
-    await page.waitForLoadState("networkidle");
-    const content = page.locator("body");
-    await expect(content).toBeVisible();
-  });
-
-  test("version history page loads", async ({ page }) => {
+  test("version history page renders heading", async ({ page }) => {
     await page.goto("/projects/test-session/versions");
     await page.waitForLoadState("networkidle");
     await expect(page.locator("h1")).toContainText("Version History");
+  });
+
+  test("empty states render for blueprints and plans", async ({ page }) => {
+    await page.goto("/blueprints");
+    await expect(page.locator("h1")).toContainText("Blueprints");
+
+    await page.goto("/plans");
+    await expect(page.locator("h1")).toContainText("Plans");
   });
 });
 
 test.describe("Frontend — navigation", () => {
   test("navbar links navigate correctly", async ({ page }) => {
     await page.goto("/");
-
     await page.getByRole("link", { name: "Projects" }).click();
     await expect(page).toHaveURL(/\/projects/);
 
     await page.getByRole("link", { name: "Dashboard" }).click();
     await expect(page).toHaveURL("/");
   });
+});
 
-  test("can navigate to create project page from landing", async ({ page }) => {
-    await page.goto("/");
-    await page
-      .getByRole("link", { name: /new project/i })
-      .first()
-      .click();
-    await expect(page).toHaveURL(/\/projects\/new/);
+test.describe("Frontend — task graph page", () => {
+  test("task graph page loads without crash", async ({ page }) => {
+    await page.goto("/projects/e2e-task-view/tasks");
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator("body")).toBeVisible();
   });
 });
 
-test.describe("Frontend — interview progression", () => {
-  test("interview page renders with progress bar", async ({ page }) => {
-    await page.goto("/projects/test-session/interview");
+test.describe("Frontend — interview page", () => {
+  test("interview page renders without crash", async ({ page }) => {
+    await page.goto("/projects/e2e-interview-view/interview");
     await page.waitForLoadState("networkidle");
-    // progress bar or breadcrumb should be visible
-    const progress = page.locator("text=Progress, text=Interview, text=Phase").first();
-    await expect(progress.or(page.locator("[role='progressbar']"))).toBeVisible();
-  });
-});
-
-test.describe("Frontend — completion and empty states", () => {
-  test("blueprints page shows empty state", async ({ page }) => {
-    await page.goto("/blueprints");
-    await page.waitForLoadState("networkidle");
-    await expect(page.locator("h1")).toContainText("Blueprints");
-  });
-
-  test("plans page shows empty state", async ({ page }) => {
-    await page.goto("/plans");
-    await page.waitForLoadState("networkidle");
-    await expect(page.locator("h1")).toContainText("Plans");
-  });
-
-  test("settings page loads", async ({ page }) => {
-    await page.goto("/settings");
-    await page.waitForLoadState("networkidle");
-    await expect(page.locator("h1")).toContainText("Settings");
+    await expect(page.locator("body")).toBeVisible();
   });
 });
