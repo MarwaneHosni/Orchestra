@@ -379,6 +379,8 @@ export class OrchestrationService {
     const session = this.store.getSession(sessionId);
     if (!session) throw new Error(`Session ${sessionId} not found`);
 
+    if (session.status === toStatus) return session;
+
     const state = this.toState(session);
     const updated = transitionState(state, toStatus as any);
     this.store.updateSession(sessionId, {
