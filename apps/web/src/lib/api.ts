@@ -55,6 +55,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
+    console.log(`[DEBUG] API error ${res.status} on ${path}:`, JSON.stringify(body));
     throw new Error(body?.error?.message ?? `Request failed: ${res.status}`);
   }
   return res.json() as Promise<T>;
@@ -348,7 +349,7 @@ export async function createCredential(input: {
 }): Promise<ProviderCredential> {
   return request("/api/v1/provider-credentials", {
     method: "POST",
-    body: JSON.stringify({ ...input, userId: "00000000-0000-0000-0000-000000000001" }),
+    body: JSON.stringify(input),
   });
 }
 

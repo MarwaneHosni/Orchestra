@@ -39,7 +39,7 @@ export const ProviderCredentialSchema = FullProviderCredentialSchema.omit({
 export type ProviderCredential = z.infer<typeof ProviderCredentialSchema>;
 
 export const CreateCredentialSchema = z.object({
-  userId: z.string().uuid().default("00000000-0000-0000-0000-000000000001"),
+  userId: z.string().uuid().default("00000000-0000-0000-0000-000000000000"),
   provider: z.enum(["openai", "anthropic", "openrouter", "google", "aws_bedrock", "azure_openai", "custom"]),
   displayName: z.string().min(1).max(100).optional(),
   apiKey: z.string().min(1, "API key is required"),
@@ -75,7 +75,14 @@ export async function registerProviderCredentialRoutes(app: FastifyInstance) {
 
   app.post("/api/v1/provider-credentials", async (request, reply) => {
     const parsed = CreateCredentialSchema.safeParse(request.body);
-    if (!parsed.success) throw new ValidationError("Invalid credential data");
+    if (!parsed.success) {
+      request.log.error(
+        { issues: parsed.error.issues, body: request.body },
+        "CreateCredentialSchema validation failed",
+      );
+      const detail = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
+      throw new ValidationError(`Invalid credential data: ${detail}`);
+    }
 
     const now = new Date().toISOString();
     const store = getCredentialStore();
