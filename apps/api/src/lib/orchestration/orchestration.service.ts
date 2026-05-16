@@ -203,12 +203,12 @@ export class OrchestrationService {
   ): { answer: AnswerRecord; next: object | null; edited: boolean } {
     const session = this.store.getSession(sessionId);
     if (!session) throw new Error(`Session ${sessionId} not found`);
-    if (session.status === "completed" || session.status === "ready_for_generation") {
+    if (session.status === "completed") {
       throw new Error("Session is no longer accepting answers");
     }
 
     const state = this.toState(session);
-    if (state.status === "waiting_for_answers") {
+    if (state.status === "waiting_for_answers" || state.status === "ready_for_generation") {
       const updated = transitionState(state, "in_progress");
       this.store.updateSession(sessionId, { status: updated.status });
     }

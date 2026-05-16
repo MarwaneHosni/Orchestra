@@ -68,6 +68,11 @@ export const FLOW_TRANSITIONS: FlowTransition[] = [
   },
   { from: ["ready_for_generation"], to: "completed", condition: "Plan generated from session" },
   {
+    from: ["ready_for_generation"],
+    to: "in_progress",
+    condition: "User edits an answer after finishing all questions",
+  },
+  {
     from: ["draft", "in_progress", "waiting_for_answers"],
     to: "completed",
     condition: "User cancels / abandons",
