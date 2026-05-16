@@ -6,6 +6,7 @@ export type {
   FindingSeverity,
   PhaseAnalysis,
   PhaseDependency,
+  SubphaseAnalysis,
   PhaseInputStatus,
   AnalysisPack,
   CrossPhaseInsights,

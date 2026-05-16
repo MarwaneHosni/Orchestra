@@ -47,6 +47,21 @@ export interface PhaseDependency {
   nature: "lifecycle" | "inferred_from_answers";
 }
 
+// ─────────────────────────────────────────────────────────────
+// Subphase analysis — per-question granular breakdown
+// ─────────────────────────────────────────────────────────────
+
+export interface SubphaseAnalysis {
+  order: number;
+  questionRef: string;
+  questionText: string;
+  answerValue: string;
+  answerPresent: boolean;
+  userConfidence: "high" | "medium" | "low";
+  flags: { kind: FindingKind; severity: FindingSeverity; message: string }[];
+  captureAs: "assumption" | "constraint" | "risk" | null;
+}
+
 export interface PhaseAnalysis {
   phaseType: PhaseType;
   phaseName: string;
@@ -55,6 +70,7 @@ export interface PhaseAnalysis {
   requiredCount: number;
   missingRequiredCount: number;
   findings: AnalysisFinding[];
+  subphases: SubphaseAnalysis[];
   inferredRequirements: string[];
   likelyConstraints: string[];
   explicitAssumptions: string[];

@@ -6,6 +6,8 @@ import type {
   AnalysisPack,
   PhaseAnalysis,
   AnalysisFinding,
+  FindingKind,
+  FindingSeverity,
   SourceLink,
   CrossPhaseInsights,
   AnalysisSummary,
@@ -206,6 +208,23 @@ function analyzePhase(phaseGroup: PhaseAnswerGroup, pack: SynthesisContextPack):
     });
   }
 
+  const subphases = answers.map((a) => ({
+    order: a.order,
+    questionRef: a.questionRef,
+    questionText: a.questionText,
+    answerValue: a.normalizedValue,
+    answerPresent: a.isPresent,
+    userConfidence: a.userConfidence,
+    flags: a.flags
+      .filter((f) => f.type !== "edited")
+      .map((f) => ({
+        kind: mapFlagKind(f.type) as FindingKind,
+        severity: f.severity as FindingSeverity,
+        message: f.message,
+      })),
+    captureAs: a.captureAs,
+  }));
+
   return {
     phaseType: phaseType as PhaseType,
     phaseName: phaseName || (PHASE_LABELS[phaseType] ?? phaseType),
@@ -214,6 +233,7 @@ function analyzePhase(phaseGroup: PhaseAnswerGroup, pack: SynthesisContextPack):
     requiredCount,
     missingRequiredCount,
     findings,
+    subphases,
     inferredRequirements: [...new Set(inferredRequirements)],
     likelyConstraints: [...new Set(likelyConstraints)],
     explicitAssumptions: [...new Set(explicitAssumptions)],
@@ -304,6 +324,23 @@ function computePhaseDependencies(phase: PhaseAnalysis, allPhases: PhaseAnalysis
   }
 
   return deps;
+}
+
+function mapFlagKind(flagType: string): string {
+  switch (flagType) {
+    case "vague":
+      return "ambiguity";
+    case "missing":
+    case "too_short":
+    case "skipped":
+      return "insufficient_input";
+    case "low_confidence":
+      return "uncertainty";
+    case "contradicts_gate":
+      return "contradiction";
+    default:
+      return "insufficient_input";
+  }
 }
 
 function makeSourceLink(answer: SynthesizedAnswer): SourceLink[] {

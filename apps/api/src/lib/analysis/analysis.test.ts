@@ -228,6 +228,42 @@ describe("analyzeAnswers", () => {
     expect(ideation.uncertaintyAreas).toBeDefined();
     expect(ideation.findings).toBeDefined();
     expect(ideation.dependencies).toBeDefined();
+    expect(ideation.subphases).toBeDefined();
+  });
+
+  it("subphases match answer count per phase", () => {
+    const pack = buildContextPack("proj-1", "Test", "session-1", answerAllSufficiently());
+    const analysis = analyzeAnswers(pack);
+    for (const phase of analysis.phases) {
+      expect(phase.subphases.length).toBeGreaterThan(0);
+      expect(phase.subphases.length).toBe(phase.answerCount + phase.missingRequiredCount);
+      for (const sub of phase.subphases) {
+        expect(sub.questionRef).toBeTruthy();
+        expect(sub.questionText).toBeTruthy();
+        expect(sub.order).toBeGreaterThanOrEqual(0);
+      }
+    }
+  });
+
+  it("subphases preserve order within phase", () => {
+    const pack = buildContextPack("proj-1", "Test", "session-1", answerAllSufficiently());
+    const analysis = analyzeAnswers(pack);
+    for (const phase of analysis.phases) {
+      const orders = phase.subphases.map((s) => s.order);
+      const sorted = [...orders].sort((a, b) => a - b);
+      expect(orders).toEqual(sorted);
+    }
+  });
+
+  it("subphases capture flags for weak answers", () => {
+    const answers = answerAllSufficiently();
+    answers[0] = makeAnswerForRef("ideation", 1, "I am not sure yet", { confidence: "low" });
+    const pack = buildContextPack("proj-1", "Test", "session-1", answers);
+    const analysis = analyzeAnswers(pack);
+    const ideation = analysis.phases.find((p) => p.phaseType === "ideation")!;
+    const flaggedSub = ideation.subphases.find((s) => s.flags.length > 0);
+    expect(flaggedSub).toBeDefined();
+    expect(flaggedSub!.flags.some((f) => f.kind === "ambiguity")).toBe(true);
   });
 
   it("computes lifecycle dependencies for each phase", () => {
