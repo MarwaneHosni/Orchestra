@@ -18,3 +18,6 @@ export { executionTasks, taskStatuses, taskPriorities, taskTypes } from "./execu
 export { taskDependencies, dependencyTypes } from "./task-dependencies.js";
 export { promptArtifacts, promptStatuses } from "./prompt-artifacts.js";
 export { generationVersions } from "./generation-versions.js";
+export { taskGraphs, taskGraphStatuses } from "./task-graphs.js";
+export { projectSnapshots, projectSnapshotStatuses, projectSnapshotReasons } from "./project-snapshots.js";
+export { activityLog, activityEventTypes } from "./activity-log.js";

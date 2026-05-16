@@ -388,3 +388,117 @@ User enters idea
 - **generations** provides a full audit trail of every AI interaction, enabling replay and debugging.
 - **ideas.interview_data** stores the full structured interview context so regeneration can reproduce the same input.
 - **plans.generation_parameters** stores the AI configuration used for each plan version.
+
+---
+
+## New Tables — Phase 6 (Snapshot / Lineage)
+
+### task_graphs
+
+Persistent storage for generated task graphs. Replaces the in-memory-only `GraphStore`.
+
+| Column                | Type          | Constraints                    |
+| --------------------- | ------------- | ------------------------------ |
+| id                    | `uuid`        | PK, `gen_random_uuid()`        |
+| plan_id               | `uuid`        | NOT NULL → plans.id            |
+| project_id            | `uuid`        | NOT NULL → projects.id         |
+| plan_version          | `integer`     | NOT NULL                       |
+| graph_version         | `integer`     | NOT NULL, DEFAULT 1            |
+| derived_from_graph_id | `uuid`        | → task_graphs.id (lineage)     |
+| status                | `varchar(15)` | NOT NULL, DEFAULT 'generating' |
+| task_count            | `integer`     | NOT NULL, DEFAULT 0            |
+| dependency_count      | `integer`     | NOT NULL, DEFAULT 0            |
+| failure_reason        | `text`        | Set when status = 'failed'     |
+| metadata              | `text`        | JSON for generation params     |
+| created_at            | `timestamptz` | NOT NULL, `now()`              |
+| updated_at            | `timestamptz` | NOT NULL, `now()`              |
+
+Unique: `(plan_id, graph_version)`
+Indexes: `plan_id`, `project_id`
+
+### project_snapshots
+
+Frozen point-in-time records for a project. Each snapshot captures which plan, blueprint, task graph, and interview session constitute the project state at that moment.
+
+| Column               | Type          | Constraints                                                       |
+| -------------------- | ------------- | ----------------------------------------------------------------- |
+| id                   | `uuid`        | PK, `gen_random_uuid()`                                           |
+| project_id           | `uuid`        | NOT NULL → projects.id                                            |
+| version              | `integer`     | NOT NULL (increments per project)                                 |
+| parent_snapshot_id   | `uuid`        | → project_snapshots.id (lineage)                                  |
+| reason               | `varchar(30)` | NOT NULL — see `projectSnapshotReasons`                           |
+| status               | `varchar(15)` | NOT NULL, DEFAULT 'creating'                                      |
+| plan_id              | `uuid`        | → plans.id (nullable)                                             |
+| plan_version         | `integer`     | Snapshot of plan version (nullable)                               |
+| blueprint_id         | `uuid`        | → blueprints.id (nullable)                                        |
+| task_graph_id        | `uuid`        | → task_graphs.id (nullable)                                       |
+| interview_session_id | `uuid`        | → interview_sessions.id (nullable)                                |
+| answer_count         | `integer`     | NOT NULL, DEFAULT 0                                               |
+| affected_phase_types | `text`        | JSON array of affected phases, e.g. `["architecture","security"]` |
+| change_summary       | `text`        | Human-readable description                                        |
+| metadata             | `text`        | JSON extensible metadata                                          |
+| created_at           | `timestamptz` | NOT NULL, `now()`                                                 |
+
+Indexes: `project_id`, `(project_id, version)` unique, `parent_snapshot_id`
+
+**Snapshot reasons:**
+
+| Reason                   | When created                                |
+| ------------------------ | ------------------------------------------- |
+| `initial`                | Project first created                       |
+| `interview_complete`     | All interview questions answered            |
+| `plan_regenerated`       | Plan regenerated from edited answers        |
+| `phase_edited`           | Individual answers edited mid-interview     |
+| `task_graph_regenerated` | Task graph regenerated for new plan version |
+| `manual`                 | Explicit user-triggered snapshot            |
+
+### activity_log
+
+Append-only timeline of events for a project. Lightweight — each record is a typed event with references and a description string.
+
+| Column      | Type          | Constraints                           |
+| ----------- | ------------- | ------------------------------------- |
+| id          | `uuid`        | PK, `gen_random_uuid()`               |
+| project_id  | `uuid`        | NOT NULL → projects.id                |
+| event_type  | `varchar(30)` | NOT NULL — see `activityEventTypes`   |
+| session_id  | `uuid`        | Loose reference to interview_sessions |
+| plan_id     | `uuid`        | Loose reference to plans              |
+| snapshot_id | `uuid`        | → project_snapshots.id (nullable)     |
+| description | `text`        | NOT NULL                              |
+| metadata    | `text`        | JSON event-specific data              |
+| created_at  | `timestamptz` | NOT NULL, `now()`                     |
+
+Indexes: `project_id`, `event_type`, `created_at`, `(project_id, created_at)`
+
+**Event types:**
+
+| Event                    | Meaning                             |
+| ------------------------ | ----------------------------------- |
+| `project.created`        | Project record created              |
+| `interview.started`      | Interview session started           |
+| `interview.completed`    | All questions answered              |
+| `answer.submitted`       | Individual answer recorded          |
+| `answer.edited`          | Previously submitted answer changed |
+| `plan.generated`         | Initial plan generated              |
+| `plan.regenerated`       | Plan re-generated (new version)     |
+| `blueprint.generated`    | Blueprint output produced           |
+| `task_graph.generated`   | Tasks decomposed from plan          |
+| `task_graph.regenerated` | Tasks re-decomposed (new version)   |
+| `prompts.exported`       | Prompt bundle exported              |
+| `snapshot.created`       | Project snapshot taken              |
+| `phase.insufficient`     | Phase marked as needing more detail |
+| `phase.missing`          | Phase has no input                  |
+| `generation.failed`      | AI generation call failed           |
+
+### prompt_artifacts (modified)
+
+Extended from Phase 2 with failure tracking:
+
+New columns: `failure_reason` (`text`), `status` widened to `varchar(15)`.
+
+| Status         | Meaning                          |
+| -------------- | -------------------------------- |
+| `pending`      | Prompt created but not yet sent  |
+| `complete`     | Prompt sent and result received  |
+| `failed`       | Assembly validation failed       |
+| `needs_review` | Assembly passed but has warnings |
