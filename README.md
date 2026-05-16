@@ -13,10 +13,12 @@ AI Software Development Orchestrator — transform a raw software idea into a st
 │   ├── shared/       Shared types, utilities, and domain models
 │   └── config/       Shared configuration helpers (placeholder)
 ├── docs/
-│   ├── decisions/    7 architecture decision records
+│   ├── decisions/    9 architecture decision records
 │   ├── architecture.md  System overview and conventions
 │   ├── deployment.md    CI/CD, secrets, production config
 │   ├── development.md   Local setup and configuration guide
+│   ├── contributing.md  Code organization, versioning, testing
+│   ├── user-guide.md    Version history, compare, export, activity
 │   └── schema.md        Database schema documentation
 ├── .github/workflows/  CI (ci.yml) and deploy (deploy.yml) pipelines
 ├── scripts/            Development helper scripts
@@ -77,9 +79,14 @@ pnpm dev          # start api, web & worker in watch mode
 ```
 
 - **Modular monolith** — API, worker, and frontend are separate processes that can be deployed independently when needed.
-- **9 domain modules** — users, projects, ideas, plans, phases, subphases, questions, answers, generations — each with Drizzle ORM schema, Zod validation, and route stubs.
-- **12-phase SDLC lifecycle** — the platform maps projects through fixed phases (ideation → requirements → architecture → ... → monitoring), with AI-generated content per phase.
-- **Dependency-aware task graph** — subphases store dependency IDs for ordered execution.
+- **20 Drizzle ORM tables** — users, projects, plans, blueprints, execution_tasks, task_graphs, project_snapshots, activity_log, and more.
+- **12-phase SDLC lifecycle** — the platform maps projects through fixed phases (ideation → requirements → architecture → ... → monitoring).
+- **Dependency-aware task graph** — tasks are decomposed from blueprint phases with automatic dependency computation.
+- **Versioned snapshots** — every project state is captured as an immutable snapshot with full lineage tracking.
+- **Regeneration with scope rules** — changing upstream phases triggers full re-snapshot; leaf phases trigger partial regeneration.
+- **Structured diffs** — compare any two snapshots to see task, prompt, and blueprint changes.
+- **Export in Markdown/JSON** — export blueprints, task graphs, or prompt bundles with version metadata.
+- **Activity timeline + analytics** — lifecycle events are tracked and surfaced in the UI.
 - **Bring-your-own-key** — AI providers are configured via env vars; no API keys are stored in the application.
 
 ## Platform Support
@@ -96,6 +103,8 @@ All development scripts are cross-platform (Windows, macOS, Linux).
 
 ## Next Steps
 
-- **New to the project?** Read [docs/development.md](docs/development.md) for setup, [CONTRIBUTING.md](CONTRIBUTING.md) for contribution workflow.
+- **New to the project?** Read [docs/development.md](docs/development.md) for setup, [docs/contributing.md](docs/contributing.md) for contribution workflow.
+- **Using the product?** See [docs/user-guide.md](docs/user-guide.md) for version history, compare, export, and activity timeline.
 - **Deploying?** See [docs/deployment.md](docs/deployment.md) for CI/CD and secrets management.
 - **Architecture?** See [docs/architecture.md](docs/architecture.md) for conventions and design decisions.
+- **Full documentation index:** [docs/index.md](docs/index.md)
