@@ -146,16 +146,34 @@ export class AIBlueprintGenerator {
     provider: string,
     model: string,
   ): { blueprint: BlueprintOutput; roadmap: RoadmapOutput } | null {
+    // Log first 500 chars of AI response for debugging
+    console.log(
+      "[AI RAW RESPONSE]",
+      JSON.stringify({
+        provider,
+        model,
+        length: content.length,
+        preview: content.slice(0, 500),
+      }),
+    );
+
     let parsed: unknown;
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) return null;
+      if (!jsonMatch) {
+        console.log("[AI PARSE ERROR] No JSON object found in response");
+        return null;
+      }
       parsed = JSON.parse(jsonMatch[0]);
-    } catch {
+    } catch (err) {
+      console.log("[AI PARSE ERROR] JSON parse failed:", err instanceof Error ? err.message : String(err));
       return null;
     }
 
-    if (!parsed || typeof parsed !== "object") return null;
+    if (!parsed || typeof parsed !== "object") {
+      console.log("[AI PARSE ERROR] Parsed value is not an object");
+      return null;
+    }
 
     const data = parsed as Record<string, unknown>;
     const now = new Date().toISOString();
@@ -190,7 +208,13 @@ export class AIBlueprintGenerator {
       },
     });
 
-    if (!blueprintResult.success) return null;
+    if (!blueprintResult.success) {
+      console.log(
+        "[AI ZOD ERROR] Blueprint validation failed:",
+        JSON.stringify(blueprintResult.error.issues, null, 2),
+      );
+      return null;
+    }
 
     // Build roadmap
     const roadmapResult = RoadmapOutputSchema.safeParse({
@@ -219,7 +243,13 @@ export class AIBlueprintGenerator {
       },
     });
 
-    if (!roadmapResult.success) return null;
+    if (!roadmapResult.success) {
+      console.log(
+        "[AI ZOD ERROR] Roadmap validation failed:",
+        JSON.stringify(roadmapResult.error.issues, null, 2),
+      );
+      return null;
+    }
 
     return {
       blueprint: blueprintResult.data,
