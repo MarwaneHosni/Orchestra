@@ -69,15 +69,12 @@ export const POLICIES: RoutingPolicy[] = [
   },
   {
     taskType: "blueprint",
-    minTier: "balanced",
+    minTier: "cheap",
     preferred: [
-      { provider: "openai", model: "gpt-4.1", tier: "strong" },
-      { provider: "anthropic", model: "claude-sonnet-4-20250514", tier: "strong" },
+      { provider: "openrouter", model: "deepseek/deepseek-v4-flash:free", tier: "cheap" },
+      { provider: "openai", model: "gpt-4o-mini", tier: "cheap" },
     ],
-    fallback: [
-      { provider: "openai", model: "gpt-4o", tier: "balanced" },
-      { provider: "openrouter", model: "anthropic/claude-sonnet-4", tier: "strong" },
-    ],
+    fallback: [{ provider: "openrouter", model: "anthropic/claude-sonnet-4", tier: "strong" }],
   },
 ];
 

@@ -93,7 +93,14 @@ export class AIBlueprintGenerator {
         provider.generate(input),
       );
 
-      const parsed = this.parseBlueprintResponse(result.content, analysis, planId, planVersion);
+      const parsed = this.parseBlueprintResponse(
+        result.content,
+        analysis,
+        planId,
+        planVersion,
+        selection.provider,
+        result.model,
+      );
 
       if (parsed) {
         return {
@@ -136,6 +143,8 @@ export class AIBlueprintGenerator {
     analysis: AnalysisPack,
     planId: string,
     planVersion: number,
+    provider: string,
+    model: string,
   ): { blueprint: BlueprintOutput; roadmap: RoadmapOutput } | null {
     let parsed: unknown;
     try {
@@ -167,8 +176,8 @@ export class AIBlueprintGenerator {
       overallConfidence: data.overallConfidence ?? 0.5,
       overallSummary: data.overallSummary ?? "",
       generationMetadata: {
-        model: "",
-        provider: "",
+        model,
+        provider,
         generationId: crypto.randomUUID(),
         startedAt: now,
         completedAt: now,
@@ -196,8 +205,8 @@ export class AIBlueprintGenerator {
       totalEffort: data.totalEffort ?? "medium",
       recommendedApproach: data.recommendedApproach,
       generationMetadata: {
-        model: "",
-        provider: "",
+        model,
+        provider,
         generationId: crypto.randomUUID(),
         startedAt: now,
         completedAt: now,
