@@ -97,7 +97,8 @@ function sampleRoadmap(_version: number): Roadmap {
   };
 }
 
-function sampleTaskDraft(_version: number): TaskDraft {
+function sampleTaskDraft(version: number): TaskDraft {
+  void version;
   return {
     projectId: "proj-1",
     projectName: "Test",
