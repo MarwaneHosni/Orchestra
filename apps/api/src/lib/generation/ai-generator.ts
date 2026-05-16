@@ -183,6 +183,15 @@ export class AIBlueprintGenerator {
     const data = parsed as Record<string, unknown>;
     const now = new Date().toISOString();
 
+    // Normalize status values: AI may return "completed", "done", etc. instead of valid enums
+    const validStatuses = ["sufficient", "insufficient", "missing", "ai_augmented"];
+    const normalizeStatus = (s: unknown): string => {
+      if (typeof s === "string" && validStatuses.includes(s)) return s;
+      if (s === "completed" || s === "done" || s === "ready") return "sufficient";
+      if (s === "in_progress" || s === "incomplete" || s === "partial") return "insufficient";
+      return "ai_augmented";
+    };
+
     // Normalize phases: convert object-style { "ideation": {...} } to array-style [{ phaseType: "ideation", ... }]
     let normalizedPhases: unknown = data.phases;
     if (data.phases && typeof data.phases === "object" && !Array.isArray(data.phases)) {
@@ -190,7 +199,7 @@ export class AIBlueprintGenerator {
       normalizedPhases = PHASE_ORDER.map((pt) => {
         const p = phaseMap[pt] as Record<string, unknown> | undefined;
         return p
-          ? { phaseType: pt, ...p }
+          ? { phaseType: pt, ...p, status: normalizeStatus(p.status) }
           : {
               phaseType: pt,
               phaseName: pt,
@@ -202,16 +211,44 @@ export class AIBlueprintGenerator {
               sourceAnswers: [],
             };
       });
+    } else if (Array.isArray(normalizedPhases)) {
+      // Normalize in-place for array-format phases
+      normalizedPhases = (normalizedPhases as Record<string, unknown>[]).map((p) => ({
+        ...p,
+        status: normalizeStatus(p.status),
+      }));
     }
 
-    // Normalize structured items: convert string arrays to object arrays with "description" field
-    const normalizeItems = (items: unknown): { description: string }[] => {
+    // Normalize structured items: convert string arrays to object arrays with required fields
+    const normalizeItems = (
+      items: unknown,
+      type: "assumption" | "constraint" | "risk",
+    ): { id: string; description: string; source: string; provenance: string }[] => {
       if (!Array.isArray(items)) return [];
-      return items.map((item) => {
-        if (typeof item === "string") return { description: item };
-        if (item && typeof item === "object" && "description" in (item as Record<string, unknown>))
-          return item as { description: string };
-        return { description: String(item) };
+      return items.map((item, i) => {
+        if (typeof item === "string") {
+          return {
+            id: `${type}-${i + 1}`,
+            description: item,
+            source: "ai_generation",
+            provenance: "ai_generated",
+          };
+        }
+        if (item && typeof item === "object") {
+          const obj = item as Record<string, unknown>;
+          return {
+            id: (obj.id as string) ?? `${type}-${i + 1}`,
+            description: (obj.description as string) ?? String(item),
+            source: (obj.source as string) ?? "ai_generation",
+            provenance: (obj.provenance as string) ?? "ai_generated",
+          };
+        }
+        return {
+          id: `${type}-${i + 1}`,
+          description: String(item),
+          source: "ai_generation",
+          provenance: "ai_generated",
+        };
       });
     };
 
@@ -230,9 +267,9 @@ export class AIBlueprintGenerator {
       schemaVersion: "orchestra-generated-v1",
       artifactType: "blueprint",
       phases: normalizedPhases,
-      assumptions: normalizeItems(data.assumptions),
-      constraints: normalizeItems(data.constraints),
-      risks: normalizeItems(data.risks),
+      assumptions: normalizeItems(data.assumptions, "assumption"),
+      constraints: normalizeItems(data.constraints, "constraint"),
+      risks: normalizeItems(data.risks, "risk"),
       overallConfidence: data.overallConfidence ?? 0.5,
       overallSummary: data.overallSummary ?? "",
       generationMetadata: {
