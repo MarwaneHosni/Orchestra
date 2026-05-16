@@ -6,6 +6,7 @@ import type { PromptStore } from "../prompt/types.js";
 import { generateTasks, deriveGraph } from "../task-graph/generator.js";
 import { assemblePrompt } from "../prompt/assembler.js";
 import { logAudit } from "../audit/logger.js";
+import { instrumentRegeneration } from "../metrics/index.js";
 
 export class VersioningService {
   constructor(
@@ -187,10 +188,12 @@ export class VersioningService {
           : `Partial regeneration: affected ${scope.affectedPhaseTypes.join(", ")}`,
       });
 
+      const regenerationAffectedPhases = escalated ? allTasks.length : scope.affectedPhaseTypes.length;
+      instrumentRegeneration(escalated ? "full" : "partial", regenerationAffectedPhases);
       return {
         snapshot,
         taskGraph,
-        affectedPhases: escalated ? allTasks.length : scope.affectedPhaseTypes.length,
+        affectedPhases: regenerationAffectedPhases,
         affectedTasks,
         affectedPrompts,
         escalatedToFull: escalated,

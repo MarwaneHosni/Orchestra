@@ -5,6 +5,7 @@ import { ValidationError, NotFoundError, RateLimitedError } from "../lib/errors.
 import { GuardrailService } from "../lib/budget/guardrail.js";
 import { createInMemoryBudgetStore } from "../lib/budget/budget.js";
 import { logAudit } from "../lib/audit/logger.js";
+import { instrumentProviderValidation } from "../lib/metrics/index.js";
 import { paginatedResponse } from "../schemas/index.js";
 
 const guardrail = new GuardrailService(createInMemoryBudgetStore(), {
@@ -160,6 +161,7 @@ export async function registerProviderCredentialRoutes(app: FastifyInstance) {
 
     const now = new Date().toISOString();
     store.update(id, { status: "valid", lastVerifiedAt: now, errorMessage: null });
+    instrumentProviderValidation(cred.provider, "valid");
     logAudit("credential.validated", cred.userId, id, { provider: cred.provider, status: "valid" });
 
     const updated = store.get(id)!;

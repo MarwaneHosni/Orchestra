@@ -4,6 +4,7 @@ import { loadConfig } from "./lib/config.js";
 import { errorHandler } from "./lib/errors.js";
 import { registerHealthRoutes } from "./routes/health.js";
 import { registerVersionRoutes } from "./routes/version.js";
+import { registerObservabilityRoutes } from "./routes/observability.js";
 import { registerDomainRoutes } from "./domains/index.js";
 
 export async function buildApp() {
@@ -24,6 +25,7 @@ export async function buildApp() {
 
   await registerHealthRoutes(app);
   await registerVersionRoutes(app);
+  await registerObservabilityRoutes(app);
   await registerDomainRoutes(app);
 
   return app;

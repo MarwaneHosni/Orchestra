@@ -1,4 +1,5 @@
 import { logAudit } from "../audit/logger.js";
+import { instrumentGuardrailAction } from "../metrics/index.js";
 import { InMemoryRateLimiter } from "./rate-limiter.js";
 import { BudgetEnforcer } from "./budget.js";
 import type { BudgetStore } from "./budget.js";
@@ -96,6 +97,7 @@ export class GuardrailService {
   checkOperation(op: GuardrailOperation, rateLimitKey: string): { result: GuardrailCheckResult } {
     const rateResult = this.getLimiter(op).check(rateLimitKey);
     if (!rateResult.allowed) {
+      instrumentGuardrailAction("rate_limited", op);
       logAudit("guardrail.rate_limited", rateLimitKey, op, {
         operation: op,
         rateLimitKey,
@@ -123,6 +125,7 @@ export class GuardrailService {
   ): { result: GuardrailCheckResult } {
     const budgetResult = this.budget.checkGeneration(scopeId, estimatedCost, estimatedTokens);
     if (!budgetResult.allowed) {
+      instrumentGuardrailAction("over_budget", "generation");
       logAudit("guardrail.over_budget", scopeId, "generation", {
         scopeId,
         estimatedCost,
@@ -152,6 +155,7 @@ export class GuardrailService {
       };
     }
     if (!cb.allow()) {
+      instrumentGuardrailAction("circuit_open", circuitName);
       logAudit("guardrail.circuit_open", "system", circuitName, {
         circuitName,
         state: cb.getState(),
@@ -175,6 +179,7 @@ export class GuardrailService {
   checkAbuse(scope: string): { result: GuardrailCheckResult } {
     if (this.abuseDetector.isBlocked(scope)) {
       const blockedUntil = this.abuseDetector.getBlockedUntil(scope);
+      instrumentGuardrailAction("abuse_blocked", scope);
       logAudit("guardrail.abuse_blocked", scope, "abuse_detection", {
         scope,
         blockedUntil,

@@ -1,0 +1,116 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "title": "Orchestra — Operational Overview",
+  "uid": "orchestra-operations",
+  "tags": ["orchestra", "generation", "providers"],
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "panels": [
+    {
+      "title": "Generation Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(generation_funnel_total{status=\"attempted\"}[5m])",
+          "legendFormat": "Attempted"
+        },
+        {
+          "expr": "rate(generation_funnel_total{status=\"completed\"}[5m])",
+          "legendFormat": "Completed"
+        },
+        {
+          "expr": "rate(generation_funnel_total{status=\"failed\"}[5m])",
+          "legendFormat": "Failed"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "req/s" },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Failed" },
+            "properties": [{ "id": "color", "value": { "mode": "fixed" } }]
+          }
+        ]
+      }
+    },
+    {
+      "title": "Generation Phases per Run",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "targets": [{ "expr": "avg(generation_phases_per_run_count)" }]
+    },
+    {
+      "title": "Provider Latency (p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(provider_generation_duration_ms_bucket[5m])) by (le, provider))",
+          "legendFormat": "{{provider}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ms" } }
+    },
+    {
+      "title": "Provider Error Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "rate(provider_errors_total[5m]) / rate(provider_generations_total[5m])",
+          "legendFormat": "Error Rate"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit" } }
+    },
+    {
+      "title": "Guardrail Blocks",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "rate(guardrail_blocks_total{action=\"rate_limited\"}[5m])",
+          "legendFormat": "Rate Limited"
+        },
+        {
+          "expr": "rate(guardrail_blocks_total{action=\"over_budget\"}[5m])",
+          "legendFormat": "Over Budget"
+        },
+        {
+          "expr": "rate(guardrail_blocks_total{action=\"circuit_open\"}[5m])",
+          "legendFormat": "Circuit Open"
+        }
+      ]
+    },
+    {
+      "title": "Export Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 12, "y": 16 },
+      "targets": [{ "expr": "rate(export_usage_total[5m])", "legendFormat": "Exports" }]
+    },
+    {
+      "title": "Regeneration Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 20, "y": 16 },
+      "targets": [
+        {
+          "expr": "rate(regeneration_total{scope=\"full\"}[5m])",
+          "legendFormat": "Full"
+        },
+        {
+          "expr": "rate(regeneration_total{scope=\"partial\"}[5m])",
+          "legendFormat": "Partial"
+        }
+      ]
+    },
+    {
+      "title": "Current Build",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 24 },
+      "targets": [{ "expr": "build_info", "legendFormat": "{{release}}" }]
+    }
+  ]
+}

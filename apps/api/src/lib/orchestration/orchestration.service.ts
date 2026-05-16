@@ -6,6 +6,7 @@ import { BlueprintGenerator } from "../blueprint/generator.js";
 import { normalizeText } from "../blueprint/normalizer.js";
 import { logAudit } from "../audit/logger.js";
 import { FailureSpikeDetector } from "../audit/failure-tracker.js";
+import { instrumentGenerationFunnel } from "../metrics/index.js";
 import type { AnswerRecord, CreateProjectInput, SessionRecord, PlanRecord } from "./types.js";
 import type { SessionStore } from "./store.js";
 
@@ -277,6 +278,7 @@ export class OrchestrationService {
     const project = this.store.getProject(session.projectId);
     if (!project) throw new Error(`Project ${session.projectId} not found`);
 
+    instrumentGenerationFunnel(session.projectId, "attempted");
     logAudit("generation.attempted", session.projectId, sessionId, {
       taskType: "blueprint",
       provider: "",
@@ -342,6 +344,10 @@ export class OrchestrationService {
 
       this.transitionSession(sessionId, "completed");
       this.log("blueprint.completed", { sessionId, planVersion });
+      instrumentGenerationFunnel(session.projectId, "completed", {
+        phaseCount: output.phases.length,
+        confidence: output.overallConfidence,
+      });
       logAudit("generation.completed", session.projectId, sessionId, {
         planVersion,
         phases: output.phases.length,
@@ -351,6 +357,7 @@ export class OrchestrationService {
       return output;
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
+      instrumentGenerationFunnel(session.projectId, "failed", { errorCategory: "terminal" });
       this.log("blueprint.generation_failed", { sessionId, planVersion, error: errorMsg });
       logAudit("generation.failed", session.projectId, sessionId, {
         planVersion,
