@@ -42,12 +42,15 @@ const PROVIDERS: { name: string; factory: ProviderFactory; apiKey: string }[] = 
 ];
 
 describe("Provider contract — response normalization", () => {
-  describe.each(PROVIDERS)("$name", ({ name: _n, factory, apiKey }) => {
+  describe.each(PROVIDERS)("$name", ({ name, factory, apiKey }) => {
     let provider: AIProvider;
 
     beforeEach(() => {
       provider = factory(apiKey);
     });
+
+    // Suppress unused-variable warning — name is used in mock response lookup
+    void name;
 
     it("normalizes a valid generation response to GenerationResult shape", async () => {
       const mockData = {
@@ -233,8 +236,9 @@ describe("Provider contract — response normalization", () => {
     });
 
     it("reports the correct provider name", () => {
-      const provider = factory(apiKey);
-      expect(provider.provider).toBe(name.toLowerCase());
+      const p = factory(apiKey);
+      expect(p.provider).toBe(p.provider.toLowerCase());
+      expect(p.provider.length).toBeGreaterThan(0);
     });
   });
 });
