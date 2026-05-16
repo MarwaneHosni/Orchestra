@@ -16,9 +16,11 @@ export interface ExportRecord {
   createdAt: string;
 }
 
+import type { BlueprintContent } from "../diff/types.js";
+
 export interface ExportOptions {
   format: ExportFormat;
-  blueprintContent?: import("../diff/types.js").BlueprintContent | null;
+  blueprintContent?: BlueprintContent | null;
 }
 
 export interface ExportStore {

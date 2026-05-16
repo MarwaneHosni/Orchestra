@@ -34,10 +34,13 @@
 
 ## Operations
 
-| Document              | Audience  | Description                                       |
-| --------------------- | --------- | ------------------------------------------------- |
-| [Runbook](runbook.md) | Operators | Health checks, troubleshooting, incident response |
-| [Logging](logging.md) | Operators | Structured log format, audit events, debugging    |
+| Document                                           | Audience     | Description                                                      |
+| -------------------------------------------------- | ------------ | ---------------------------------------------------------------- |
+| [Runbook](runbook.md)                              | Operators    | Health checks, troubleshooting, incident response                |
+| [Logging](logging.md)                              | Operators    | Structured log format, audit events, debugging                   |
+| [Observability](observability.md)                  | Operators    | Metrics reference, Prometheus config, alerting rules, dashboards |
+| [Grafana Dashboard](grafana-dashboard.json)        | Operators    | Importable dashboard JSON (8 panels)                             |
+| [Performance Optimizations](perf-optimizations.md) | Contributors | Store indexing, Map lookups, pagination, lazy prompt assembly    |
 
 ## User Guide
 
@@ -45,11 +48,13 @@
 | --------------------------- | -------- | ------------------------------------------------------------------------ |
 | [User Guide](user-guide.md) | Users    | Version history, comparison, exports, activity timeline, self-host notes |
 
-## Known Limitations
+## Known Limitations & Phase Summaries
 
-| Document                                     | Description                                                  |
-| -------------------------------------------- | ------------------------------------------------------------ |
-| [Phase 4 Limitations](phase4-limitations.md) | Known issues from task graph and prompt generation hardening |
+| Document                                     | Description                                                                   |
+| -------------------------------------------- | ----------------------------------------------------------------------------- |
+| [Phase 7 Completion](phase7-completion.md)   | Guardrails, performance, observability — verification results, residual risks |
+| [Phase 6 Completion](phase6-completion.md)   | Versioning, export, diff, analytics — delivered and deferred                  |
+| [Phase 4 Limitations](phase4-limitations.md) | Known issues from task graph and prompt generation hardening                  |
 
 ## Architecture Decisions
 
