@@ -5,6 +5,7 @@ export const POLICIES: RoutingPolicy[] = [
     taskType: "clarification",
     minTier: "cheap",
     preferred: [
+      { provider: "openrouter", model: "deepseek/deepseek-v4-flash:free", tier: "cheap" },
       { provider: "openai", model: "gpt-4o-mini", tier: "cheap" },
       { provider: "anthropic", model: "claude-3-5-haiku-latest", tier: "cheap" },
     ],
@@ -21,6 +22,7 @@ export const POLICIES: RoutingPolicy[] = [
       { provider: "anthropic", model: "claude-sonnet-4-20250514", tier: "balanced" },
     ],
     fallback: [
+      { provider: "openrouter", model: "deepseek/deepseek-v4-flash:free", tier: "cheap" },
       { provider: "openai", model: "gpt-4o-mini", tier: "cheap" },
       { provider: "anthropic", model: "claude-3-5-haiku-latest", tier: "cheap" },
       { provider: "openrouter", model: "openai/gpt-4o", tier: "balanced" },
@@ -47,6 +49,7 @@ export const POLICIES: RoutingPolicy[] = [
       { provider: "anthropic", model: "claude-sonnet-4-20250514", tier: "balanced" },
     ],
     fallback: [
+      { provider: "openrouter", model: "deepseek/deepseek-v4-flash:free", tier: "cheap" },
       { provider: "openai", model: "gpt-4o-mini", tier: "cheap" },
       { provider: "openrouter", model: "openai/gpt-4o", tier: "balanced" },
     ],
@@ -55,6 +58,7 @@ export const POLICIES: RoutingPolicy[] = [
     taskType: "summary",
     minTier: "cheap",
     preferred: [
+      { provider: "openrouter", model: "deepseek/deepseek-v4-flash:free", tier: "cheap" },
       { provider: "openai", model: "gpt-4o-mini", tier: "cheap" },
       { provider: "anthropic", model: "claude-3-5-haiku-latest", tier: "cheap" },
     ],

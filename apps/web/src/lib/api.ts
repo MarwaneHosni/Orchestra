@@ -60,10 +60,37 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export interface ProjectRecord {
+  id: string;
+  name: string;
+  description: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta: { total: number; page: number; pageSize: number; totalPages: number };
+}
+
+export async function listProjects(page = 1, pageSize = 20): Promise<PaginatedResponse<ProjectRecord>> {
+  return request<PaginatedResponse<ProjectRecord>>(`/api/v1/projects?page=${page}&pageSize=${pageSize}`);
+}
+
 export async function createProject(ideaText: string, projectName?: string): Promise<CreateProjectResult> {
   return request<CreateProjectResult>("/api/v1/projects", {
     method: "POST",
     body: JSON.stringify({ ideaText, projectName }),
+  });
+}
+
+export async function createOrResumeSession(
+  projectId: string,
+): Promise<{ sessionId: string; status: string }> {
+  return request<{ sessionId: string; status: string }>(`/api/v1/projects/${projectId}/interviews`, {
+    method: "POST",
+    body: JSON.stringify({}),
   });
 }
 

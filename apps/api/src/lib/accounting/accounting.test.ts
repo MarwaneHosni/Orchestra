@@ -7,8 +7,8 @@ describe("MODEL_PRICING", () => {
   it("has entries for all known models", () => {
     expect(MODEL_PRICING.length).toBeGreaterThan(0);
     for (const p of MODEL_PRICING) {
-      expect(p.promptPricePer1K).toBeGreaterThan(0);
-      expect(p.completionPricePer1K).toBeGreaterThan(0);
+      expect(p.promptPricePer1K).toBeGreaterThanOrEqual(0);
+      expect(p.completionPricePer1K).toBeGreaterThanOrEqual(0);
     }
   });
 

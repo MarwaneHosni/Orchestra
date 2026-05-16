@@ -34,6 +34,12 @@ export const MODEL_PRICING: ModelPricing[] = [
     promptPricePer1K: 0.003,
     completionPricePer1K: 0.015,
   },
+  {
+    provider: "openrouter",
+    model: "deepseek/deepseek-v4-flash:free",
+    promptPricePer1K: 0,
+    completionPricePer1K: 0,
+  },
 ];
 
 export function getPricing(provider: string, model: string): ModelPricing | undefined {
