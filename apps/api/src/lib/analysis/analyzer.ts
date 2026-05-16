@@ -1,6 +1,7 @@
 import type { SynthesisContextPack, SynthesizedAnswer, PhaseAnswerGroup } from "../synthesis/types.js";
 import { PHASE_LABELS } from "../interview/questions.js";
 import type { PhaseType } from "../contract/output-schema.js";
+import { PHASE_ORDER } from "../contract/output-schema.js";
 import type {
   AnalysisPack,
   PhaseAnalysis,
@@ -9,6 +10,7 @@ import type {
   CrossPhaseInsights,
   AnalysisSummary,
   PhaseInputStatus,
+  PhaseDependency,
 } from "./types.js";
 
 export function analyzeAnswers(pack: SynthesisContextPack): AnalysisPack {
@@ -23,6 +25,14 @@ export function analyzeAnswers(pack: SynthesisContextPack): AnalysisPack {
   for (const phaseGroup of pack.phases) {
     const analysis = analyzePhase(phaseGroup, pack);
     phases.push(analysis);
+  }
+
+  // Compute dependencies after all phases are analyzed (needs full picture)
+  let totalInferredDependencies = 0;
+  for (const analysis of phases) {
+    const deps = computePhaseDependencies(analysis, phases);
+    analysis.dependencies = deps;
+    totalInferredDependencies += deps.length;
     totalFindings += analysis.findings.length;
     highSeverityFindings += analysis.findings.filter((f) => f.severity === "high").length;
     totalUncertaintyAreas += analysis.uncertaintyAreas.length;
@@ -41,6 +51,7 @@ export function analyzeAnswers(pack: SynthesisContextPack): AnalysisPack {
     totalFindings,
     highSeverityFindings,
     totalUncertaintyAreas,
+    totalInferredDependencies,
   };
 
   return {
@@ -209,6 +220,7 @@ function analyzePhase(phaseGroup: PhaseAnswerGroup, pack: SynthesisContextPack):
     identifiedRisks: [...new Set(identifiedRisks)],
     keyDecisions,
     uncertaintyAreas: [...new Set(uncertaintyAreas)],
+    dependencies: [],
   };
 }
 
@@ -253,6 +265,45 @@ function buildCrossPhaseInsights(pack: SynthesisContextPack, phases: PhaseAnalys
     globalRisks: [...new Set(globalRisks)],
     overallInputStatus,
   };
+}
+
+function computePhaseDependencies(phase: PhaseAnalysis, allPhases: PhaseAnalysis[]): PhaseDependency[] {
+  const deps: PhaseDependency[] = [];
+  const currentIndex = PHASE_ORDER.indexOf(phase.phaseType);
+
+  // Lifecycle dependencies: each phase depends on all prior phases
+  for (let i = 0; i < currentIndex; i++) {
+    const priorPhase = allPhases[i]!;
+    deps.push({
+      dependsOnPhase: priorPhase.phaseType,
+      reason: `${priorPhase.phaseName} must be completed before ${phase.phaseName} — fixed lifecycle ordering`,
+      sourceRef: "lifecycle",
+      nature: "lifecycle",
+    });
+  }
+
+  // Inferred dependencies: if this phase's answers reference concepts from other phases
+  const phaseAnswerTexts = phase.findings.flatMap((f) => f.sources).map((s) => s.excerpt.toLowerCase());
+
+  if (phaseAnswerTexts.length > 0) {
+    for (let i = 0; i < currentIndex; i++) {
+      const priorPhase = allPhases[i]!;
+      const priorKeywords = priorPhase.keyDecisions.map((d) => d.description.toLowerCase());
+      const matchesPrior = priorKeywords.some((kw) =>
+        phaseAnswerTexts.some((text) => text.includes(kw.slice(0, 30))),
+      );
+      if (matchesPrior) {
+        deps.push({
+          dependsOnPhase: priorPhase.phaseType,
+          reason: `Answers in ${phase.phaseName} reference decisions from ${priorPhase.phaseName}`,
+          sourceRef: "inferred",
+          nature: "inferred_from_answers",
+        });
+      }
+    }
+  }
+
+  return deps;
 }
 
 function makeSourceLink(answer: SynthesizedAnswer): SourceLink[] {

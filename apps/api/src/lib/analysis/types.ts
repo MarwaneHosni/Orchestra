@@ -40,6 +40,13 @@ export interface AnalysisFinding {
 
 export type PhaseInputStatus = "sufficient" | "insufficient" | "missing";
 
+export interface PhaseDependency {
+  dependsOnPhase: PhaseType;
+  reason: string;
+  sourceRef: string;
+  nature: "lifecycle" | "inferred_from_answers";
+}
+
 export interface PhaseAnalysis {
   phaseType: PhaseType;
   phaseName: string;
@@ -54,6 +61,7 @@ export interface PhaseAnalysis {
   identifiedRisks: string[];
   keyDecisions: { description: string; sourceRef: string }[];
   uncertaintyAreas: string[];
+  dependencies: PhaseDependency[];
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -90,4 +98,5 @@ export interface AnalysisSummary {
   totalFindings: number;
   highSeverityFindings: number;
   totalUncertaintyAreas: number;
+  totalInferredDependencies: number;
 }

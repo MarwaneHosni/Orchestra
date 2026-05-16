@@ -227,5 +227,25 @@ describe("analyzeAnswers", () => {
     expect(ideation.keyDecisions).toBeDefined();
     expect(ideation.uncertaintyAreas).toBeDefined();
     expect(ideation.findings).toBeDefined();
+    expect(ideation.dependencies).toBeDefined();
+  });
+
+  it("computes lifecycle dependencies for each phase", () => {
+    const pack = buildContextPack("proj-1", "Test", "session-1", answerAllSufficiently());
+    const analysis = analyzeAnswers(pack);
+    // First phase (ideation) should have 0 lifecycle deps
+    expect(analysis.phases[0]!.dependencies.length).toBe(0);
+    // Second phase (requirements) should depend on ideation
+    expect(analysis.phases[1]!.dependencies.some((d) => d.nature === "lifecycle")).toBe(true);
+    // Later phases should have multiple lifecycle deps
+    const lastPhase = analysis.phases[analysis.phases.length - 1]!;
+    const lifecycleDeps = lastPhase.dependencies.filter((d) => d.nature === "lifecycle");
+    expect(lifecycleDeps.length).toBeGreaterThan(0);
+  });
+
+  it("reports totalInferredDependencies in summary", () => {
+    const pack = buildContextPack("proj-1", "Test", "session-1", answerAllSufficiently());
+    const analysis = analyzeAnswers(pack);
+    expect(analysis.summary.totalInferredDependencies).toBeGreaterThanOrEqual(0);
   });
 });
