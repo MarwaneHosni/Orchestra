@@ -200,6 +200,55 @@ export async function getSnapshotDiff(leftSnapshotId: string, rightSnapshotId: s
   return request(`/api/v1/snapshots/${leftSnapshotId}/compare/${rightSnapshotId}`);
 }
 
+// ── Exports ───────────────────────────────────────────────────────────
+
+export interface ExportRecord {
+  id: string;
+  snapshotId: string;
+  projectId: string;
+  format: "markdown" | "json";
+  type: "blueprint" | "task_graph" | "prompts" | "full_bundle";
+  content: string;
+  bundleVersion: string;
+  snapshotVersion: number;
+  planVersion: number | null;
+  sourceReason: string;
+  createdAt: string;
+}
+
+export async function exportArtifact(
+  snapshotId: string,
+  type: ExportRecord["type"],
+  format: ExportRecord["format"],
+  blueprintContent?: Record<string, unknown> | null,
+): Promise<ExportRecord> {
+  return request(`/api/v1/snapshots/${snapshotId}/export`, {
+    method: "POST",
+    body: JSON.stringify({ type, format, blueprintContent }),
+  });
+}
+
+export async function getExports(snapshotId: string): Promise<{ data: ExportRecord[] }> {
+  return request(`/api/v1/snapshots/${snapshotId}/exports`);
+}
+
+export async function getExportContent(exportId: string): Promise<ExportRecord> {
+  return request(`/api/v1/exports/${exportId}`);
+}
+
+function triggerDownload(content: string, filename: string, format: string) {
+  const mimeType = format === "json" ? "application/json" : "text/markdown";
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export { triggerDownload };
+
 // ── Provider Credentials ──────────────────────────────────────────────
 
 export interface ProviderCredential {

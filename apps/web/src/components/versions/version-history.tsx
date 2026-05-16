@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { VersionNode } from "./version-node";
 import { VersionCompare } from "./version-compare";
+import { ExportActionCenter } from "./export-action-center";
 import { StepIndicator } from "@/components/ui/step-indicator";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { getSnapshots, getSnapshotDiff } from "@/lib/api";
@@ -172,9 +173,14 @@ export function VersionHistory({ sessionId }: VersionHistoryProps) {
               </div>
             )}
             {diff && !diffLoading && <VersionCompare diff={diff} />}
-            {!diff && !diffLoading && !diffError && selectedId && (
+            {!diff && !diffLoading && !diffError && selectedId && compareId && (
               <div className="flex h-full items-center justify-center rounded-xl border-2 border-dashed border-border p-12 text-center">
                 <p className="text-sm text-text-secondary">Select a second version to see what changed.</p>
+              </div>
+            )}
+            {!diff && !diffLoading && !diffError && selectedId && !compareId && snapshots.length > 0 && (
+              <div className="rounded-xl border border-border bg-surface p-5">
+                <ExportActionCenter snapshot={snapshots.find((s) => s.id === selectedId)!} />
               </div>
             )}
           </div>
