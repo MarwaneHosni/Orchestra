@@ -22,10 +22,8 @@ export const POLICIES: RoutingPolicy[] = [
       { provider: "anthropic", model: "claude-sonnet-4-20250514", tier: "balanced" },
     ],
     fallback: [
-      { provider: "openrouter", model: "deepseek/deepseek-v4-flash:free", tier: "cheap" },
-      { provider: "openai", model: "gpt-4o-mini", tier: "cheap" },
-      { provider: "anthropic", model: "claude-3-5-haiku-latest", tier: "cheap" },
-      { provider: "openrouter", model: "openai/gpt-4o", tier: "balanced" },
+      { provider: "openrouter", model: "anthropic/claude-sonnet-4", tier: "strong" },
+      { provider: "mock", model: "mock-blueprint-v1", tier: "cheap" },
     ],
   },
   {

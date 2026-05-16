@@ -32,9 +32,32 @@ export async function generateWithAI(
   const pack = buildContextPack(projectId, projectName, sessionId, answers);
   const analysis = analyzeAnswers(pack);
 
-  // 2. Check if any provider credentials are stored
+  // 2. Check if any provider credentials are stored; auto-create mock if none exist
   const store = getCredentialStore();
-  const allCreds = store.list();
+  let allCreds = store.list();
+  const hasAnyCreds = allCreds.length > 0;
+
+  if (!hasAnyCreds) {
+    const now = new Date().toISOString();
+    store.insert({
+      id: "mock-credential",
+      userId: "00000000-0000-0000-0000-000000000000",
+      projectId: null,
+      provider: "mock",
+      displayName: "Mock AI Provider",
+      status: "valid",
+      encryptedApiKey: "mock-key",
+      keyReference: null,
+      defaultModel: "mock-blueprint-v1",
+      modelsAvailable: null,
+      lastVerifiedAt: now,
+      errorMessage: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    allCreds = store.list();
+  }
+
   const hasValidCreds = allCreds.some((c) => c.status === "valid" || c.status === "unverified");
 
   if (!hasValidCreds) {

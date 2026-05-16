@@ -131,10 +131,10 @@ describe("RouterService", () => {
 });
 
 describe("POLICIES", () => {
-  it("has entries for all 5 task types", () => {
+  it("has entries for all 6 task types", () => {
     const types = POLICIES.map((p) => p.taskType).sort();
     expect(types).toEqual(
-      ["architecture", "clarification", "prompt_generation", "roadmap", "summary"].sort(),
+      ["architecture", "blueprint", "clarification", "prompt_generation", "roadmap", "summary"].sort(),
     );
   });
 

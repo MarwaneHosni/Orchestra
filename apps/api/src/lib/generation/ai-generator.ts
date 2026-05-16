@@ -2,6 +2,7 @@ import type { AIProvider, GenerationInput } from "../provider/types.js";
 import { OpenAIProvider } from "../provider/openai.js";
 import { AnthropicProvider } from "../provider/anthropic.js";
 import { OpenRouterProvider } from "../provider/openrouter.js";
+import { MockAIProvider } from "../provider/mock.js";
 import type { RouterService } from "../router/router.js";
 import type { RouterDecision, ModelSelection } from "../router/types.js";
 import type { AnalysisPack } from "../analysis/types.js";
@@ -351,6 +352,8 @@ export class AIBlueprintGenerator {
         return new AnthropicProvider(apiKey);
       case "openrouter":
         return new OpenRouterProvider(apiKey);
+      case "mock":
+        return new MockAIProvider(apiKey);
       default:
         return undefined;
     }
