@@ -56,36 +56,38 @@
 
 ## Verification Results
 
-| Check                    | Status      | Details                                                                 |
-| ------------------------ | ----------- | ----------------------------------------------------------------------- |
-| Full test suite          | ✅ PASS     | 23 files, 404 tests, 0 failures                                         |
-| Unit tests               | ✅ PASS     | 328 tests across 18 files                                               |
-| Contract tests           | ✅ PASS     | 12 tests across providers                                               |
-| Integration tests        | ✅ PASS     | 7 tests across 2 files                                                  |
-| E2E tests (API)          | ✅ PASS     | 9 tests (byok flow)                                                     |
-| E2E tests (Playwright)   | ✅ FOUND    | 2 files in apps/web/e2e/ (separate runner)                              |
-| Snapshot tests           | ✅ PASS     | 2 snapshot files, all assertions stable                                 |
-| Performance tests        | ✅ PASS     | 16 tests, sub-50ms at 1K-10K scale                                      |
-| Metrics tests            | ✅ PASS     | 28 tests                                                                |
-| Format                   | ✅ PASS     | Prettier clean                                                          |
-| Lint                     | ✅ PASS     | 0 errors, 5 warnings (all pre-existing `any` in provider error parsing) |
-| Guardrail components     | ✅ PRESENT  | 7 files, all wired                                                      |
-| Observability components | ✅ PRESENT  | 7 files, /metrics endpoint active                                       |
-| Store indexing           | ✅ VERIFIED | All 7 in-memory stores use Map                                          |
-| Error types              | ✅ VERIFIED | 4 guardrail-specific errors defined                                     |
-| Audit event types        | ✅ VERIFIED | 26 event types defined                                                  |
+| Check                    | Status             | Details                                                                                |
+| ------------------------ | ------------------ | -------------------------------------------------------------------------------------- |
+| Full test suite          | ✅ PASS            | 23 files, 404 tests, 0 failures                                                        |
+| Unit tests               | ✅ PASS            | 328 tests across 18 files                                                              |
+| Contract tests           | ✅ PASS            | 12 tests across providers                                                              |
+| Integration tests        | ✅ PASS            | 7 tests across 2 files                                                                 |
+| E2E tests (API)          | ✅ PASS            | 9 tests (byok flow)                                                                    |
+| E2E tests (Playwright)   | ✅ FOUND           | 2 files in apps/web/e2e/ (separate runner)                                             |
+| Snapshot tests           | ✅ PASS            | 2 snapshot files, all assertions stable                                                |
+| Performance tests        | ✅ PASS            | 16 tests, sub-50ms at 1K-10K scale                                                     |
+| Metrics tests            | ✅ PASS            | 28 tests                                                                               |
+| Format                   | ✅ PASS            | Prettier clean                                                                         |
+| Lint                     | ✅ PASS            | 0 errors, 5 warnings (all pre-existing `any` in provider error parsing)                |
+| Guardrail components     | ✅ PRESENT         | 7 files, all wired                                                                     |
+| Observability components | ✅ PRESENT         | 7 files, /metrics endpoint active                                                      |
+| Store indexing           | ✅ VERIFIED        | All 7 in-memory stores use Map                                                         |
+| Error types              | ✅ VERIFIED        | 4 guardrail-specific errors defined                                                    |
+| Audit event types        | ✅ VERIFIED        | 26 event types defined                                                                 |
+| CI security scanning     | ⚠️ NOT IN CI       | CI has no SAST, dependency scanning, or secret scanning — documented in residual risks |
+| Auth middleware          | ⚠️ NOT IMPLEMENTED | No authentication/authorization layer — all route handlers use `"system"`              |
 
 ## Residual Risks
 
-| Risk                         | Severity   | Description                                                                                                                                                        | Mitigation                                                                                                                    |
-| ---------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| In-memory state              | **High**   | All rate limiter, budget, circuit breaker, abuse detector, and metrics state lost on server restart                                                                | Documented in perf-optimizations.md and observability.md. Recommend Redis-backed stores for production (deferred to Phase 8). |
-| Provider error types         | **Low**    | `any` cast in provider error parsing (5 lint warnings) carries a theoretical type-safety risk                                                                      | Acceptable — the `any` is scoped to JSON error body parsing where the shape is genuinely unknown at compile time              |
-| Playwright E2E not in vitest | **Low**    | Frontend E2E tests (2 files) require separate Playwright runner; not run by `pnpm test`                                                                            | Documented in test-strategy.md. Runner is `pnpm --filter @orchestra/web e2e` (requires running API + web servers).            |
-| No DB-backed stores          | **High**   | All stores (budget, rate limits, audits, metrics) use in-memory arrays/Maps — no persistence                                                                       | Acceptable for MVP/self-hosted. DB-backed implementation is the primary Phase 8 recommendation.                               |
-| Metrics are ephemeral        | **Medium** | Metrics registry resets on restart. No historical metric data without Prometheus scraping.                                                                         | Infrastructure setup (Prometheus + Grafana) is operator responsibility. Metrics endpoint is ready for scraping.               |
-| No auth middleware           | **Medium** | Rate limiting keys are user IDs passed manually. No authentication/authorization layer.                                                                            | All route handlers use hardcoded `"system"` for the user. Real auth needed for multi-tenant use.                              |
-| Generation is deterministic  | **Low**    | Current `BlueprintGenerator.generate()` doesn't call an AI provider — so provider latency/error metrics won't fire until provider routing is wired into generation | Instrumentation wrappers are in place and tested. Wiring provider calls into generation is a Phase 8 task.                    |
+| Risk                         | Severity   | Description                                                                                                                                                                                  | Mitigation                                                                                                                     |
+| ---------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| In-memory state              | **High**   | All rate limiter, budget, circuit breaker, abuse detector, and metrics state lost on server restart                                                                                          | Documented in perf-optimizations.md and observability.md. Recommend Redis-backed stores for production (deferred to Phase 8).  |
+| No auth middleware           | **High**   | No authentication or authorization layer exists. All route handlers use hardcoded `"system"` for user identity. Rate limit keys, budget scopes, and audit actors are not tied to real users. | Acceptable for single-user/self-hosted MVP. Multi-tenant use requires auth middleware before deploying to shared environments. |
+| No security scanning in CI   | **Medium** | CI pipeline (`.github/workflows/ci.yml`) runs lint, format, typecheck, test, and build — but has no SAST (CodeQL, Snyk), dependency scanning (`npm audit`), or secret scanning.              | Add at minimum `npm audit` to CI; consider CodeQL or Snyk for SAST coverage in Phase 8.                                        |
+| Metrics are ephemeral        | **Medium** | Metrics registry resets on restart. No historical metric data without Prometheus scraping.                                                                                                   | Infrastructure setup (Prometheus + Grafana) is operator responsibility. Metrics endpoint is ready for scraping.                |
+| Playwright E2E not in vitest | **Low**    | Frontend E2E tests (2 files) require separate Playwright runner; not run by `pnpm test`                                                                                                      | Runner is `pnpm --filter @orchestra/web e2e` (requires running API on :3000 + web on :3001). Documents in test-strategy.md.    |
+| Provider error types         | **Low**    | `any` cast in provider error parsing (5 lint warnings) carries a theoretical type-safety risk                                                                                                | Acceptable — the `any` is scoped to JSON error body parsing where the shape is genuinely unknown at compile time               |
+| Generation is deterministic  | **Low**    | Current `BlueprintGenerator.generate()` doesn't call an AI provider — so provider latency/error metrics won't fire until provider routing is wired into generation                           | Instrumentation wrappers are in place and tested. Wiring provider calls into generation is a Phase 8 task.                     |
 
 ## Operational Recommendations
 
@@ -97,6 +99,7 @@
 6. **Set `SOURCE_VERSION`** in CI/CD pipeline so release correlation works in metrics and traces
 7. **Wire provider calls into generation** to exercise the full provider instrumentation path (provider latency histograms, error counters)
 8. **Add authentication layer** so rate limiting keys map to real users rather than `"system"`
+9. **Add security scanning to CI** — at minimum `npm audit` for dependency vulnerabilities, and consider CodeQL or Snyk for source analysis once the codebase stabilizes
 
 ## Files Changed in Phase 7
 
