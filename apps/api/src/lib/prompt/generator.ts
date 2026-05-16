@@ -105,6 +105,10 @@ function buildContext(task: DraftTask, phase: PhaseAnalysis | null, analysis: An
     if (constraints.length > 0) {
       parts.push(`Constraints: ${constraints.join("; ")}`);
     }
+    const answeredCount = phase.subphases.filter((s) => s.answerPresent).length;
+    if (answeredCount > 0) {
+      parts.push(`Based on ${answeredCount} answered questions from the interview session.`);
+    }
   }
   if (task.uncertaintyNote) {
     parts.push(`Note: ${task.uncertaintyNote}`);
@@ -158,6 +162,19 @@ function buildArchitecturalAlignment(task: DraftTask, analysis: AnalysisPack): s
     const deps = phase.dependencies.filter((d) => d.nature === "lifecycle");
     if (deps.length > 0) {
       parts.push(`Depends on prior phases: ${deps.map((d) => d.dependsOnPhase).join(", ")}.`);
+    }
+    if (phase.explicitAssumptions.length > 0) {
+      parts.push(
+        `${phase.explicitAssumptions.length} recorded assumptions must be validated during implementation.`,
+      );
+    }
+    if (phase.identifiedRisks.length > 0) {
+      parts.push(`${phase.identifiedRisks.length} identified risks require mitigation.`);
+    }
+    if (analysis.crossPhase.contradictions.length > 0) {
+      parts.push(
+        `Note: ${analysis.crossPhase.contradictions.length} cross-phase contradiction(s) exist — verify integration.`,
+      );
     }
   }
   return parts.join(" ");

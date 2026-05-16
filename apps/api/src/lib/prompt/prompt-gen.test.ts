@@ -230,6 +230,46 @@ describe("generatePrompts", () => {
       }
     });
 
+    it("prompt text contains project name and task title", () => {
+      const { analysis, tasks } = buildTasks();
+      const bundle = generatePrompts(tasks, analysis, 1);
+      for (const prompt of bundle.prompts) {
+        expect(prompt.promptText).toContain("Test");
+      }
+      // Spot-check a known task title appears in prompt text
+      const firstPrompt = bundle.prompts[0]!;
+      const task = tasks.find((t) => t.id === firstPrompt.taskId);
+      if (task) {
+        expect(firstPrompt.promptText).toContain(task.title);
+      }
+    });
+
+    it("prompt context references source answers when available", () => {
+      const { analysis, tasks } = buildTasks();
+      const bundle = generatePrompts(tasks, analysis, 1);
+      const answeredPhases = bundle.prompts.filter((p) => {
+        const phase = analysis.phases.find((ph) => ph.phaseType === p.lineage.sourcePhaseType);
+        return phase && phase.subphases.some((s) => s.answerPresent);
+      });
+      for (const prompt of answeredPhases) {
+        expect(prompt.sections.context).toContain("answered questions");
+      }
+    });
+
+    it("architectural alignment references assumptions and risks when present", () => {
+      const { analysis, tasks } = buildTasks();
+      const bundle = generatePrompts(tasks, analysis, 1);
+      for (const prompt of bundle.prompts) {
+        const phase = analysis.phases.find((p) => p.phaseType === prompt.lineage.sourcePhaseType);
+        if (phase && phase.explicitAssumptions.length > 0) {
+          expect(prompt.sections.architecturalAlignment).toContain("assumptions");
+        }
+        if (phase && phase.identifiedRisks.length > 0) {
+          expect(prompt.sections.architecturalAlignment).toContain("risks");
+        }
+      }
+    });
+
     it("prompt text is within reasonable length", () => {
       const { analysis, tasks } = buildTasks();
       const bundle = generatePrompts(tasks, analysis, 1);
