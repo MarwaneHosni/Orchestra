@@ -231,12 +231,18 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
         </section>
       )}
 
-      <div className="flex gap-3 border-t border-border pt-6">
+      <div className="flex flex-wrap gap-3 border-t border-border pt-6">
         <button
           onClick={() => router.push(`/projects/${sessionId}/tasks`)}
           className="rounded-lg bg-orchestra-600 px-6 py-2 text-sm font-medium text-white hover:bg-orchestra-700"
         >
           View task graph
+        </button>
+        <button
+          onClick={() => router.push(`/projects/${sessionId}/versions`)}
+          className="rounded-lg border border-border bg-white px-6 py-2 text-sm font-medium text-text-secondary hover:bg-gray-50"
+        >
+          Version history
         </button>
         <button
           onClick={() => router.push(`/projects/${sessionId}/interview`)}

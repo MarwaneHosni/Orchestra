@@ -149,13 +149,21 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
             {needsReviewCount > 0 && ` · ${needsReviewCount} needs review`}
           </p>
         </div>
-        <button
-          onClick={handleExport}
-          disabled={exporting}
-          className="rounded-lg bg-orchestra-600 px-4 py-2 text-sm font-medium text-white hover:bg-orchestra-700 disabled:opacity-50"
-        >
-          {exporting ? "Exporting..." : "Export bundle"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => (window.location.href = `/projects/${sessionId}/versions`)}
+            className="rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-text-secondary hover:bg-gray-50"
+          >
+            Version history
+          </button>
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="rounded-lg bg-orchestra-600 px-4 py-2 text-sm font-medium text-white hover:bg-orchestra-700 disabled:opacity-50"
+          >
+            {exporting ? "Exporting..." : "Export bundle"}
+          </button>
+        </div>
       </div>
 
       {exportError && (

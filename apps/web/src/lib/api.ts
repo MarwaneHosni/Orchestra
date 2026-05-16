@@ -117,6 +117,89 @@ export async function generateBlueprint(sessionId: string): Promise<BlueprintRes
   return request(`/api/v1/interviews/${sessionId}/generate`, { method: "POST", body: "{}" });
 }
 
+// ── Versioning / Snapshots ────────────────────────────────────────────
+
+export interface SnapshotInfo {
+  id: string;
+  projectId: string;
+  version: number;
+  parentSnapshotId: string | null;
+  reason: string;
+  status: "complete" | "failed";
+  planId: string | null;
+  planVersion: number | null;
+  blueprintId: string | null;
+  taskGraphId: string | null;
+  interviewSessionId: string | null;
+  answerCount: number;
+  affectedPhaseTypes: string[] | null;
+  changeSummary: string | null;
+  failureReason: string | null;
+  createdAt: string;
+}
+
+export async function getSnapshots(projectId: string): Promise<{ data: SnapshotInfo[] }> {
+  return request(`/api/v1/projects/${projectId}/snapshots`);
+}
+
+export interface DiffSummary {
+  regenerationScope: "full" | "partial" | "none";
+  affectedPhaseTypes: string[];
+  phaseChanges: number;
+  taskChanges: number;
+  promptChanges: number;
+  blueprintChanges: number;
+}
+
+export interface TaskDiff {
+  phaseType: string;
+  order: number;
+  changeType: "added" | "removed" | "modified" | "unchanged";
+  left: { title: string; type: string; status: string; depCount: number } | null;
+  right: { title: string; type: string; status: string; depCount: number } | null;
+}
+
+export interface PromptDiff {
+  phaseType: string;
+  changeType: "added" | "removed" | "modified" | "unchanged";
+  textChanged: boolean;
+  statusChanged: boolean;
+}
+
+export interface BlueprintItemDiff {
+  changeType: "added" | "removed" | "modified" | "unchanged";
+  description: string;
+}
+
+export interface PhaseSummaryDiff {
+  phaseType: string;
+  summaryChanged: boolean;
+  confidenceChanged: boolean;
+  statusChanged: boolean;
+  leftSummary: string | null;
+  rightSummary: string | null;
+}
+
+export interface BlueprintDiff {
+  assumptions: BlueprintItemDiff[];
+  constraints: BlueprintItemDiff[];
+  risks: BlueprintItemDiff[];
+  phaseSummaries: PhaseSummaryDiff[];
+}
+
+export interface VersionDiff {
+  left: { version: number; reason: string; planVersion: number | null; createdAt: string };
+  right: { version: number; reason: string; planVersion: number | null; createdAt: string };
+  summary: DiffSummary;
+  tasks: TaskDiff[];
+  prompts: PromptDiff[];
+  blueprint: BlueprintDiff | null;
+}
+
+export async function getSnapshotDiff(leftSnapshotId: string, rightSnapshotId: string): Promise<VersionDiff> {
+  return request(`/api/v1/snapshots/${leftSnapshotId}/compare/${rightSnapshotId}`);
+}
+
 // ── Provider Credentials ──────────────────────────────────────────────
 
 export interface ProviderCredential {
