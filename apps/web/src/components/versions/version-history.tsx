@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { VersionNode } from "./version-node";
 import { VersionCompare } from "./version-compare";
 import { ExportActionCenter } from "./export-action-center";
+import { ActivityTimeline } from "@/components/activity/activity-timeline";
+import { UsageSummary } from "@/components/activity/usage-summary";
 import { StepIndicator } from "@/components/ui/step-indicator";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { getSnapshots, getSnapshotDiff } from "@/lib/api";
@@ -192,6 +194,28 @@ export function VersionHistory({ sessionId }: VersionHistoryProps) {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {sorted.length > 0 && (
+        <div className="space-y-6 border-t border-border pt-6">
+          <details className="group">
+            <summary className="cursor-pointer text-sm font-semibold text-text-primary hover:text-orchestra-600">
+              Activity timeline
+            </summary>
+            <div className="mt-3">
+              <ActivityTimeline projectId={sessionId} compact />
+            </div>
+          </details>
+
+          <details className="group">
+            <summary className="cursor-pointer text-sm font-semibold text-text-primary hover:text-orchestra-600">
+              Usage summary
+            </summary>
+            <div className="mt-3">
+              <UsageSummary projectId={sessionId} />
+            </div>
+          </details>
         </div>
       )}
     </div>

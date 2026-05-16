@@ -249,6 +249,51 @@ function triggerDownload(content: string, filename: string, format: string) {
 
 export { triggerDownload };
 
+// ── Activity / Timeline ───────────────────────────────────────────────
+
+export interface ActivityEvent {
+  id: string;
+  eventType: string;
+  timestamp: string;
+  resourceId: string | null;
+  metadata: Record<string, unknown>;
+}
+
+export interface ProjectSummary {
+  totalEvents: number;
+  snapshotCount: number;
+  exportCount: number;
+  compareCount: number;
+  failedCount: number;
+}
+
+export async function getProjectActivity(projectId: string): Promise<{ data: ActivityEvent[] }> {
+  return request(`/api/v1/projects/${projectId}/activity`);
+}
+
+export async function getProjectSummary(projectId: string): Promise<ProjectSummary> {
+  return request(`/api/v1/projects/${projectId}/summary`);
+}
+
+const EVENT_LABELS: Record<string, string> = {
+  "snapshot.created": "Snapshot created",
+  "snapshot.failed": "Snapshot failed",
+  "snapshot.regenerated": "Plan regenerated",
+  "snapshot.partial_regenerated": "Partial regeneration",
+  "export.generated": "Artifact exported",
+  "export.redownloaded": "Prior export re-downloaded",
+  "compare.viewed": "Versions compared",
+  "generation.attempted": "Generation started",
+  "generation.completed": "Generation completed",
+  "generation.failed": "Generation failed",
+  "project.created": "Project created",
+  "project.updated": "Project updated",
+};
+
+export function getEventLabel(eventType: string): string {
+  return EVENT_LABELS[eventType] ?? eventType;
+}
+
 // ── Provider Credentials ──────────────────────────────────────────────
 
 export interface ProviderCredential {

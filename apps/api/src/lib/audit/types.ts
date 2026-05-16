@@ -8,7 +8,17 @@ export type AuditEventType =
   | "generation.completed"
   | "generation.failed"
   | "budget.blocked"
-  | "budget.warning";
+  | "budget.warning"
+  // Phase 6 — Versioning & Export
+  | "snapshot.created"
+  | "snapshot.failed"
+  | "snapshot.regenerated"
+  | "snapshot.partial_regenerated"
+  | "export.generated"
+  | "export.redownloaded"
+  | "export.exported"
+  | "compare.viewed"
+  | "project.updated";
 
 export interface AuditEntry {
   id: string;
