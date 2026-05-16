@@ -33,6 +33,12 @@ export function validateAll(artifacts: {
   if (artifacts.taskDraft && artifacts.blueprint) {
     issues.push(...checkTaskBlueprintConsistency(artifacts.taskDraft, artifacts.blueprint));
   }
+  if (artifacts.taskDraft) {
+    issues.push(...checkTaskDependencyCycles(artifacts.taskDraft));
+  }
+  if (artifacts.promptBundle && artifacts.taskDraft) {
+    issues.push(...checkPromptTaskConsistency(artifacts.promptBundle, artifacts.taskDraft));
+  }
 
   const outcome = computeOutcome(issues);
   const stats = computeStats(issues);
@@ -437,6 +443,83 @@ function checkTaskBlueprintConsistency(td: TaskDraft, bp: BlueprintOutput): Vali
         phaseType: phase,
       });
     }
+  }
+
+  return issues;
+}
+
+// ── Task dependency cycle detection ─────────────────────────
+
+function checkTaskDependencyCycles(td: TaskDraft): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const taskMap = new Map(td.tasks.map((t) => [t.id, t]));
+  const visited = new Set<string>();
+  const inStack = new Set<string>();
+
+  function dfs(taskId: string): boolean {
+    if (inStack.has(taskId)) return true;
+    if (visited.has(taskId)) return false;
+    visited.add(taskId);
+    inStack.add(taskId);
+    const task = taskMap.get(taskId);
+    if (task) {
+      for (const dep of task.dependencies) {
+        if (taskMap.has(dep.taskId) && dfs(dep.taskId)) {
+          return true;
+        }
+      }
+    }
+    inStack.delete(taskId);
+    return false;
+  }
+
+  for (const task of td.tasks) {
+    visited.clear();
+    inStack.clear();
+    if (dfs(task.id)) {
+      issues.push({
+        artifactType: "task_graph",
+        code: "TK008",
+        severity: "error",
+        message: `Circular dependency detected involving task "${task.id}"`,
+        phaseType: task.phaseType,
+        field: "dependencies",
+      });
+      break; // Report one cycle — fix then re-validate
+    }
+  }
+
+  return issues;
+}
+
+// ── Prompt-to-task consistency ───────────────────────────────
+
+function checkPromptTaskConsistency(pb: PromptBundle, td: TaskDraft): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const taskIds = new Set(td.tasks.map((t) => t.id));
+
+  for (const prompt of pb.prompts) {
+    if (prompt.lineage?.taskId && !taskIds.has(prompt.lineage.taskId)) {
+      issues.push({
+        artifactType: "prompt_bundle",
+        code: "CR003",
+        severity: "error",
+        message: `Prompt "${prompt.id}" references non-existent task "${prompt.lineage.taskId}" in lineage`,
+        field: "lineage.taskId",
+      });
+    }
+  }
+
+  // Check prompt count matches task count within tolerance
+  const taskCount = td.tasks.length;
+  const promptCount = pb.prompts.length;
+  if (taskCount > 0 && Math.abs(promptCount - taskCount) > taskCount * 0.2) {
+    issues.push({
+      artifactType: "prompt_bundle",
+      code: "CR004",
+      severity: "warning",
+      message: `Prompt count (${promptCount}) differs significantly from task count (${taskCount})`,
+    });
   }
 
   return issues;

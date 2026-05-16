@@ -391,4 +391,32 @@ describe("attemptRepair", () => {
     // Phase order mismatch in roadmap will trigger RM002 first
     expect(result.issues.length).toBeGreaterThan(0);
   });
+
+  it("detects circular dependencies in tasks", () => {
+    const td = validTaskDraft();
+    // Create a cycle: task-A → task-B, task-B → task-A
+    const taskA = td.tasks[0]!;
+    const taskB = td.tasks[1]!;
+    taskA.dependencies.push({ taskId: taskB.id, kind: "blocks" });
+    taskB.dependencies.push({ taskId: taskA.id, kind: "blocks" });
+    const result = validateAll({ taskDraft: td });
+    expect(result.issues.some((i) => i.code === "TK008")).toBe(true);
+  });
+
+  it("detects prompt referencing non-existent task", () => {
+    const pb = validPromptBundle();
+    const td = validTaskDraft();
+    pb.prompts[0]!.lineage.taskId = "non-existent-task-id";
+    const result = validateAll({ promptBundle: pb, taskDraft: td });
+    expect(result.issues.some((i) => i.code === "CR003")).toBe(true);
+  });
+
+  it("detects significant prompt-task count mismatch", () => {
+    const pb = validPromptBundle();
+    const td = validTaskDraft();
+    // Truncate tasks to 1, keeping all prompts — big mismatch
+    td.tasks = td.tasks.slice(0, 1);
+    const result = validateAll({ promptBundle: pb, taskDraft: td });
+    expect(result.issues.some((i) => i.code === "CR004")).toBe(true);
+  });
 });
