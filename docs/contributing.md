@@ -48,6 +48,8 @@ ExportService(snapshotStore, graphStore, promptStore, exportStore)
 
 Never import a store singleton directly from a service — always inject it.
 
+**Exception:** The audit logger (`logAudit()` from `lib/audit/logger.ts`) is a global utility, not a store. It is called directly from services for fire-and-forget event emission. Audit events never block the caller and are not part of the core domain logic. See the Analytics Events section below.
+
 ### Domain Routes (`apps/api/src/domains/`)
 
 Each domain file exports a `registerXRoutes(app: FastifyInstance)` function.
