@@ -211,7 +211,6 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
         await submitAnswer(sessionId, next.question.id, val);
         next = await getNextQuestion(sessionId);
       }
-      await transitionSession(sessionId, "ready_for_generation");
       await generateBlueprint(sessionId);
       router.push(`/projects/${sessionId}/summary`);
     } catch (e) {
