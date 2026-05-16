@@ -167,6 +167,88 @@ describe("validatePrompt", () => {
   });
 });
 
+describe("Prompt artifact — snapshot stability", () => {
+  it("artifact structure is deterministic for the same task context", () => {
+    const artifact = assemblePrompt(makeContext());
+
+    const stable = {
+      taskId: artifact.taskId,
+      planId: artifact.planId,
+      planVersion: artifact.planVersion,
+      version: artifact.version,
+      status: artifact.status,
+      failureReason: artifact.failureReason,
+      sections: {
+        objective: artifact.sections.objective,
+        constraints: artifact.sections.constraints,
+        expectedOutput: artifact.sections.expectedOutput,
+        validationCriteria: artifact.sections.validationCriteria,
+        architecturalAlignment: artifact.sections.architecturalAlignment,
+        agentTips: artifact.sections.agentTips,
+      },
+      promptLength: artifact.promptText.length,
+      promptStartsWith: artifact.promptText.slice(0, 50),
+    };
+
+    expect(stable).toMatchSnapshot();
+  });
+
+  it("varies by task type (config vs code vs test)", () => {
+    const config = assemblePrompt(makeContext({ task: makeTask({ type: "config", title: "Setup DB" }) }));
+    const code = assemblePrompt(makeContext({ task: makeTask({ type: "code", title: "Write API" }) }));
+    const test = assemblePrompt(makeContext({ task: makeTask({ type: "test", title: "Test it" }) }));
+
+    // Config should have config-specific constraints and agent tips
+    expect(config.sections.constraints.some((c) => c.includes("environment variables"))).toBe(true);
+    expect(config.sections.agentTips.commonBugs.some((b) => b.includes("Default"))).toBe(true);
+
+    // Code should have code-specific common bugs
+    expect(code.sections.agentTips.commonBugs.some((b) => b.includes("promise rejections"))).toBe(true);
+
+    // Test should have test-specific constraints
+    expect(test.sections.constraints.some((c) => c.includes("80% coverage"))).toBe(true);
+
+    // All three should have the same base structure
+    for (const a of [config, code, test]) {
+      expect(a.sections.objective).toBeTruthy();
+      expect(a.sections.context).toBeTruthy();
+      expect(a.sections.architecturalAlignment).toBeTruthy();
+      expect(a.sections.agentTips.security.length).toBeGreaterThanOrEqual(4);
+      expect(a.sections.agentTips.edgeCases.length).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it("validation status is complete for well-formed prompts", () => {
+    const artifact = assemblePrompt(makeContext());
+    expect(artifact.status).toBe("complete");
+    expect(artifact.failureReason).toBeNull();
+
+    // All required sections have content
+    expect(artifact.sections.objective.length).toBeGreaterThan(10);
+    expect(artifact.sections.context.length).toBeGreaterThan(50);
+    expect(artifact.sections.constraints.length).toBeGreaterThanOrEqual(3);
+    expect(artifact.sections.expectedOutput.length).toBeGreaterThan(20);
+    expect(artifact.sections.validationCriteria.length).toBeGreaterThanOrEqual(1);
+    expect(artifact.sections.architecturalAlignment.length).toBeGreaterThan(50);
+    expect(artifact.sections.agentTips.security.length).toBeGreaterThan(0);
+  });
+
+  it("agent tips structure is consistent across task types", () => {
+    const taskTypes = ["code", "config", "test", "review"] as const;
+    for (const type of taskTypes) {
+      const artifact = assemblePrompt(makeContext({ task: makeTask({ type }) }));
+      const tips = artifact.sections.agentTips;
+      expect(tips.security).toBeInstanceOf(Array);
+      expect(tips.edgeCases).toBeInstanceOf(Array);
+      expect(tips.dependencyWarnings).toBeInstanceOf(Array);
+      expect(tips.commonBugs).toBeInstanceOf(Array);
+      // Every task type has at least all base tips
+      expect(tips.security.length).toBeGreaterThanOrEqual(4);
+      expect(tips.commonBugs.length).toBeGreaterThanOrEqual(4);
+    }
+  });
+});
+
 describe("PromptStore", () => {
   it("persists and retrieves prompt artifacts", () => {
     const store = createInMemoryPromptStore();

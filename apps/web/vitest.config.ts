@@ -4,7 +4,7 @@ import path from "path";
 export default defineConfig({
   test: {
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
-    exclude: ["dist/**", "node_modules/**", ".next/**"],
+    exclude: ["dist/**", "node_modules/**", ".next/**", "e2e/**"],
   },
   resolve: {
     alias: {

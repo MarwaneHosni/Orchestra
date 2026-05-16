@@ -1,0 +1,66 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Prompt artifact — snapshot stability > artifact structure is deterministic for the same task context 1`] = `
+{
+  "failureReason": null,
+  "planId": "plan-1",
+  "planVersion": 1,
+  "promptLength": 2358,
+  "promptStartsWith": "# Execution Prompt
+
+## Objective
+Implement: Implem",
+  "sections": {
+    "agentTips": {
+      "commonBugs": [
+        "Off-by-one errors in loops and array indexing",
+        "Race conditions in async operations without proper synchronization",
+        "Silent error swallowing — ensure errors are logged or propagated",
+        "Inconsistent naming or type mismatches between related modules",
+        "Unhandled promise rejections in async code",
+        "Memory leaks from unclosed connections or listeners",
+      ],
+      "dependencyWarnings": [
+        "Ensure all imported modules and packages are declared in the project",
+        "Check that type definitions match between interfaces and implementations",
+        "Verify that environment variables referenced in this task are documented",
+      ],
+      "edgeCases": [
+        "Consider empty states: what happens when there is no data?",
+        "Consider error states: what happens when a dependency fails?",
+        "Consider boundary conditions: maximum input sizes, concurrent access",
+      ],
+      "security": [
+        "Validate all inputs and sanitize outputs",
+        "Do not hardcode secrets, API keys, or credentials",
+        "Use parameterized queries to prevent injection attacks",
+        "Apply least-privilege principles to any permissions",
+      ],
+    },
+    "architecturalAlignment": "This task is part of the "backend" phase.
+The overall project "TeamSync" follows the architecture defined in the project blueprint.
+This task contributes to: Implement user authentication endpoint
+Implementation tasks build the core functionality specified in this phase.",
+    "constraints": [
+      "Task must be completable within 3 prompt round(s)",
+      "Output must be coherent and independently verifiable",
+      "Follow the existing project conventions and code style",
+      "Implementation must handle error cases and edge conditions",
+      "Follow the Single Responsibility Principle",
+    ],
+    "expectedOutput": "Complete the following work:
+
+1. Implement user authentication endpoint
+2. Ensure the output meets the acceptance criteria below
+3. If applicable, update or create the relevant files in the project",
+    "objective": "Implement: Implement user authentication endpoint",
+    "validationCriteria": [
+      "Users can register and log in",
+      "Passwords are hashed",
+    ],
+  },
+  "status": "complete",
+  "taskId": "task-1",
+  "version": 1,
+}
+`;
