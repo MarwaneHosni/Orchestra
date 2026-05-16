@@ -18,7 +18,7 @@ export interface ExportRecord {
 
 export interface ExportOptions {
   format: ExportFormat;
-  blueprintContent?: Record<string, unknown> | null;
+  blueprintContent?: import("../diff/types.js").BlueprintContent | null;
 }
 
 export interface ExportStore {

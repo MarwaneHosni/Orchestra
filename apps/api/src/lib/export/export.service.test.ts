@@ -242,6 +242,53 @@ describe("ExportService - metadata and lineage", () => {
     expect(parsed.snapshot.parentSnapshotId).toBe(snapshot.id);
   });
 
+  it("includes regeneration scope and phase content when blueprint provided", () => {
+    const { service, snapshot } = setupEnv();
+    const result = service.exportFullBundle(snapshot.id, {
+      format: "markdown",
+      blueprintContent: {
+        phases: [
+          {
+            phaseType: "backend",
+            phaseName: "Backend",
+            summary: "API layer",
+            status: "insufficient",
+            confidence: 0.3,
+          },
+        ],
+        assumptions: [{ description: "PostgreSQL" }],
+        constraints: [{ description: "AWS deploy" }],
+        risks: [{ description: "Team size" }],
+      },
+    });
+    expect(result.content).toContain("API layer");
+    expect(result.content).toContain("PostgreSQL");
+    expect(result.content).toContain("AWS deploy");
+    expect(result.content).toContain("Team size");
+
+    // JSON format preserves the same content
+    const jsonResult = service.exportFullBundle(snapshot.id, {
+      format: "json",
+      blueprintContent: {
+        phases: [
+          {
+            phaseType: "backend",
+            phaseName: "Backend",
+            summary: "API layer",
+            status: "insufficient",
+            confidence: 0.3,
+          },
+        ],
+        assumptions: [{ description: "PostgreSQL" }],
+        constraints: [{ description: "AWS deploy" }],
+        risks: [{ description: "Team size" }],
+      },
+    });
+    const parsed = JSON.parse(jsonResult.content);
+    expect(parsed.blueprint.phases).toBeDefined();
+    expect(parsed.blueprint.assumptions).toHaveLength(1);
+  });
+
   it("preserves regeneration reason in markdown header", () => {
     const { service, snapshot } = setupEnv();
     const result = service.exportFullBundle(snapshot.id, { format: "markdown" });

@@ -2,6 +2,7 @@ import type { SnapshotRecord, SnapshotStore } from "../versioning/types.js";
 import type { GraphStore } from "../task-graph/generator.js";
 import type { PromptStore, PromptArtifact } from "../prompt/types.js";
 import type { TaskNode } from "../task-graph/types.js";
+import type { BlueprintContent } from "../diff/types.js";
 import type { ExportRecord, ExportOptions, ExportStore, ExportFormat } from "./types.js";
 import { EXPORT_BUNDLE_VERSION, PHASE_LABELS, PHASE_ORDER } from "./types.js";
 
@@ -125,7 +126,7 @@ export class ExportService {
     snapshot: SnapshotRecord,
     graph: TaskNode[] | null,
     prompts: PromptArtifact[],
-    blueprintContent?: Record<string, unknown> | null,
+    blueprintContent?: BlueprintContent | null,
   ): string {
     const lines: string[] = [];
     lines.push(`# Orchestra Project Export`, "");
@@ -133,6 +134,9 @@ export class ExportService {
     lines.push(`> **Snapshot:** v${snapshot.version} — ${snapshot.reason}`);
     lines.push(`> **Date:** ${new Date(snapshot.createdAt).toISOString()}`);
     if (snapshot.parentSnapshotId) lines.push(`> **Derived from:** snapshot ${snapshot.parentSnapshotId}`);
+    if (snapshot.affectedPhaseTypes) {
+      lines.push(`> **Regeneration scope:** partial — affected ${snapshot.affectedPhaseTypes.join(", ")}`);
+    }
     lines.push("");
 
     lines.push(this.renderBlueprintMarkdown(snapshot, blueprintContent));
@@ -146,7 +150,7 @@ export class ExportService {
 
   private renderBlueprintMarkdown(
     snapshot: SnapshotRecord,
-    _blueprintContent?: Record<string, unknown> | null,
+    blueprintContent?: BlueprintContent | null,
   ): string {
     const lines: string[] = [];
     lines.push("## Blueprint", "");
@@ -154,11 +158,44 @@ export class ExportService {
     lines.push(`**Snapshot reason:** ${snapshot.reason}`);
     lines.push(`**Answers recorded:** ${snapshot.answerCount}`);
     if (snapshot.affectedPhaseTypes) {
-      lines.push(`**Affected phases:** ${snapshot.affectedPhaseTypes.join(", ")}`);
+      lines.push(`**Regeneration scope:** partial — ${snapshot.affectedPhaseTypes.join(", ")}`);
     }
     if (snapshot.changeSummary) {
       lines.push("", `**Summary:** ${snapshot.changeSummary}`, "");
     }
+
+    if (blueprintContent) {
+      lines.push("", "### Phases", "");
+      for (const p of blueprintContent.phases) {
+        const label = PHASE_LABELS[p.phaseType] ?? p.phaseName;
+        lines.push(
+          `- **${label}** — ${p.status} (confidence: ${Math.round(p.confidence * 100)}%)`,
+          `  - ${p.summary}`,
+        );
+      }
+
+      if (blueprintContent.assumptions.length > 0) {
+        lines.push("", "### Assumptions", "");
+        for (const a of blueprintContent.assumptions) {
+          lines.push(`- ${a.description}`);
+        }
+      }
+
+      if (blueprintContent.constraints.length > 0) {
+        lines.push("", "### Constraints", "");
+        for (const c of blueprintContent.constraints) {
+          lines.push(`- ${c.description}`);
+        }
+      }
+
+      if (blueprintContent.risks.length > 0) {
+        lines.push("", "### Risks", "");
+        for (const r of blueprintContent.risks) {
+          lines.push(`- ${r.description}`);
+        }
+      }
+    }
+
     return lines.join("\n");
   }
 
@@ -230,7 +267,7 @@ export class ExportService {
     snapshot: SnapshotRecord,
     graph: TaskNode[] | null,
     prompts: PromptArtifact[],
-    blueprintContent?: Record<string, unknown> | null,
+    blueprintContent?: BlueprintContent | null,
   ): string {
     const bundle: Record<string, unknown> = {
       exportFormat: EXPORT_BUNDLE_VERSION,
@@ -281,10 +318,7 @@ export class ExportService {
     return JSON.stringify(bundle, null, 2);
   }
 
-  private renderBlueprintJson(
-    snapshot: SnapshotRecord,
-    blueprintContent?: Record<string, unknown> | null,
-  ): string {
+  private renderBlueprintJson(snapshot: SnapshotRecord, blueprintContent?: BlueprintContent | null): string {
     return JSON.stringify(
       {
         exportType: "blueprint",
@@ -296,7 +330,13 @@ export class ExportService {
         answerCount: snapshot.answerCount,
         affectedPhaseTypes: snapshot.affectedPhaseTypes,
         changeSummary: snapshot.changeSummary,
-        content: blueprintContent ?? null,
+        regenerationScope: snapshot.affectedPhaseTypes
+          ? `partial — ${snapshot.affectedPhaseTypes.join(", ")}`
+          : "full",
+        phases: blueprintContent?.phases ?? [],
+        assumptions: blueprintContent?.assumptions ?? [],
+        constraints: blueprintContent?.constraints ?? [],
+        risks: blueprintContent?.risks ?? [],
       },
       null,
       2,
