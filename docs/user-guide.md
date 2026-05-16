@@ -115,14 +115,13 @@ On the version history page, expand the **Activity timeline** section.
 
 ### Events Shown
 
-| Event                      | Icon | Description                                |
-| -------------------------- | ---- | ------------------------------------------ |
-| Snapshot created           | •    | Full project snapshot taken                |
-| Partial regeneration       | •    | Phase-specific regeneration                |
-| Snapshot failed            | •    | Snapshot creation failed                   |
-| Artifact exported          | •    | Blueprint, task graph, or prompts exported |
-| Prior export re-downloaded | •    | Previously generated export retrieved      |
-| Versions compared          | •    | Two snapshots were compared                |
+| Event                      | Description                                |
+| -------------------------- | ------------------------------------------ |
+| Snapshot created           | Full project snapshot taken                |
+| Partial regeneration       | Phase-specific regeneration                |
+| Snapshot failed            | Snapshot creation failed                   |
+| Artifact exported          | Blueprint, task graph, or prompts exported |
+| Prior export re-downloaded | Previously generated export retrieved      |
 
 ### What's NOT in the timeline
 
