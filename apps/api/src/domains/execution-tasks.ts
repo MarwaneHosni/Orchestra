@@ -5,6 +5,7 @@ import { assemblePrompt, createInMemoryPromptStore } from "../lib/prompt/index.j
 import { NotFoundError, RateLimitedError } from "../lib/errors.js";
 import { GuardrailService } from "../lib/budget/guardrail.js";
 import { createInMemoryBudgetStore } from "../lib/budget/budget.js";
+import { getTracer } from "../lib/metrics/index.js";
 import type { PhaseInput } from "../lib/task-graph/types.js";
 
 const exportGuardrail = new GuardrailService(createInMemoryBudgetStore(), {
@@ -127,34 +128,55 @@ function defaultPhases(): PhaseInput[] {
 
 export async function registerExecutionTaskRoutes(app: FastifyInstance) {
   app.get("/api/v1/plans/:planId/tasks", async (request) => {
+    const tracer = getTracer();
+    const span = tracer.startSpan("tasks.list");
+
     const { planId } = request.params as { planId: string };
     const query = request.query as { version?: string };
     const requestedVersion = query.version ? parseInt(query.version, 10) : 1;
 
     if (isNaN(requestedVersion) || requestedVersion < 1) {
+      tracer.endSpan(span, "error", "version must be a positive integer");
       throw new Error("version must be a positive integer");
     }
 
-    let graph = graphStore.getGraph(planId, requestedVersion);
+    try {
+      let graph = graphStore.getGraph(planId, requestedVersion);
 
-    if (!graph) {
-      const existingGraphs = graphStore.getGraphsByPlan(planId);
-      const phases = defaultPhases();
+      if (!graph) {
+        const existingGraphs = graphStore.getGraphsByPlan(planId);
+        const phases = defaultPhases();
+        const genSpan = tracer.startSpan("tasks.generate", span.spanId);
 
-      if (requestedVersion === 1) {
-        graph = generateTasks(planId, 1, phases);
-      } else if (existingGraphs.length === 0) {
-        graph = generateTasks(planId, requestedVersion, phases);
-      } else {
-        const sourceVersion = Math.max(...existingGraphs.map((g) => g.planVersion));
-        const sourceGraph = existingGraphs.find((g) => g.planVersion === sourceVersion)!;
-        graph = deriveGraph(planId, requestedVersion, phases, sourceGraph);
+        try {
+          if (requestedVersion === 1) {
+            graph = generateTasks(planId, 1, phases);
+          } else if (existingGraphs.length === 0) {
+            graph = generateTasks(planId, requestedVersion, phases);
+          } else {
+            const sourceVersion = Math.max(...existingGraphs.map((g) => g.planVersion));
+            const sourceGraph = existingGraphs.find((g) => g.planVersion === sourceVersion)!;
+            graph = deriveGraph(planId, requestedVersion, phases, sourceGraph);
+          }
+          tracer.endSpan(genSpan, "ok");
+        } catch (err) {
+          tracer.endSpan(genSpan, "error", err instanceof Error ? err.message : String(err));
+          throw err;
+        }
+
+        graphStore.saveGraph(graph);
       }
 
-      graphStore.saveGraph(graph);
-    }
+      span.tags["planId"] = planId;
+      span.tags["planVersion"] = String(graph.planVersion);
+      span.tags["taskCount"] = String(graph.tasks.length);
+      tracer.endSpan(span, "ok");
 
-    return { planId, planVersion: graph.planVersion, tasks: graph.tasks, dependencies: graph.dependencies };
+      return { planId, planVersion: graph.planVersion, tasks: graph.tasks, dependencies: graph.dependencies };
+    } catch (err) {
+      tracer.endSpan(span, "error", err instanceof Error ? err.message : String(err));
+      throw err;
+    }
   });
 
   app.get("/api/v1/plans/:planId/tasks/:taskId/prompt", async (request) => {
@@ -182,8 +204,12 @@ export async function registerExecutionTaskRoutes(app: FastifyInstance) {
   });
 
   app.get("/api/v1/plans/:planId/prompts/export", async (request) => {
+    const tracer = getTracer();
+    const span = tracer.startSpan("export.bundle");
+
     const exportCheck = exportGuardrail.checkExport("system");
     if (!exportCheck.allowed) {
+      tracer.endSpan(span, "error", exportCheck.reason ?? "Export rate limit exceeded");
       throw new RateLimitedError(
         exportCheck.reason ?? "Export rate limit exceeded",
         exportCheck.retryAfterMs ?? 60_000,
@@ -191,64 +217,79 @@ export async function registerExecutionTaskRoutes(app: FastifyInstance) {
       );
     }
 
-    const { planId } = request.params as { planId: string };
-    const query = request.query as { version?: string };
-    const requestedVersion = query.version ? parseInt(query.version, 10) : 1;
+    try {
+      const { planId } = request.params as { planId: string };
+      const query = request.query as { version?: string };
+      const requestedVersion = query.version ? parseInt(query.version, 10) : 1;
 
-    if (isNaN(requestedVersion) || requestedVersion < 1) {
-      throw new Error("version must be a positive integer");
+      if (isNaN(requestedVersion) || requestedVersion < 1) {
+        tracer.endSpan(span, "error", "version must be a positive integer");
+        throw new Error("version must be a positive integer");
+      }
+
+      const graph = graphStore.getGraph(planId, requestedVersion);
+      if (!graph) {
+        tracer.endSpan(span, "error", `Plan ${planId} not found`);
+        throw new NotFoundError("Plan", planId);
+      }
+
+      const prompts = promptStore.getByPlan(planId, requestedVersion);
+      const tasks = graph.tasks;
+      const promptMap = new Map(prompts.map((p) => [p.taskId, p]));
+
+      let missingCount = 0;
+      let nullTextCount = 0;
+      for (const t of tasks) {
+        const p = promptMap.get(t.id);
+        if (!p) missingCount++;
+        else if (!p.promptText) nullTextCount++;
+      }
+
+      const warnings: string[] = [];
+      if (missingCount > 0) warnings.push(`${missingCount} task(s) have no prompt artifact`);
+      if (nullTextCount > 0) warnings.push(`${nullTextCount} task(s) have empty prompt text`);
+
+      span.tags["planId"] = planId;
+      span.tags["planVersion"] = String(graph.planVersion);
+      span.tags["taskCount"] = String(tasks.length);
+      span.tags["promptCount"] = String(prompts.length);
+      tracer.endSpan(span, "ok");
+
+      const bundle = {
+        exportFormat: "orchestra-prompt-bundle-v1",
+        exportedAt: new Date().toISOString(),
+        planId,
+        planVersion: graph.planVersion,
+        derivedFromPlanVersion: graph.derivedFromPlanVersion ?? null,
+        taskCount: tasks.length,
+        promptCount: prompts.length,
+        warnings: warnings.length > 0 ? warnings : undefined,
+        tasks: tasks.map((t) => {
+          const prompt = promptMap.get(t.id);
+          return {
+            order: t.order,
+            phaseType: t.phaseType,
+            title: t.title,
+            type: t.type,
+            priority: t.priority,
+            status: t.status,
+            dependencies: t.dependencies,
+            acceptanceCriteria: t.acceptanceCriteria,
+            promptText: prompt?.promptText ?? null,
+            promptValidationStatus: prompt?.status ?? null,
+            promptFailureReason: prompt?.failureReason ?? null,
+          };
+        }),
+        metadata: {
+          generatedAt: prompts[0]?.createdAt ?? null,
+          graphVersion: graph.planVersion,
+        },
+      };
+
+      return bundle;
+    } catch (err) {
+      tracer.endSpan(span, "error", err instanceof Error ? err.message : String(err));
+      throw err;
     }
-
-    const graph = graphStore.getGraph(planId, requestedVersion);
-    if (!graph) throw new NotFoundError("Plan", planId);
-
-    const prompts = promptStore.getByPlan(planId, requestedVersion);
-    const tasks = graph.tasks;
-    const promptMap = new Map(prompts.map((p) => [p.taskId, p]));
-
-    let missingCount = 0;
-    let nullTextCount = 0;
-    for (const t of tasks) {
-      const p = promptMap.get(t.id);
-      if (!p) missingCount++;
-      else if (!p.promptText) nullTextCount++;
-    }
-
-    const warnings: string[] = [];
-    if (missingCount > 0) warnings.push(`${missingCount} task(s) have no prompt artifact`);
-    if (nullTextCount > 0) warnings.push(`${nullTextCount} task(s) have empty prompt text`);
-
-    const bundle = {
-      exportFormat: "orchestra-prompt-bundle-v1",
-      exportedAt: new Date().toISOString(),
-      planId,
-      planVersion: graph.planVersion,
-      derivedFromPlanVersion: graph.derivedFromPlanVersion ?? null,
-      taskCount: tasks.length,
-      promptCount: prompts.length,
-      warnings: warnings.length > 0 ? warnings : undefined,
-      tasks: tasks.map((t) => {
-        const prompt = promptMap.get(t.id);
-        return {
-          order: t.order,
-          phaseType: t.phaseType,
-          title: t.title,
-          type: t.type,
-          priority: t.priority,
-          status: t.status,
-          dependencies: t.dependencies,
-          acceptanceCriteria: t.acceptanceCriteria,
-          promptText: prompt?.promptText ?? null,
-          promptValidationStatus: prompt?.status ?? null,
-          promptFailureReason: prompt?.failureReason ?? null,
-        };
-      }),
-      metadata: {
-        generatedAt: prompts[0]?.createdAt ?? null,
-        graphVersion: graph.planVersion,
-      },
-    };
-
-    return bundle;
   });
 }

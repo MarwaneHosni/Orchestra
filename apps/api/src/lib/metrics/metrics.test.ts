@@ -259,6 +259,32 @@ describe("instrumentation wrappers", () => {
     expect(rendered).toContain('provider_errors_total{provider="anthropic"');
   });
 
+  it("request-level tracing creates root span with parent-child chain", async () => {
+    const tracer = new Tracer();
+    const exported: any[] = [];
+    setTraceExporter({ export: (s) => exported.push(s) });
+
+    const rootSpan = tracer.startSpan("generation.blueprint");
+    rootSpan.tags["projectId"] = "proj-1";
+
+    const childSpan = tracer.startSpan("provider.openai", rootSpan.spanId);
+    childSpan.tags["provider"] = "openai";
+    childSpan.tags["model"] = "gpt-4o";
+
+    tracer.endSpan(childSpan, "ok");
+    tracer.endSpan(rootSpan, "ok");
+    setTraceExporter(globalLogExporter);
+
+    const root = exported.find((s) => s.operationName === "generation.blueprint");
+    const child = exported.find((s) => s.operationName === "provider.openai");
+    expect(root).toBeDefined();
+    expect(child).toBeDefined();
+    expect(child.parentSpanId).toBe(root.spanId);
+    expect(root.tags.projectId).toBe("proj-1");
+    expect(child.tags.provider).toBe("openai");
+    expect(root.durationMs).toBeGreaterThanOrEqual(child.durationMs ?? 0);
+  });
+
   it("no sensitive data in metrics labels", () => {
     const rendered = globalMetrics.renderPrometheus();
     const sensitivePatterns = [/api.key/i, /sk-[a-zA-Z0-9]/, /promptText/i, /user.*input/i];
