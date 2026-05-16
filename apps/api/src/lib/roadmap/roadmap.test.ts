@@ -237,6 +237,13 @@ describe("buildRoadmapAndTasks", () => {
       expect(flagged.length).toBeGreaterThan(0);
     });
 
+    it("phases with sufficient input have zero flagged tasks", () => {
+      const analysis = buildAnalysis(answerAllSufficiently());
+      const { taskDraft } = buildRoadmapAndTasks(analysis);
+      const flagged = taskDraft.tasks.filter((t) => t.dependsOnUnresolvedInput);
+      expect(flagged.length).toBe(0);
+    });
+
     it("metadata is propagated", () => {
       const analysis = buildAnalysis(answerAllSufficiently());
       const { roadmap, taskDraft } = buildRoadmapAndTasks(analysis);
