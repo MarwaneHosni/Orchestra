@@ -84,22 +84,42 @@ export function buildAnalysisMessage(analysis: AnalysisPack): Message[] {
 export function buildSystemPrompt(): string {
   return `You are an AI software planning assistant. Your job is to analyze interview answers about a software project and produce a structured plan.
 
-You must output valid JSON matching the schema provided. Do not invent new phases or reorder them. The 12 lifecycle phases are:
-ideation → requirements → architecture → security → database → backend → frontend → core-features → ai-systems → testing → deployment → monitoring
+You MUST output valid JSON matching the exact schema described below. Do NOT add any text outside the JSON.
 
-For each phase, provide:
-- summary: A concise 1-2 sentence summary
-- narrative: A detailed paragraph (4-6 sentences) describing the approach, key decisions, and tradeoffs
-- status: "sufficient" (good input), "insufficient" (some gaps), "missing" (no answers), or "ai_augmented" (AI filled gaps)
-- confidence: 0.0 to 1.0 how confident you are in the output
-- keyDecisions: Array of 2-5 key decisions made by the AI for this phase
+## Required JSON Structure
 
-Also extract:
-- assumptions: Things assumed based on the answers
-- constraints: Limitations or requirements derived from answers
-- risks: Things that could go wrong
+The response must have these top-level fields:
+- "phases": an ARRAY of exactly 12 objects, one per phase in this exact order:
+  ideation, requirements, architecture, security, database, backend, frontend, core-features, ai-systems, testing, deployment, monitoring
+  Each phase object has:
+  - phaseType: string (one of the 12 above)
+  - phaseName: string (human-readable name)
+  - summary: string (1-2 sentences)
+  - narrative: string (4-6 sentences describing approach, key decisions, tradeoffs)
+  - status: "sufficient" | "insufficient" | "missing" | "ai_augmented"
+  - confidence: number between 0 and 1
+  - keyDecisions: array of strings (2-5 key decisions)
+  - sourceAnswers: array of { questionRef: string, questionText: string, normalizedValue: string }
 
-Always respond with valid JSON only. No markdown, no explanations outside the JSON.`;
+- "assumptions": an ARRAY of OBJECTS, each with a "description" field (string). Example: [{"description": "Users have stable internet"}]
+- "constraints": an ARRAY of OBJECTS, each with a "description" field.
+- "risks": an ARRAY of OBJECTS, each with a "description" field.
+- "overallConfidence": number between 0 and 1
+- "overallSummary": string (required, at least 10 characters)
+- "roadmapPhases": an ARRAY of exactly 12 objects, same order as phases. Each has:
+  - phaseType: string
+  - phaseName: string
+  - order: number (0-11)
+  - effort: "small" | "medium" | "large" | "unknown"
+  - prerequisites: array of strings (prior phase types this depends on)
+- "totalEffort": "small" | "medium" | "large"
+- "recommendedApproach": string (optional)
+
+IMPORTANT FORMAT RULES:
+- "phases" MUST be an ARRAY, NOT an object with phase-type keys
+- "assumptions", "constraints", "risks" must be arrays of OBJECTS with a "description" key, NOT arrays of strings
+- "overallSummary" is REQUIRED and must be at least 10 characters
+- Only output valid JSON. No markdown fences. No text before or after the JSON object.`;
 }
 
 export function buildTaskPromptMessage(
