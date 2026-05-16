@@ -17,13 +17,15 @@
 | [UX Specification](ux-spec.md)                          | Designers    | Phase 5 UX audit and improvement plan                         |
 | [Accessibility Validation](accessibility-validation.md) | QA           | Keyboard flow, screen reader, and focus management checklists |
 
-## Task Decomposition & Prompting
+## AI-First Generation Pipeline
 
-| Document                                      | Audience     | Description                                            |
-| --------------------------------------------- | ------------ | ------------------------------------------------------ |
-| [Task Decomposition](task-decomposition.md)   | All          | Phase-to-task mapping, dependency rules, prompt schema |
-| [Prompting Standards](prompting-standards.md) | Contributors | Prompt structure, determinism, validation, stability   |
-| [Interview Specification](interview-spec.md)  | Contributors | Question flow, state machine, answer normalization     |
+| Document                                      | Audience     | Description                                                          |
+| --------------------------------------------- | ------------ | -------------------------------------------------------------------- |
+| [Output Contract](output-contract.md)         | Contributors | Zod schemas for all AI-generated artifacts, fixed lifecycle encoding |
+| [Task Decomposition](task-decomposition.md)   | All          | Phase-to-task mapping, dependency rules, prompt schema               |
+| [Prompting Standards](prompting-standards.md) | Contributors | Prompt structure, determinism, validation, stability                 |
+| [Interview Specification](interview-spec.md)  | Contributors | Question flow, state machine, answer normalization                   |
+| [Persistence Architecture](persistence.md)    | Contributors | Separate answer/artifact stores, lineage chain, query patterns       |
 
 ## Versioning & Regeneration
 
@@ -52,6 +54,7 @@
 
 | Document                                     | Description                                                                   |
 | -------------------------------------------- | ----------------------------------------------------------------------------- |
+| [Phase 8 Completion](phase8-completion.md)   | AI-first pipeline, E2E verification, known limitations, handoff               |
 | [Phase 7 Completion](phase7-completion.md)   | Guardrails, performance, observability — verification results, residual risks |
 | [Phase 6 Completion](phase6-completion.md)   | Versioning, export, diff, analytics — delivered and deferred                  |
 | [Phase 4 Limitations](phase4-limitations.md) | Known issues from task graph and prompt generation hardening                  |
