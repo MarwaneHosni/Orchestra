@@ -5,6 +5,7 @@ import { SubmitAnswerSchema, TransitionSchema } from "../lib/orchestration/orche
 import { NotFoundError, ValidationError, RateLimitedError, OverBudgetError } from "../lib/errors.js";
 import { GuardrailService } from "../lib/budget/guardrail.js";
 import { createInMemoryBudgetStore } from "../lib/budget/budget.js";
+import { generateWithAI } from "../lib/generation/orchestrator.js";
 
 export async function registerInterviewSessionRoutes(app: FastifyInstance) {
   const orch = new OrchestrationService(getStore());
@@ -109,7 +110,68 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
       }
 
       try {
-        const output = orch.generateBlueprint(sessionId);
+        // Ensure session is in the right state
+        if (session.status !== "ready_for_generation" && session.status !== "completed") {
+          throw new Error(
+            `Session must be ready_for_generation before generating a blueprint (current: ${session.status})`,
+          );
+        }
+
+        // Try AI generation with stored credentials
+        const project = getStore().getProject(session.projectId);
+        if (!project) throw new NotFoundError("Project", session.projectId);
+
+        const existingPlans = getStore().getPlansByProject(project.id);
+        const planVersion = existingPlans.length + 1;
+        const planId = crypto.randomUUID();
+
+        const answers = getStore().getLatestAnswersBySession(sessionId);
+        const aiResult = await generateWithAI(
+          project.id,
+          project.name,
+          sessionId,
+          answers,
+          planId,
+          planVersion,
+        );
+
+        let output: object;
+
+        if (aiResult.mode === "ai_success") {
+          // AI succeeded — use the AI-generated blueprint
+          // Plan record creation is handled inside generateWithAI → persistGeneration flow
+          // But we need a basic plan record for the store
+          const now = new Date().toISOString();
+          getStore().insertPlan({
+            id: planId,
+            projectId: project.id,
+            version: planVersion,
+            status: "complete",
+            staleAt: null,
+            createdAt: now,
+            updatedAt: now,
+          });
+          getStore().insertBlueprint({
+            id: crypto.randomUUID(),
+            planId,
+            projectId: project.id,
+            content: JSON.stringify(aiResult.output),
+            format: "json",
+            version: planVersion,
+            status: "complete",
+            staleAt: null,
+            createdAt: now,
+            updatedAt: now,
+          });
+          orch.transitionSession(sessionId, "completed");
+          output = aiResult.output;
+          app.log.info({ model: aiResult.model, provider: aiResult.provider }, "AI-generated blueprint");
+        } else {
+          // Fall back to deterministic generation (handles plan/blueprint creation internally)
+          app.log.info({ mode: aiResult.mode }, "AI generation unavailable — using deterministic fallback");
+          output = orch.generateBlueprint(sessionId);
+        }
+
         guardrail.budget.recordOutcome(session.projectId, estimatedCost, estimatedTokens, "completed");
         guardrail.getCircuitBreaker("provider")?.recordSuccess();
         guardrail.abuseDetector.clear(session.projectId);

@@ -4,6 +4,7 @@ import { encrypt, decrypt, serializeEncrypted, parseEncrypted } from "../secrets
 export interface CredentialStore {
   list(): FullProviderCredential[];
   get(id: string): FullProviderCredential | undefined;
+  getRaw(id: string): FullProviderCredential | undefined;
   insert(c: FullProviderCredential): void;
   update(id: string, c: Partial<FullProviderCredential>): void;
   remove(id: string): void;
@@ -19,6 +20,10 @@ export function createInMemoryCredentialStore(): CredentialStore {
     get(id) {
       const found = byId.get(id);
       return found ? stripSecrets(found) : undefined;
+    },
+    getRaw(id) {
+      const found = byId.get(id);
+      return found ? { ...found } : undefined;
     },
     insert(c) {
       byId.set(c.id, c);
