@@ -49,29 +49,36 @@
 
 No automatic deletion. Retention is application-layer. Manual archive can move records older than 12 months to cold storage.
 
+### E2E Verification Scope
+
+The E2E smoke test covers the **Phase 4–5 HTTP routes** (task graph generation, prompt assembly, bundle export, versioned graph retrieval). **Phase 6 services** (snapshot creation, diff, export service, analytics) are verified at the **unit test level** (273 tests) but have **no HTTP endpoints yet**. The frontend components (`VersionHistory`, `ExportActionCenter`, `ActivityTimeline`) call API functions in `lib/api.ts` that will fail until the corresponding Fastify routes are built.
+
 ### Intentionally Deferred
 
-| Feature                                        | Rationale                                                                 | When to revisit                                        |
-| ---------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `compare.viewed` analytics event               | `AnalyticsService.trackCompareViewed()` exists but no caller emits it     | Phase 7 when the compare route is wired to the backend |
-| `export.redownloaded` analytics event          | Method exists, not called                                                 | Phase 7 when re-download tracking is needed            |
-| Prompt bundle export from version history      | Current "Export bundle" button on task graph page skips the `ExportStore` | Phase 7 — unify export paths                           |
-| PDF export format                              | Deferred per prompt 5 — markdown and JSON are authoritative first         | Phase 8 or later                                       |
-| Compare view navigation from activity timeline | Activity events could link to the diff view                               | Phase 7 UX pass                                        |
+| Feature                                        | Rationale                                                                                              | When to revisit                                                                                                                                                         |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fastify routes for snapshot CRUD               | `SnapshotService`, `DiffService`, `ExportService`, `AnalyticsService` exist but have no HTTP endpoints | Phase 7 — build `GET /api/v1/projects/:id/snapshots`, `POST /api/v1/snapshots/:id/export`, `GET /api/v1/snapshots/:id/compare/:id`, `GET /api/v1/projects/:id/activity` |
+| `compare.viewed` analytics event               | `AnalyticsService.trackCompareViewed()` exists but no caller emits it                                  | Phase 7 when the compare route is wired                                                                                                                                 |
+| `export.redownloaded` analytics event          | Method exists, not called                                                                              | Phase 7 when re-download tracking is needed                                                                                                                             |
+| Prompt bundle export from version history      | Current "Export bundle" button on task graph page skips the `ExportStore`                              | Phase 7 — unify export paths                                                                                                                                            |
+| PDF export format                              | Deferred per prompt 5 — markdown and JSON are authoritative first                                      | Phase 8 or later                                                                                                                                                        |
+| Compare view navigation from activity timeline | Activity events could link to the diff view                                                            | Phase 7 UX pass                                                                                                                                                         |
 
 ### Known Limitations
 
-1. All stores are in-memory. Server restart loses snapshot, graph, prompt, and export data. The Drizzle DB schema exists but the application layer reads/writes in-memory stores. Production migration requires implementing DB-backed stores.
-2. `prompt_artifacts` DB table has `failure_reason` and `needs_review` status in the Drizzle schema but no in-memory store supports these yet (the in-memory `PromptStore` uses the app-level `PromptArtifact` type which does support them).
-3. The `activity_log` DB table exists in Drizzle but the application uses the in-memory `AuditStore` for event querying. The analytics service reads from the in-memory store.
-4. No consolidated README for the docs/index.md navigation from the repo root — users must know to visit `docs/index.md`.
+1. **No HTTP routes for Phase 6 services** — `VersioningService`, `DiffService`, `ExportService`, and `AnalyticsService` are fully implemented and tested at the library level, but have no Fastify endpoints. Frontend components call API functions that will return 404 until routes are built.
+2. All stores are in-memory. Server restart loses snapshot, graph, prompt, and export data. The Drizzle DB schema exists but the application layer reads/writes in-memory stores. Production migration requires implementing DB-backed stores.
+3. `prompt_artifacts` DB table has `failure_reason` and `needs_review` status in the Drizzle schema but no in-memory store supports these yet (the in-memory `PromptStore` uses the app-level `PromptArtifact` type which does support them).
+4. The `activity_log` DB table exists in Drizzle but the application uses the in-memory `AuditStore` for event querying. The analytics service reads from the in-memory store.
+5. No consolidated README for the docs/index.md navigation from the repo root — users must know to visit `docs/index.md`.
 
 ### Handoff to Phase 7
 
-The verified versioning, export, analytics, and documentation foundation is in place. Phase 7 should:
+The verified versioning, export, analytics, and documentation foundation is in place (273 tests, all passing). Phase 7 should:
 
-1. Implement DB-backed stores for persistence
-2. Wire `compare.viewed` and `export.redownloaded` analytics events
-3. Unify the prompt bundle export through the ExportStore
-4. Add the compare view navigation from activity timeline events
-5. Run a comprehensive UI polish pass
+1. **Build Fastify routes** for all Phase 6 services — snapshot CRUD, diff comparison, export generation, and activity/analytics queries. Without these routes, the frontend components cannot function.
+2. Implement DB-backed stores for persistence
+3. Wire `compare.viewed` and `export.redownloaded` analytics events
+4. Unify the prompt bundle export through the ExportStore
+5. Add the compare view navigation from activity timeline events
+6. Run a comprehensive UI polish pass
