@@ -61,12 +61,14 @@ export class AIBlueprintGenerator {
 
     const provider = this.createProvider(selection);
     if (!provider) {
-      // Try fallback
-      if (decision.fallbackChain.length > 0) {
+      // Try fallback — remove current fallback from chain to avoid infinite loops
+      while (decision.fallbackChain.length > 0) {
         const fallback = decision.fallbackChain[0]!;
+        const remaining = decision.fallbackChain.slice(1);
         const fbDecision: RouterDecision = {
           ...decision,
           selection: fallback,
+          fallbackChain: remaining,
           usedFallback: true,
           reasoning: [...decision.reasoning, `Fallback to ${fallback.provider}/${fallback.model}`],
         };
@@ -83,7 +85,7 @@ export class AIBlueprintGenerator {
       systemPrompt,
       messages,
       temperature: 0.3,
-      maxTokens: 8000,
+      maxTokens: 2000,
     };
 
     try {
@@ -245,9 +247,11 @@ export class AIBlueprintGenerator {
     errorMsg: string,
   ): Promise<AIGenerationResult<{ blueprint: BlueprintOutput; roadmap: RoadmapOutput }>> {
     const fallbackSelection = decision.fallbackChain[0]!;
+    const remainingFallbacks = decision.fallbackChain.slice(1);
     const fbDecision: RouterDecision = {
       ...decision,
       selection: fallbackSelection,
+      fallbackChain: remainingFallbacks,
       usedFallback: true,
       reasoning: [
         ...decision.reasoning,

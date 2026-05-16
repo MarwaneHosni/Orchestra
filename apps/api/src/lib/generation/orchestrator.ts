@@ -53,18 +53,21 @@ export async function generateWithAI(
 
   // 4. Create AI generator
   const aiGen = new AIBlueprintGenerator(router, (provider: string) => {
-    const rawCred = store.getRaw(provider);
-    if (!rawCred?.encryptedApiKey) {
-      // Try fallback — check other providers in case the name doesn't match exactly
-      for (const c of allCreds) {
-        if (c.provider === provider) {
-          const raw = store.getRaw(c.id);
-          if (raw?.encryptedApiKey) return decryptKey(raw.encryptedApiKey);
-        }
+    // Look up credential by provider name (e.g., "openrouter")
+    for (const c of allCreds) {
+      if (c.provider === provider) {
+        const raw = store.getRaw(c.id);
+        if (raw?.encryptedApiKey) return decryptKey(raw.encryptedApiKey);
       }
-      return undefined;
     }
-    return decryptKey(rawCred.encryptedApiKey);
+    // Fallback: try alternate credential if the stored one has a different name
+    if (provider === "openrouter" || provider === "openai" || provider === "anthropic") {
+      for (const c of allCreds) {
+        const raw = store.getRaw(c.id);
+        if (raw?.encryptedApiKey) return decryptKey(raw.encryptedApiKey);
+      }
+    }
+    return undefined;
   });
 
   // 5. Call AI
