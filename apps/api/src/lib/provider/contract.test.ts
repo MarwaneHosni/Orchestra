@@ -268,17 +268,23 @@ describe("ProviderRequestError — cross-provider consistency", () => {
 describe("Provider validation — credential patterns", () => {
   describe.each(PROVIDERS)("$name", ({ name: _n, factory }) => {
     it("rejects empty API key", async () => {
+      const mock = mockFetch([{ url: "/", status: 401, body: { error: { message: "Unauthorized" } } }]);
+      mock.install();
       const provider = factory("");
       const result = await provider.validate();
       expect(result.valid).toBe(false);
       expect(result.error).toBeTruthy();
+      mock.restore();
     });
 
     it("rejects whitespace-only API key", async () => {
+      const mock = mockFetch([{ url: "/", status: 401, body: { error: { message: "Unauthorized" } } }]);
+      mock.install();
       const provider = factory("   ");
       const result = await provider.validate();
       expect(result.valid).toBe(false);
       expect(result.error).toBeTruthy();
+      mock.restore();
     });
   });
 });
