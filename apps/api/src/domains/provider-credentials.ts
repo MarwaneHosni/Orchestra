@@ -16,7 +16,7 @@ export const FullProviderCredentialSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
   projectId: z.string().uuid().optional().nullable(),
-  provider: z.enum(["openai", "anthropic", "google", "aws_bedrock", "azure_openai", "custom"]),
+  provider: z.enum(["openai", "anthropic", "openrouter", "google", "aws_bedrock", "azure_openai", "custom"]),
   displayName: z.string().min(1).max(100),
   status: z.enum(["unverified", "valid", "invalid", "expired", "rate_limited", "failed"]),
   encryptedApiKey: z.string().optional().nullable(),
@@ -40,7 +40,7 @@ export type ProviderCredential = z.infer<typeof ProviderCredentialSchema>;
 
 export const CreateCredentialSchema = z.object({
   userId: z.string().uuid().default("00000000-0000-0000-0000-000000000001"),
-  provider: z.enum(["openai", "anthropic", "google", "aws_bedrock", "azure_openai", "custom"]),
+  provider: z.enum(["openai", "anthropic", "openrouter", "google", "aws_bedrock", "azure_openai", "custom"]),
   displayName: z.string().min(1).max(100).optional(),
   apiKey: z.string().min(1, "API key is required"),
   defaultModel: z.string().optional(),
