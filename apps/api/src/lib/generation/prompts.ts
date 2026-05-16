@@ -35,91 +35,35 @@ export function buildAnalysisMessage(analysis: AnalysisPack): Message[] {
   const lines: string[] = [];
 
   lines.push(`Project: ${analysis.projectName}`);
-  lines.push(`Session: ${analysis.sessionId}`);
   lines.push("");
-  lines.push("## Phase Analysis Summary");
-  lines.push("");
+  lines.push("Phase summaries:");
 
   for (const phase of analysis.phases) {
-    lines.push(`### ${phase.phaseName} (${phase.inputStatus})`);
-    lines.push(`- Answered ${phase.answerCount}/${phase.requiredCount} required questions`);
+    lines.push(`- ${phase.phaseName}: ${phase.answerCount}/${phase.requiredCount} answered`);
     if (phase.inferredRequirements.length > 0) {
-      lines.push("- Inferred Requirements:");
-      for (const r of phase.inferredRequirements.slice(0, 5)) {
-        lines.push(`  - ${r.length > 150 ? r.slice(0, 147) + "..." : r}`);
-      }
+      lines.push(`  Requirements: ${phase.inferredRequirements.slice(0, 2).join("; ").slice(0, 200)}`);
     }
-    if (phase.likelyConstraints.length > 0) {
-      lines.push("- Likely Constraints:");
-      for (const c of phase.likelyConstraints.slice(0, 3)) {
-        lines.push(`  - ${c.length > 150 ? c.slice(0, 147) + "..." : c}`);
-      }
-    }
-    if (phase.explicitAssumptions.length > 0) {
-      lines.push(`- Explicit Assumptions: ${phase.explicitAssumptions.length} recorded`);
-    }
-    if (phase.identifiedRisks.length > 0) {
-      lines.push(`- Identified Risks: ${phase.identifiedRisks.length} identified`);
-    }
-    if (phase.uncertaintyAreas.length > 0) {
-      lines.push("- Uncertainty Areas:");
-      for (const u of phase.uncertaintyAreas.slice(0, 3)) {
-        lines.push(`  - ${u.length > 150 ? u.slice(0, 147) + "..." : u}`);
-      }
-    }
-    lines.push("");
-  }
-
-  if (analysis.crossPhase.contradictions.length > 0) {
-    lines.push("## Cross-Phase Contradictions");
-    for (const c of analysis.crossPhase.contradictions) {
-      lines.push(`- ${c.description}`);
-    }
-    lines.push("");
   }
 
   return [{ role: "user" as const, content: lines.join("\n") }];
 }
 
 export function buildSystemPrompt(): string {
-  return `You are an AI software planning assistant. Your job is to analyze interview answers about a software project and produce a structured plan.
+  return `You are an AI planning assistant. Output ONLY valid JSON with no extra text.
 
-You MUST output valid JSON matching the exact schema described below. Do NOT add any text outside the JSON.
+Top-level fields required:
+- "phases": ARRAY of 12 objects in this exact order: ideation, requirements, architecture, security, database, backend, frontend, core-features, ai-systems, testing, deployment, monitoring
+  Each phase: { phaseType, phaseName, summary (1 sentence), narrative (2 sentences max), status, confidence (0-1), keyDecisions [1-2 items] }
+- "assumptions": ARRAY of { description: string }
+- "constraints": ARRAY of { description: string }
+- "risks": ARRAY of { description: string }
+- "overallConfidence": 0-1
+- "overallSummary": string (min 10 chars)
+- "roadmapPhases": ARRAY of 12 { phaseType, phaseName, order, effort, prerequisites }
+- "totalEffort": "small"|"medium"|"large"
 
-## Required JSON Structure
-
-The response must have these top-level fields:
-- "phases": an ARRAY of exactly 12 objects, one per phase in this exact order:
-  ideation, requirements, architecture, security, database, backend, frontend, core-features, ai-systems, testing, deployment, monitoring
-  Each phase object has:
-  - phaseType: string (one of the 12 above)
-  - phaseName: string (human-readable name)
-  - summary: string (1-2 sentences)
-  - narrative: string (4-6 sentences describing approach, key decisions, tradeoffs)
-  - status: "sufficient" | "insufficient" | "missing" | "ai_augmented"
-  - confidence: number between 0 and 1
-  - keyDecisions: array of strings (2-5 key decisions)
-  - sourceAnswers: array of { questionRef: string, questionText: string, normalizedValue: string }
-
-- "assumptions": an ARRAY of OBJECTS, each with a "description" field (string). Example: [{"description": "Users have stable internet"}]
-- "constraints": an ARRAY of OBJECTS, each with a "description" field.
-- "risks": an ARRAY of OBJECTS, each with a "description" field.
-- "overallConfidence": number between 0 and 1
-- "overallSummary": string (required, at least 10 characters)
-- "roadmapPhases": an ARRAY of exactly 12 objects, same order as phases. Each has:
-  - phaseType: string
-  - phaseName: string
-  - order: number (0-11)
-  - effort: "small" | "medium" | "large" | "unknown"
-  - prerequisites: array of strings (prior phase types this depends on)
-- "totalEffort": "small" | "medium" | "large"
-- "recommendedApproach": string (optional)
-
-IMPORTANT FORMAT RULES:
-- "phases" MUST be an ARRAY, NOT an object with phase-type keys
-- "assumptions", "constraints", "risks" must be arrays of OBJECTS with a "description" key, NOT arrays of strings
-- "overallSummary" is REQUIRED and must be at least 10 characters
-- Only output valid JSON. No markdown fences. No text before or after the JSON object.`;
+CRITICAL: "phases" must be an ARRAY, not an object. "assumptions/constraints/risks" must be arrays of {description} objects, not strings.
+Only output JSON. No markdown, no text outside.`;
 }
 
 export function buildTaskPromptMessage(

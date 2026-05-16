@@ -55,7 +55,11 @@ export class AIBlueprintGenerator {
     planId: string,
     planVersion: number,
     isFallback: boolean,
+    depth = 0,
   ): Promise<AIGenerationResult<{ blueprint: BlueprintOutput; roadmap: RoadmapOutput }>> {
+    if (depth > 5) {
+      return this.failureResult("Max retry depth exceeded", decision, Date.now());
+    }
     const startTime = Date.now();
     const selection = decision.selection;
 
@@ -72,7 +76,7 @@ export class AIBlueprintGenerator {
           usedFallback: true,
           reasoning: [...decision.reasoning, `Fallback to ${fallback.provider}/${fallback.model}`],
         };
-        return this.callProvider(fbDecision, analysis, planId, planVersion, true);
+        return this.callProvider(fbDecision, analysis, planId, planVersion, true, depth + 1);
       }
       return this.failureResult(`No provider available for ${selection.provider}`, decision, startTime);
     }
@@ -85,7 +89,7 @@ export class AIBlueprintGenerator {
       systemPrompt,
       messages,
       temperature: 0.3,
-      maxTokens: 2000,
+      maxTokens: 1500,
     };
 
     try {
@@ -125,6 +129,7 @@ export class AIBlueprintGenerator {
           planVersion,
           startTime,
           "AI response could not be parsed as valid JSON",
+          depth + 1,
         );
       }
 
@@ -132,7 +137,7 @@ export class AIBlueprintGenerator {
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       if (decision.fallbackChain.length > 0) {
-        return this.tryFallback(decision, analysis, planId, planVersion, startTime, errorMsg);
+        return this.tryFallback(decision, analysis, planId, planVersion, startTime, errorMsg, depth + 1);
       }
       return this.failureResult(errorMsg, decision, startTime);
     }
@@ -321,6 +326,7 @@ export class AIBlueprintGenerator {
     planVersion: number,
     _startTime: number,
     errorMsg: string,
+    depth: number,
   ): Promise<AIGenerationResult<{ blueprint: BlueprintOutput; roadmap: RoadmapOutput }>> {
     const fallbackSelection = decision.fallbackChain[0]!;
     const remainingFallbacks = decision.fallbackChain.slice(1);
@@ -334,7 +340,7 @@ export class AIBlueprintGenerator {
         `Fallback to ${fallbackSelection.provider}/${fallbackSelection.model} after: ${errorMsg}`,
       ],
     };
-    return this.callProvider(fbDecision, analysis, planId, planVersion, true);
+    return this.callProvider(fbDecision, analysis, planId, planVersion, true, depth + 1);
   }
 
   private failureResult(
