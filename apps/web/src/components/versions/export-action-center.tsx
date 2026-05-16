@@ -32,6 +32,7 @@ export function ExportActionCenter({ snapshot }: ExportActionCenterProps) {
   const [exporting, setExporting] = useState<ExportType | null>(null);
   const [format, setFormat] = useState<ExportFormat>("markdown");
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -54,6 +55,9 @@ export function ExportActionCenter({ snapshot }: ExportActionCenterProps) {
       const record = await exportArtifact(snapshot.id, type, format);
       setExports((prev) => [record, ...prev]);
       triggerDownload(record.content, filename(snapshot, type, format), format);
+      const label = EXPORT_TYPE_LABELS[type];
+      setSuccessMessage(`${label} exported successfully`);
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Export failed");
     } finally {
@@ -160,6 +164,15 @@ export function ExportActionCenter({ snapshot }: ExportActionCenterProps) {
           );
         })}
       </div>
+
+      {successMessage && (
+        <div
+          className="rounded-lg border border-green-200 bg-green-50 p-3 text-xs text-green-700"
+          role="status"
+        >
+          {successMessage}
+        </div>
+      )}
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700" role="alert">

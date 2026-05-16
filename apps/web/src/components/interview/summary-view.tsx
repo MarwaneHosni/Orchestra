@@ -242,7 +242,7 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
           onClick={() => router.push(`/projects/${sessionId}/versions`)}
           className="rounded-lg border border-border bg-white px-6 py-2 text-sm font-medium text-text-secondary hover:bg-gray-50"
         >
-          Version history
+          Exports &amp; versions
         </button>
         <button
           onClick={() => router.push(`/projects/${sessionId}/interview`)}
