@@ -101,6 +101,17 @@ describe("Connected workflow — full pipeline", () => {
     expect(snapshot.version).toBe(1);
     expect(snapshot.parentSnapshotId).toBeNull();
     expect(snapshot.status).toBe("complete");
+    expect(snapshot.planId).toBe("plan-int");
+    expect(snapshot.planVersion).toBe(1);
+    expect(snapshot.taskGraphId).toBe("tg-int");
+    expect(snapshot.interviewSessionId).toBe(sessionId);
+    expect(snapshot.answerCount).toBe(final.answered);
+
+    // Stored snapshot matches returned snapshot
+    const storedSnapshot = snapshotStore.get(snapshot.id);
+    expect(storedSnapshot).toBeDefined();
+    expect(storedSnapshot!.planId).toBe("plan-int");
+    expect(storedSnapshot!.planVersion).toBe(1);
 
     // 5. Export full bundle from snapshot
     const exportStore = createInMemoryExportStore();
@@ -174,7 +185,14 @@ describe("Connected workflow — full pipeline", () => {
 
     expect(v1Export.snapshotVersion).toBe(1);
     expect(v2Export.snapshotVersion).toBe(2);
+    expect(v1Export.snapshotId).toBe(s1.id);
+    expect(v2Export.snapshotId).toBe(result.snapshot.id);
     expect(v1Export.id).not.toBe(v2Export.id);
+
+    // Exports are persisted independently
+    const storedV1 = exportStore.getBySnapshot(s1.id);
+    expect(storedV1).toHaveLength(1);
+    expect(storedV1[0]!.id).toBe(v1Export.id);
 
     // Old version 1 graph and prompts remain accessible
     const oldGraph = graphStore.getGraph("plan-diff", 1);
