@@ -10,6 +10,7 @@ import type {
 export interface SessionStore {
   insertProject(p: ProjectRecord): void;
   getProject(id: string): ProjectRecord | undefined;
+  getAllProjects(): ProjectRecord[];
   insertIdea(i: IdeaRecord): void;
   insertSession(s: SessionRecord): void;
   updateSession(id: string, s: Partial<SessionRecord>): void;
@@ -28,87 +29,134 @@ export interface SessionStore {
 }
 
 export function createInMemoryStore(): SessionStore {
-  const p: ProjectRecord[] = [];
-  const i: IdeaRecord[] = [];
-  const s: SessionRecord[] = [];
-  const a: AnswerRecord[] = [];
-  const plans: PlanRecord[] = [];
-  const blueprints: BlueprintRecord[] = [];
+  const projects = new Map<string, ProjectRecord>();
+  const ideas: IdeaRecord[] = [];
+  const sessions = new Map<string, SessionRecord>();
+  const sessionsByProject = new Map<string, SessionRecord[]>();
+  const answersBySession = new Map<string, AnswerRecord[]>();
+  const latestAnswersBySession = new Map<string, AnswerRecord[]>();
+  const plansByProject = new Map<string, PlanRecord[]>();
+  const blueprintsByProject = new Map<string, BlueprintRecord[]>();
+
+  function invalidateAnswerCache(sessionId: string): void {
+    latestAnswersBySession.delete(sessionId);
+  }
+
+  function getProjectSessions(projectId: string): SessionRecord[] {
+    let list = sessionsByProject.get(projectId);
+    if (!list) {
+      list = [];
+      sessionsByProject.set(projectId, list);
+    }
+    return list;
+  }
+
+  function getProjectPlans(projectId: string): PlanRecord[] {
+    let list = plansByProject.get(projectId);
+    if (!list) {
+      list = [];
+      plansByProject.set(projectId, list);
+    }
+    return list;
+  }
+
+  function getProjectBlueprints(projectId: string): BlueprintRecord[] {
+    let list = blueprintsByProject.get(projectId);
+    if (!list) {
+      list = [];
+      blueprintsByProject.set(projectId, list);
+    }
+    return list;
+  }
 
   return {
     insertProject(r) {
-      p.push(r);
+      projects.set(r.id, r);
     },
     getProject(id) {
-      return p.find((r) => r.id === id);
+      return projects.get(id);
+    },
+    getAllProjects() {
+      return [...projects.values()];
     },
     insertIdea(r) {
-      i.push(r);
+      ideas.push(r);
     },
     insertSession(r) {
-      s.push(r);
+      sessions.set(r.id, r);
+      getProjectSessions(r.projectId).push(r);
     },
     updateSession(id, partial) {
-      const idx = s.findIndex((r) => r.id === id);
-      if (idx !== -1) {
-        const existing = s[idx];
-        if (existing) Object.assign(existing, partial);
-      }
+      const existing = sessions.get(id);
+      if (existing) Object.assign(existing, partial);
     },
     getSession(id) {
-      return s.find((r) => r.id === id);
+      return sessions.get(id);
     },
     getSessionsByProject(projectId) {
-      return s.filter((r) => r.projectId === projectId);
+      return [...getProjectSessions(projectId)];
     },
     insertAnswer(r) {
-      a.push(r);
+      let list = answersBySession.get(r.sessionId);
+      if (!list) {
+        list = [];
+        answersBySession.set(r.sessionId, list);
+      }
+      list.push(r);
+      invalidateAnswerCache(r.sessionId);
     },
     getAnswersBySession(sessionId) {
-      return a.filter((r) => r.sessionId === sessionId);
+      return [...(answersBySession.get(sessionId) ?? [])];
     },
     getLatestAnswersBySession(sessionId) {
-      return a.filter((r) => r.sessionId === sessionId && r.isLatest);
+      const cached = latestAnswersBySession.get(sessionId);
+      if (cached) return cached;
+      const all = answersBySession.get(sessionId);
+      if (!all) return [];
+      const latest = all.filter((r) => r.isLatest);
+      latestAnswersBySession.set(sessionId, latest);
+      return latest;
     },
     supersedeAnswer(sessionId, questionId) {
+      const list = answersBySession.get(sessionId);
+      if (!list) return;
       const now = new Date().toISOString();
-      for (const ans of a) {
-        if (ans.sessionId === sessionId && ans.questionId === questionId && ans.isLatest) {
+      for (const ans of list) {
+        if (ans.questionId === questionId && ans.isLatest) {
           ans.isLatest = false;
           ans.supersededAt = now;
         }
       }
+      invalidateAnswerCache(sessionId);
     },
     insertPlan(r) {
-      plans.push(r);
+      getProjectPlans(r.projectId).push(r);
     },
     getPlansByProject(projectId) {
-      return plans.filter((r) => r.projectId === projectId);
+      return [...getProjectPlans(projectId)];
     },
     markPlansStaleBySession(sessionId) {
-      const session = s.find((r) => r.id === sessionId);
+      const session = sessions.get(sessionId);
       if (!session) return;
       const now = new Date().toISOString();
-      for (const plan of plans) {
-        if (plan.projectId === session.projectId && !plan.staleAt) {
-          plan.staleAt = now;
-        }
+      const list = getProjectPlans(session.projectId);
+      for (const plan of list) {
+        if (!plan.staleAt) plan.staleAt = now;
       }
     },
     insertBlueprint(r) {
-      blueprints.push(r);
+      getProjectBlueprints(r.projectId).push(r);
     },
     getBlueprintsByProject(projectId) {
-      return blueprints.filter((r) => r.projectId === projectId);
+      return [...getProjectBlueprints(projectId)];
     },
     markBlueprintsStaleBySession(sessionId) {
-      const session = s.find((r) => r.id === sessionId);
+      const session = sessions.get(sessionId);
       if (!session) return;
       const now = new Date().toISOString();
-      for (const bp of blueprints) {
-        if (bp.projectId === session.projectId && !bp.staleAt) {
-          bp.staleAt = now;
-        }
+      const list = getProjectBlueprints(session.projectId);
+      for (const bp of list) {
+        if (!bp.staleAt) bp.staleAt = now;
       }
     },
   };

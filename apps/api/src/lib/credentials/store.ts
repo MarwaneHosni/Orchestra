@@ -10,29 +10,25 @@ export interface CredentialStore {
 }
 
 export function createInMemoryCredentialStore(): CredentialStore {
-  const items: FullProviderCredential[] = [];
+  const byId = new Map<string, FullProviderCredential>();
 
   return {
     list() {
-      return items.map(stripSecrets);
+      return [...byId.values()].map(stripSecrets);
     },
     get(id) {
-      const found = items.find((c) => c.id === id);
+      const found = byId.get(id);
       return found ? stripSecrets(found) : undefined;
     },
     insert(c) {
-      items.push(c);
+      byId.set(c.id, c);
     },
     update(id, partial) {
-      const existing = items.find((c) => c.id === id);
+      const existing = byId.get(id);
       if (existing) Object.assign(existing, partial);
     },
     remove(id) {
-      const existing = items.find((c) => c.id === id);
-      if (existing) {
-        const idx = items.indexOf(existing);
-        if (idx !== -1) items.splice(idx, 1);
-      }
+      byId.delete(id);
     },
   };
 }

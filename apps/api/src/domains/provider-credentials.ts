@@ -5,6 +5,7 @@ import { ValidationError, NotFoundError, RateLimitedError } from "../lib/errors.
 import { GuardrailService } from "../lib/budget/guardrail.js";
 import { createInMemoryBudgetStore } from "../lib/budget/budget.js";
 import { logAudit } from "../lib/audit/logger.js";
+import { paginatedResponse } from "../schemas/index.js";
 
 const guardrail = new GuardrailService(createInMemoryBudgetStore(), {
   rateLimitProviderValidation: { maxRequests: 20, windowMs: 60_000 },
@@ -51,9 +52,16 @@ export const UpdateCredentialSchema = z.object({
 });
 
 export async function registerProviderCredentialRoutes(app: FastifyInstance) {
-  app.get("/api/v1/provider-credentials", async () => {
+  app.get("/api/v1/provider-credentials", async (request) => {
+    const query = request.query as { page?: string; pageSize?: string };
+    const page = Math.max(1, parseInt(query.page ?? "1", 10) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(query.pageSize ?? "20", 10) || 20));
     const store = getCredentialStore();
-    return { data: store.list() };
+    const all = store.list();
+    const total = all.length;
+    const offset = (page - 1) * pageSize;
+    const items = all.slice(offset, offset + pageSize);
+    return paginatedResponse(items, total, page, pageSize);
   });
 
   app.get("/api/v1/provider-credentials/:id", async (request) => {

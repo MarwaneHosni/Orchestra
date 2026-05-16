@@ -37,7 +37,11 @@ export async function registerProjectRoutes(app: FastifyInstance) {
     },
     async (request) => {
       const query = ProjectListSchema.parse(request.query);
-      return paginatedResponse([], 0, query.page, query.pageSize);
+      const all = getStore().getAllProjects();
+      const total = all.length;
+      const offset = (query.page - 1) * query.pageSize;
+      const page = all.slice(offset, offset + query.pageSize);
+      return paginatedResponse(page, total, query.page, query.pageSize);
     },
   );
 

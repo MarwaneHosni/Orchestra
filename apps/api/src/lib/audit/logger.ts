@@ -8,14 +8,29 @@ export interface AuditStore {
 
 export function createInMemoryAuditStore(): AuditStore {
   const entries: AuditEntry[] = [];
+  const byEventType = new Map<string, AuditEntry[]>();
+
+  function getEventList(eventType: string): AuditEntry[] {
+    let list = byEventType.get(eventType);
+    if (!list) {
+      list = [];
+      byEventType.set(eventType, list);
+    }
+    return list;
+  }
+
   return {
     append(e) {
       entries.push(e);
+      getEventList(e.eventType).push(e);
     },
     query(filter) {
       if (!filter) return [...entries];
-      return entries.filter((e) => {
-        for (const [key, value] of Object.entries(filter)) {
+      const { eventType, ...rest } = filter;
+      const candidates = eventType ? getEventList(eventType) : entries;
+      if (Object.keys(rest).length === 0) return [...candidates];
+      return candidates.filter((e) => {
+        for (const [key, value] of Object.entries(rest)) {
           if ((e as unknown as Record<string, unknown>)[key] !== value) return false;
         }
         return true;

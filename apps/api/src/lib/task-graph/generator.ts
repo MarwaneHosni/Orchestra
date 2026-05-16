@@ -8,18 +8,35 @@ export interface GraphStore {
 }
 
 export function createInMemoryGraphStore(): GraphStore {
-  const graphs: TaskGraph[] = [];
+  const byKey = new Map<string, TaskGraph>();
+  const byPlan = new Map<string, TaskGraph[]>();
+
+  function planKey(planId: string, version: number): string {
+    return `${planId}::${version}`;
+  }
+
+  function getPlanList(planId: string): TaskGraph[] {
+    let list = byPlan.get(planId);
+    if (!list) {
+      list = [];
+      byPlan.set(planId, list);
+    }
+    return list;
+  }
+
   return {
     saveGraph(g) {
-      const existing = graphs.find((x) => x.planId === g.planId && x.planVersion === g.planVersion);
-      if (existing) throw new Error(`Graph already exists for plan ${g.planId} version ${g.planVersion}`);
-      graphs.push(g);
+      const key = planKey(g.planId, g.planVersion);
+      if (byKey.has(key))
+        throw new Error(`Graph already exists for plan ${g.planId} version ${g.planVersion}`);
+      byKey.set(key, g);
+      getPlanList(g.planId).push(g);
     },
     getGraph(planId, version) {
-      return graphs.find((g) => g.planId === planId && g.planVersion === version);
+      return byKey.get(planKey(planId, version));
     },
     getGraphsByPlan(planId) {
-      return graphs.filter((g) => g.planId === planId);
+      return [...getPlanList(planId)];
     },
   };
 }

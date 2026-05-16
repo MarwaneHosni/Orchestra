@@ -1,26 +1,36 @@
 import type { SnapshotRecord, SnapshotStore } from "./types.js";
 
 export function createInMemorySnapshotStore(): SnapshotStore {
-  const items: SnapshotRecord[] = [];
+  const byId = new Map<string, SnapshotRecord>();
+  const byProject = new Map<string, SnapshotRecord[]>();
+
+  function getProjectList(projectId: string): SnapshotRecord[] {
+    let list = byProject.get(projectId);
+    if (!list) {
+      list = [];
+      byProject.set(projectId, list);
+    }
+    return list;
+  }
 
   return {
     insert(r) {
-      items.push(r);
+      byId.set(r.id, r);
+      getProjectList(r.projectId).push(r);
     },
     get(id) {
-      return items.find((r) => r.id === id);
+      return byId.get(id);
     },
     getByProject(projectId) {
-      return items.filter((r) => r.projectId === projectId).sort((a, b) => a.version - b.version);
+      return [...getProjectList(projectId)].sort((a, b) => a.version - b.version);
     },
     getLatestByProject(projectId) {
-      const projectSnapshots = items
-        .filter((r) => r.projectId === projectId)
-        .sort((a, b) => b.version - a.version);
-      return projectSnapshots[0];
+      const list = getProjectList(projectId);
+      if (list.length === 0) return undefined;
+      return [...list].sort((a, b) => b.version - a.version)[0];
     },
     updateStatus(id, status, failureReason) {
-      const record = items.find((r) => r.id === id);
+      const record = byId.get(id);
       if (record) {
         record.status = status;
         record.failureReason = failureReason;

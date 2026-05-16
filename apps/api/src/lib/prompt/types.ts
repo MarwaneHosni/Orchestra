@@ -64,16 +64,33 @@ export interface PromptStore {
 }
 
 export function createInMemoryPromptStore(): PromptStore {
-  const items: PromptArtifact[] = [];
+  const byTask = new Map<string, PromptArtifact>();
+  const byPlan = new Map<string, PromptArtifact[]>();
+
+  function planKey(planId: string, planVersion: number): string {
+    return `${planId}::${planVersion}`;
+  }
+
+  function getPlanList(planId: string, planVersion: number): PromptArtifact[] {
+    const key = planKey(planId, planVersion);
+    let list = byPlan.get(key);
+    if (!list) {
+      list = [];
+      byPlan.set(key, list);
+    }
+    return list;
+  }
+
   return {
     save(a) {
-      items.push(a);
+      getPlanList(a.planId, a.planVersion).push(a);
+      byTask.set(a.taskId, a);
     },
     getByTask(taskId) {
-      return items.find((a) => a.taskId === taskId);
+      return byTask.get(taskId);
     },
     getByPlan(planId, planVersion) {
-      return items.filter((a) => a.planId === planId && a.planVersion === planVersion);
+      return [...getPlanList(planId, planVersion)];
     },
   };
 }

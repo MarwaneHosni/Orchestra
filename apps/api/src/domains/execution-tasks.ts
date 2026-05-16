@@ -152,30 +152,32 @@ export async function registerExecutionTaskRoutes(app: FastifyInstance) {
       }
 
       graphStore.saveGraph(graph);
-
-      const allTasks = graph.tasks;
-      for (const task of allTasks) {
-        assemblePrompt(
-          {
-            task,
-            planName: "Project",
-            allTasks,
-            predecessorOutputs: [],
-            phaseSummary: task.phaseType,
-          },
-          promptStore,
-          graph.planVersion,
-        );
-      }
     }
 
     return { planId, planVersion: graph.planVersion, tasks: graph.tasks, dependencies: graph.dependencies };
   });
 
   app.get("/api/v1/plans/:planId/tasks/:taskId/prompt", async (request) => {
-    const { taskId } = request.params as { taskId: string };
-    const prompt = promptStore.getByTask(taskId);
-    if (!prompt) throw new NotFoundError("Prompt", taskId);
+    const { planId, taskId } = request.params as { planId: string; taskId: string };
+    let prompt = promptStore.getByTask(taskId);
+    if (!prompt) {
+      const graph = graphStore.getGraphsByPlan(planId);
+      if (graph.length === 0) throw new NotFoundError("Plan", planId);
+      const latestGraph = graph.reduce((a, b) => (a.planVersion > b.planVersion ? a : b));
+      const task = latestGraph.tasks.find((t) => t.id === taskId);
+      if (!task) throw new NotFoundError("Task", taskId);
+      prompt = assemblePrompt(
+        {
+          task,
+          planName: "Project",
+          allTasks: latestGraph.tasks,
+          predecessorOutputs: [],
+          phaseSummary: task.phaseType,
+        },
+        promptStore,
+        latestGraph.planVersion,
+      );
+    }
     return prompt;
   });
 
@@ -202,20 +204,19 @@ export async function registerExecutionTaskRoutes(app: FastifyInstance) {
 
     const prompts = promptStore.getByPlan(planId, requestedVersion);
     const tasks = graph.tasks;
+    const promptMap = new Map(prompts.map((p) => [p.taskId, p]));
 
-    const missingPrompts = tasks.filter((t) => !prompts.find((p) => p.taskId === t.id));
-    const tasksWithNullPrompt = tasks.filter((t) => {
-      const p = prompts.find((p) => p.taskId === t.id);
-      return p && !p.promptText;
-    });
+    let missingCount = 0;
+    let nullTextCount = 0;
+    for (const t of tasks) {
+      const p = promptMap.get(t.id);
+      if (!p) missingCount++;
+      else if (!p.promptText) nullTextCount++;
+    }
 
     const warnings: string[] = [];
-    if (missingPrompts.length > 0) {
-      warnings.push(`${missingPrompts.length} task(s) have no prompt artifact`);
-    }
-    if (tasksWithNullPrompt.length > 0) {
-      warnings.push(`${tasksWithNullPrompt.length} task(s) have empty prompt text`);
-    }
+    if (missingCount > 0) warnings.push(`${missingCount} task(s) have no prompt artifact`);
+    if (nullTextCount > 0) warnings.push(`${nullTextCount} task(s) have empty prompt text`);
 
     const bundle = {
       exportFormat: "orchestra-prompt-bundle-v1",
@@ -227,7 +228,7 @@ export async function registerExecutionTaskRoutes(app: FastifyInstance) {
       promptCount: prompts.length,
       warnings: warnings.length > 0 ? warnings : undefined,
       tasks: tasks.map((t) => {
-        const prompt = prompts.find((p) => p.taskId === t.id);
+        const prompt = promptMap.get(t.id);
         return {
           order: t.order,
           phaseType: t.phaseType,
