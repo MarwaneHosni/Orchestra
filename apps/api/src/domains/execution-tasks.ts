@@ -2,8 +2,14 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { generateTasks, deriveGraph, createInMemoryGraphStore } from "../lib/task-graph/generator.js";
 import { assemblePrompt, createInMemoryPromptStore } from "../lib/prompt/index.js";
-import { NotFoundError } from "../lib/errors.js";
+import { NotFoundError, RateLimitedError } from "../lib/errors.js";
+import { GuardrailService } from "../lib/budget/guardrail.js";
+import { createInMemoryBudgetStore } from "../lib/budget/budget.js";
 import type { PhaseInput } from "../lib/task-graph/types.js";
+
+const exportGuardrail = new GuardrailService(createInMemoryBudgetStore(), {
+  rateLimitExport: { maxRequests: 30, windowMs: 60_000 },
+});
 
 export const ExecutionTaskSchema = z.object({
   id: z.string().uuid(),
@@ -174,6 +180,15 @@ export async function registerExecutionTaskRoutes(app: FastifyInstance) {
   });
 
   app.get("/api/v1/plans/:planId/prompts/export", async (request) => {
+    const exportCheck = exportGuardrail.checkExport("system");
+    if (!exportCheck.allowed) {
+      throw new RateLimitedError(
+        exportCheck.reason ?? "Export rate limit exceeded",
+        exportCheck.retryAfterMs ?? 60_000,
+        "export",
+      );
+    }
+
     const { planId } = request.params as { planId: string };
     const query = request.query as { version?: string };
     const requestedVersion = query.version ? parseInt(query.version, 10) : 1;

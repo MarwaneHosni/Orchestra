@@ -24,6 +24,43 @@ export class ValidationError extends AppError {
   }
 }
 
+export class RateLimitedError extends AppError {
+  constructor(
+    message: string,
+    public readonly retryAfterMs: number,
+    public readonly limitName: string,
+  ) {
+    super("RATE_LIMITED", message, 429);
+  }
+}
+
+export class OverBudgetError extends AppError {
+  constructor(
+    message: string,
+    public readonly scope: string,
+  ) {
+    super("OVER_BUDGET", message, 403);
+  }
+}
+
+export class CircuitOpenError extends AppError {
+  constructor(
+    message: string,
+    public readonly circuitName: string,
+  ) {
+    super("CIRCUIT_OPEN", message, 503);
+  }
+}
+
+export class AbuseBlockedError extends AppError {
+  constructor(
+    message: string,
+    public readonly scope: string,
+  ) {
+    super("ABUSE_BLOCKED", message, 429);
+  }
+}
+
 export function errorHandler(error: FastifyError | Error, request: FastifyRequest, reply: FastifyReply) {
   if (error instanceof AppError) {
     return reply.status(error.statusCode).send({

@@ -1,8 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { getCredentialStore, encryptKey } from "../lib/credentials/store.js";
-import { ValidationError, NotFoundError } from "../lib/errors.js";
+import { ValidationError, NotFoundError, RateLimitedError } from "../lib/errors.js";
+import { GuardrailService } from "../lib/budget/guardrail.js";
+import { createInMemoryBudgetStore } from "../lib/budget/budget.js";
 import { logAudit } from "../lib/audit/logger.js";
+
+const guardrail = new GuardrailService(createInMemoryBudgetStore(), {
+  rateLimitProviderValidation: { maxRequests: 20, windowMs: 60_000 },
+});
 
 export const FullProviderCredentialSchema = z.object({
   id: z.string().uuid(),
@@ -134,6 +140,15 @@ export async function registerProviderCredentialRoutes(app: FastifyInstance) {
     const store = getCredentialStore();
     const cred = store.get(id);
     if (!cred) throw new NotFoundError("Provider credential", id);
+
+    const validationCheck = guardrail.checkProviderValidation(id, cred.userId);
+    if (!validationCheck.allowed) {
+      throw new RateLimitedError(
+        validationCheck.reason ?? "Provider validation rate limit exceeded",
+        validationCheck.retryAfterMs ?? 60_000,
+        "provider_validation",
+      );
+    }
 
     const now = new Date().toISOString();
     store.update(id, { status: "valid", lastVerifiedAt: now, errorMessage: null });

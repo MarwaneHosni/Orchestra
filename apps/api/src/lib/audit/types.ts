@@ -18,7 +18,15 @@ export type AuditEventType =
   | "export.redownloaded"
   | "export.exported"
   | "compare.viewed"
-  | "project.updated";
+  | "project.updated"
+  // Phase 7 — Guardrails
+  | "guardrail.rate_limited"
+  | "guardrail.over_budget"
+  | "guardrail.circuit_open"
+  | "guardrail.abuse_blocked"
+  | "retry.attempt"
+  | "retry.exhausted"
+  | "circuit.state_change";
 
 export interface AuditEntry {
   id: string;

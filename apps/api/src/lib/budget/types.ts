@@ -50,3 +50,58 @@ export const DEFAULT_BUDGET: Omit<BudgetConfig, "projectId"> = {
   maxGenerationsPerMonth: 1000,
   maxTokensPerMonth: 10_000_000,
 };
+
+// ── Circuit Breaker ───────────────────────────────────────────
+
+export type CircuitState = "CLOSED" | "OPEN" | "HALF_OPEN";
+
+export interface CircuitBreakerConfig {
+  name: string;
+  failureThreshold: number;
+  successThreshold: number;
+  openTimeoutMs: number;
+}
+
+export const DEFAULT_CIRCUIT_BREAKER: Omit<CircuitBreakerConfig, "name"> = {
+  failureThreshold: 5,
+  successThreshold: 3,
+  openTimeoutMs: 30_000,
+};
+
+// ── Abuse Detection ───────────────────────────────────────────
+
+export interface AbuseConfig {
+  failureThreshold: number;
+  windowMs: number;
+  blockDurationMs: number;
+}
+
+export interface AbuseRecord {
+  failures: { timestamp: number }[];
+  blockedUntil: number | null;
+}
+
+export const DEFAULT_ABUSE_CONFIG: AbuseConfig = {
+  failureThreshold: 10,
+  windowMs: 300_000,
+  blockDurationMs: 600_000,
+};
+
+// ── Guardrail Result ──────────────────────────────────────────
+
+export interface GuardrailCheckResult {
+  allowed: boolean;
+  reason: string | null;
+  retryAfterMs: number | null;
+  blockedBy: "rate_limit" | "budget" | "circuit_breaker" | "abuse_detection" | null;
+}
+
+export const OPERATION_GENERATION = "generation";
+export const OPERATION_REGENERATION = "regeneration";
+export const OPERATION_EXPORT = "export";
+export const OPERATION_PROVIDER_VALIDATION = "provider_validation";
+export type GuardrailOperation =
+  | typeof OPERATION_GENERATION
+  | typeof OPERATION_REGENERATION
+  | typeof OPERATION_EXPORT
+  | typeof OPERATION_PROVIDER_VALIDATION;

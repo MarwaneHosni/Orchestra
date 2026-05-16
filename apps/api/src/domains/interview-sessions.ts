@@ -2,10 +2,13 @@ import type { FastifyInstance } from "fastify";
 import { OrchestrationService } from "../lib/orchestration/orchestration.service.js";
 import { getStore } from "../lib/orchestration/store.js";
 import { SubmitAnswerSchema, TransitionSchema } from "../lib/orchestration/orchestration.service.js";
-import { NotFoundError, ValidationError } from "../lib/errors.js";
+import { NotFoundError, ValidationError, RateLimitedError, OverBudgetError } from "../lib/errors.js";
+import { GuardrailService } from "../lib/budget/guardrail.js";
+import { createInMemoryBudgetStore } from "../lib/budget/budget.js";
 
 export async function registerInterviewSessionRoutes(app: FastifyInstance) {
   const orch = new OrchestrationService(getStore());
+  const guardrail = new GuardrailService(createInMemoryBudgetStore());
 
   app.post("/api/v1/projects/:projectId/interviews", async (request, reply) => {
     const projectId = (request.params as { projectId: string }).projectId;
@@ -78,8 +81,47 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
       schema: { body: { type: "object", properties: {}, additionalProperties: false } },
     },
     async (request) => {
-      const output = orch.generateBlueprint((request.params as { id: string }).id);
-      return output;
+      const sessionId = (request.params as { id: string }).id;
+      const session = getStore().getSession(sessionId);
+      if (!session) throw new NotFoundError("Session", sessionId);
+
+      // Guardrail check: rate limit + budget + circuit breaker + abuse detection
+      const estimatedCost = 0.001;
+      const estimatedTokens = 500;
+      const guardResult = guardrail.checkGeneration(
+        session.projectId,
+        "system",
+        estimatedCost,
+        estimatedTokens,
+      );
+      if (!guardResult.allowed) {
+        if (guardResult.blockedBy === "rate_limit") {
+          throw new RateLimitedError(
+            guardResult.reason ?? "Rate limit exceeded",
+            guardResult.retryAfterMs ?? 60_000,
+            "generation",
+          );
+        }
+        if (guardResult.blockedBy === "budget") {
+          throw new OverBudgetError(guardResult.reason ?? "Budget exceeded", session.projectId);
+        }
+        throw new RateLimitedError(guardResult.reason ?? "Request blocked", 30_000, "generation");
+      }
+
+      try {
+        const output = orch.generateBlueprint(sessionId);
+        guardrail.budget.recordOutcome(session.projectId, estimatedCost, estimatedTokens, "completed");
+        guardrail.getCircuitBreaker("provider")?.recordSuccess();
+        guardrail.abuseDetector.clear(session.projectId);
+        return output;
+      } catch (err) {
+        guardrail.budget.recordOutcome(session.projectId, 0, 0, "failed");
+        guardrail
+          .ensureCircuitBreaker("provider", { failureThreshold: 5, openTimeoutMs: 30_000 })
+          .recordFailure();
+        guardrail.abuseDetector.recordFailure(session.projectId);
+        throw err;
+      }
     },
   );
 
