@@ -19,6 +19,8 @@ const AGENT_TIPS = [
   "Check dependencies: how does this connect to other parts of the system?",
 ];
 
+const NOT_SURE_TEXT = "I am not sure yet — do what you think is more optimal";
+
 export function QuestionRenderer({
   question,
   initialValue,
@@ -145,17 +147,26 @@ function QuestionInput({
   switch (question.type) {
     case "text":
       return (
-        <textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          rows={4}
-          maxLength={question.validation?.maxLength ?? undefined}
-          placeholder="Type your answer..."
-          className={baseInput}
-          aria-invalid={!!error}
-          aria-required={question.required}
-          aria-describedby={error ? "text-error" : undefined}
-        />
+        <div className="space-y-3">
+          <textarea
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            rows={4}
+            maxLength={question.validation?.maxLength ?? undefined}
+            placeholder="Type your answer..."
+            className={baseInput}
+            aria-invalid={!!error}
+            aria-required={question.required}
+            aria-describedby={error ? "text-error" : undefined}
+          />
+          <button
+            type="button"
+            onClick={() => onChange(NOT_SURE_TEXT)}
+            className="text-sm text-orchestra-600 hover:text-orchestra-700 underline underline-offset-2"
+          >
+            I&apos;m not sure yet — let Orchestra decide
+          </button>
+        </div>
       );
 
     case "select":
