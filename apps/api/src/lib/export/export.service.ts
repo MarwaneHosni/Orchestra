@@ -5,6 +5,7 @@ import type { TaskNode } from "../task-graph/types.js";
 import type { BlueprintContent } from "../diff/types.js";
 import type { ExportRecord, ExportOptions, ExportStore, ExportFormat } from "./types.js";
 import { EXPORT_BUNDLE_VERSION, PHASE_LABELS, PHASE_ORDER } from "./types.js";
+import { logAudit } from "../audit/logger.js";
 
 export class ExportService {
   constructor(
@@ -117,6 +118,15 @@ export class ExportService {
       createdAt: new Date().toISOString(),
     };
     this.exportStore.insert(record);
+
+    logAudit("export.generated", "system", snapshot.projectId, {
+      exportId: record.id,
+      snapshotId: snapshot.id,
+      format: record.format,
+      type: record.type,
+      projectId: snapshot.projectId,
+    });
+
     return record;
   }
 

@@ -5,6 +5,7 @@ import type { GraphStore } from "../task-graph/generator.js";
 import type { PromptStore } from "../prompt/types.js";
 import { generateTasks, deriveGraph } from "../task-graph/generator.js";
 import { assemblePrompt } from "../prompt/assembler.js";
+import { logAudit } from "../audit/logger.js";
 
 export class VersioningService {
   constructor(
@@ -90,6 +91,17 @@ export class VersioningService {
     };
 
     this.snapshotStore.insert(snapshot);
+
+    const isPartial = snapshot.affectedPhaseTypes !== null && snapshot.affectedPhaseTypes.length > 0;
+    const eventType = isPartial ? "snapshot.partial_regenerated" : "snapshot.created";
+    logAudit(eventType, "system", snapshot.projectId, {
+      snapshotId: snapshot.id,
+      version: snapshot.version,
+      reason: snapshot.reason,
+      projectId: snapshot.projectId,
+      planVersion: snapshot.planVersion,
+    });
+
     return snapshot;
   }
 
@@ -194,6 +206,12 @@ export class VersioningService {
         changeSummary: `Regeneration failed: ${errorMsg}`,
       });
       this.snapshotStore.updateStatus(failedSnapshot.id, "failed", errorMsg);
+      logAudit("snapshot.failed", "system", params.projectId, {
+        snapshotId: failedSnapshot.id,
+        reason: params.changeReason,
+        error: errorMsg,
+        projectId: params.projectId,
+      });
       throw new Error(`Regeneration failed: ${errorMsg}`, { cause: err });
     }
   }
