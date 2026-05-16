@@ -67,6 +67,18 @@ export const POLICIES: RoutingPolicy[] = [
       { provider: "openrouter", model: "openai/gpt-4o-mini", tier: "cheap" },
     ],
   },
+  {
+    taskType: "blueprint",
+    minTier: "balanced",
+    preferred: [
+      { provider: "openai", model: "gpt-4.1", tier: "strong" },
+      { provider: "anthropic", model: "claude-sonnet-4-20250514", tier: "strong" },
+    ],
+    fallback: [
+      { provider: "openai", model: "gpt-4o", tier: "balanced" },
+      { provider: "openrouter", model: "anthropic/claude-sonnet-4", tier: "strong" },
+    ],
+  },
 ];
 
 export function getPolicy(taskType: string): RoutingPolicy | undefined {

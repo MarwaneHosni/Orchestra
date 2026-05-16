@@ -1,4 +1,10 @@
-export type TaskType = "clarification" | "roadmap" | "architecture" | "prompt_generation" | "summary";
+export type TaskType =
+  | "clarification"
+  | "roadmap"
+  | "architecture"
+  | "prompt_generation"
+  | "summary"
+  | "blueprint";
 
 export type ModelTier = "cheap" | "balanced" | "strong";
 
