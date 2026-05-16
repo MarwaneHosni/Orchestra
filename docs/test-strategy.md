@@ -66,14 +66,14 @@
 
 ### 2.2 Highest-Risk Regressions
 
-| Risk                                                             | Why it's high-risk                                                           | Detection layer                                         |
-| ---------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------- |
-| **Schema drift** — DB column and app type get out of sync        | New migration changes a column; app code still uses old type                 | Contract (typecheck), Integration (store save/retrieve) |
-| **Prompt shape drift** — prompt text format changes accidentally | `formatPrompt()` changes output; downstream exports and comparisons break    | Snapshot (formatPrompt, section content)                |
-| **Provider adapter breakage** — OpenAI/Anthropic API changes     | External API changes cause adapter failures that aren't caught until runtime | Unit (provider tests with known inputs)                 |
-| **Export format changes** — JSON or Markdown structure changes   | Downstream consumers expect a specific schema                                | Snapshot (export content determinism), Contract (Zod)   |
-| **Regeneration bugs** — wrong scope, wrong affected tasks        | Escalation rules change; partial regen produces wrong results                | Integration (regenerate → verify affected tasks)        |
-| **Security regression** — encryption, credential redaction       | Key material leaks or redaction filters fail                                 | Unit (encryption round-trip, redaction patterns)        |
+| Risk                                                             | Why it's high-risk                                                           | Detection layer                                                                                                                                                                                                                        |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Schema drift** — DB column and app type get out of sync        | New migration changes a column; app code still uses old type                 | Contract (typecheck), Integration (store save/retrieve)                                                                                                                                                                                |
+| **Prompt shape drift** — prompt text format changes accidentally | `formatPrompt()` changes output; downstream exports and comparisons break    | Snapshot (formatPrompt, section content)                                                                                                                                                                                               |
+| **Provider adapter breakage** — OpenAI/Anthropic API changes     | External API changes cause adapter failures that aren't caught until runtime | Unit (request shape construction, response parsing with known payloads); Contract (request/response type definitions); **No runtime contract verification exists** — a future integration suite should validate against the actual API |
+| **Export format changes** — JSON or Markdown structure changes   | Downstream consumers expect a specific schema                                | Snapshot (export content determinism), Contract (Zod)                                                                                                                                                                                  |
+| **Regeneration bugs** — wrong scope, wrong affected tasks        | Escalation rules change; partial regen produces wrong results                | Integration (regenerate → verify affected tasks)                                                                                                                                                                                       |
+| **Security regression** — encryption, credential redaction       | Key material leaks or redaction filters fail                                 | Unit (encryption round-trip, redaction patterns)                                                                                                                                                                                       |
 
 ---
 
@@ -164,7 +164,18 @@ Rules:
 | Store dependencies    | Use real in-memory implementations (`createInMemoryXStore()`).                                                          | These are lightweight, correct, and exercise the same contract as a production store.                     |
 | External HTTP calls   | **Do not make real HTTP calls in unit/integration tests.** Services that require HTTP should accept an injected client. | Keeps tests fast and deterministic.                                                                       |
 
-**Exception:** The existing `byok-e2e.test.ts` chains services without mocking. This is acceptable as an end-to-end integration test because all stores are in-memory and no HTTP calls are made.
+**E2E test pattern** (template in `byok-e2e.test.ts`): Chain multiple services together using their in-memory stores. Arrange → Act → Assert across module boundaries. Test a complete product flow (e.g., create project → interview → blueprint → task graph → prompts) without HTTP or real I/O. Use `setupEnv()` or `createService()` factories to isolate each test run.
+
+```
+Example flow from byok-e2e.test.ts:
+  createInMemoryStore()                    ← arrange all stores
+  new OrchestrationService(store)          ← arrange services
+  service.createProject(input)             ← act
+  service.startSession(sessionId)
+  service.submitAnswer(sessionId, ...)
+  generator.generate(project, session, ...) ← cross-module
+  expect(output.phases.length).toBe(12)    ← assert
+```
 
 ---
 
