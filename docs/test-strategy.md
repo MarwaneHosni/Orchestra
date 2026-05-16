@@ -64,7 +64,16 @@
 | Budget enforcement + rate limiting                         | ✅   | ✅          | —        | —   | —        | P0       |
 | Encryption/decryption                                      | ✅   | —           | —        | —   | —        | P0       |
 
-### 2.2 Highest-Risk Regressions
+### 2.2 Coverage Gaps (Highest Priority to Fill)
+
+| Gap                                                    | Flows affected                     | Why it matters                                  | Target layer                                                |
+| ------------------------------------------------------ | ---------------------------------- | ----------------------------------------------- | ----------------------------------------------------------- |
+| No snapshot tests for export JSON structure            | Export generation                  | Export format could change without detection    | Snapshot (add `toMatchSnapshot` for JSON output)            |
+| No E2E test for regeneration → compare → export flow   | Version diff, Export, Regeneration | Full product workflow not validated as a chain  | E2E (chain versioning + diff + export services)             |
+| No contract tests for provider request/response shapes | Provider routing, BYOK             | External API changes are caught only at runtime | Contract (define expected request/response types)           |
+| No integration tests for analytics emission points     | Analytics event emission           | Events could silently stop being emitted        | Integration (verify `logAudit` called with correct payload) |
+
+### 2.3 Highest-Risk Regressions
 
 | Risk                                                             | Why it's high-risk                                                           | Detection layer                                                                                                                                                                                                                        |
 | ---------------------------------------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -183,15 +192,15 @@ Example flow from byok-e2e.test.ts:
 
 ### 5.1 Priority Order
 
-| Priority | Area                                                      | Test type       | Existing coverage | Work needed                                                            |
-| -------- | --------------------------------------------------------- | --------------- | ----------------- | ---------------------------------------------------------------------- |
-| P0       | Interview question sequencing + dependency rules          | Integration     | 1 file, 15 tests  | Verify coverage of all 12 phases, dependency rules, skip logic         |
-| P0       | Blueprint generation edge cases                           | Integration     | 1 file, 20 tests  | Add tests for all ambiguity flag types, confidence boundaries          |
-| P0       | Task graph for all phase status combinations              | Unit + Snapshot | 1 file, 26 tests  | Add coverage for all 3 statuses × 12 phases                            |
-| P0       | Prompt validation integration (failed/needs_review)       | Integration     | 1 file, 16 tests  | Verify `assemblePrompt` correctly sets status for each validation path |
-| P1       | Export determinism across all formats                     | Snapshot        | 1 file, 18 tests  | Add snapshot for JSON export output structure                          |
-| P1       | Version diff with real blueprint content                  | Integration     | 1 file, 18 tests  | Add blueprint content to diff tests                                    |
-| P1       | Error recovery for all service failure modes              | Integration     | Scattered         | Create dedicated error-recovery describe blocks                        |
+| Priority | Area                                                      | Test type       | Existing coverage | Work needed                                                            | Definition of Done                                                                                                                          |
+| -------- | --------------------------------------------------------- | --------------- | ----------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| P0       | Interview question sequencing + dependency rules          | Integration     | 1 file, 15 tests  | Verify coverage of all 12 phases, dependency rules, skip logic         | `getNextQuestion` tested with all 12 phases; dependency gating tested; skip path tested                                                     |
+| P0       | Blueprint generation edge cases                           | Integration     | 1 file, 20 tests  | Add tests for all ambiguity flag types, confidence boundaries          | All 5 flag types (`missing`, `too_short`, `low_confidence`, `vague`, `conflicting`) have a test; low/medium/high confidence boundary tested |
+| P0       | Task graph for all phase status combinations              | Unit + Snapshot | 1 file, 26 tests  | Add coverage for all 3 statuses × 12 phases                            | Every `PhaseInput.status` (`sufficient`, `insufficient`, `missing`) tested for at least one phase; snapshot updated for new graph shape     |
+| P0       | Prompt validation integration (failed/needs_review)       | Integration     | 1 file, 16 tests  | Verify `assemblePrompt` correctly sets status for each validation path | Test exists for `assemblePrompt` producing each status (`complete`, `failed`, `needs_review`) naturally                                     |
+| P1       | Export determinism across all formats                     | Snapshot        | 1 file, 18 tests  | Add snapshot for JSON export output structure                          | JSON export `toMatchSnapshot()` added; repeated runs produce identical output                                                               |
+| P1       | Version diff with real blueprint content                  | Integration     | 1 file, 18 tests  | Add blueprint content to diff tests                                    | At least one diff test passes structured `BlueprintContent` and validates assumptions/constraints/risks diffs                               |
+| P1       | Error recovery for all service failure modes              | Integration     | Scattered         | Create dedicated error-recovery describe blocks                        | Each service's `describe("error handling")` block tests at least 2 failure paths                                                            |
 | P2       | Analytics emission points                                 | Integration     | None              | Verify events are emitted with correct payloads                        |
 | P2       | Provider adapter edge cases (timeout, malformed response) | Unit            | 1 file, 11 tests  | Add tests for non-200 responses, incomplete payloads                   |
 
