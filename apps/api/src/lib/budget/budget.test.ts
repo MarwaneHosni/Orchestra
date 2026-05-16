@@ -1,7 +1,13 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach, vi } from "vitest";
 import { BudgetEnforcer, createInMemoryBudgetStore } from "./budget.js";
 import { InMemoryRateLimiter } from "./rate-limiter.js";
-import { classifyFailure, createRetryState, shouldRetry, computeBackoff } from "./failure-handler.js";
+import {
+  classifyFailure,
+  createRetryState,
+  shouldRetry,
+  computeBackoff,
+  executeWithRetry,
+} from "./failure-handler.js";
 
 describe("BudgetEnforcer", () => {
   let store: ReturnType<typeof createInMemoryBudgetStore>;
@@ -200,5 +206,78 @@ describe("retry helpers", () => {
     const state = createRetryState();
     for (let i = 0; i < 10; i++) computeBackoff(state);
     expect(state.nextDelayMs).toBe(30_000);
+  });
+});
+
+describe("executeWithRetry", () => {
+  it("succeeds on first attempt without retries", async () => {
+    const result = await executeWithRetry(() => Promise.resolve("ok"), {
+      operationName: "test",
+      scopeId: "scope-1",
+    });
+    expect(result).toBe("ok");
+  });
+
+  it("retries on retryable failure and succeeds", async () => {
+    let attempts = 0;
+    const result = await executeWithRetry(
+      async () => {
+        attempts++;
+        if (attempts < 3) {
+          const err = new Error("Provider 503") as any;
+          err.statusCode = 503;
+          throw err;
+        }
+        return "success";
+      },
+      { operationName: "test", scopeId: "scope-1" },
+      { maxRetries: 3, baseDelayMs: 10 },
+    );
+    expect(result).toBe("success");
+    expect(attempts).toBe(3);
+  }, 10_000);
+
+  it("throws on terminal error without retrying", async () => {
+    let attempts = 0;
+    await expect(
+      executeWithRetry(
+        async () => {
+          attempts++;
+          const err = new Error("Auth failed") as any;
+          err.statusCode = 401;
+          throw err;
+        },
+        { operationName: "test", scopeId: "scope-1" },
+      ),
+    ).rejects.toThrow("Auth failed");
+    expect(attempts).toBe(1);
+  });
+
+  it("exhausts retries and re-throws on persistent retryable error", async () => {
+    let attempts = 0;
+    await expect(
+      executeWithRetry(
+        async () => {
+          attempts++;
+          const err = new Error("Always failing") as any;
+          err.statusCode = 503;
+          throw err;
+        },
+        { operationName: "test", scopeId: "scope-1" },
+        { maxRetries: 2, baseDelayMs: 5 },
+      ),
+    ).rejects.toThrow("Always failing");
+    expect(attempts).toBe(3);
+  }, 10_000);
+
+  it("does not retry on success", async () => {
+    const fn = vi.fn().mockResolvedValue("ok");
+    const result = await executeWithRetry(
+      fn,
+      { operationName: "test", scopeId: "scope-1" },
+      { maxRetries: 5, baseDelayMs: 1000 },
+    );
+    expect(result).toBe("ok");
+    expect(fn).toHaveBeenCalledTimes(1);
   });
 });
