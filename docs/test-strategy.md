@@ -4,13 +4,19 @@
 
 ### 1.1 Layer Map
 
-| Layer           | Tools                      | Scope                                          | Speed    | Runs in CI       |
-| --------------- | -------------------------- | ---------------------------------------------- | -------- | ---------------- |
-| **Unit**        | Vitest                     | Single function, class, or module in isolation | ~ms      | ✅ Always        |
-| **Integration** | Vitest + in-memory stores  | Service wired to its stores, no network        | ~ms–10ms | ✅ Always        |
-| **Snapshot**    | Vitest (`toMatchSnapshot`) | Structural output stability (graph, prompt)    | ~ms      | ✅ Always        |
-| **Contract**    | TypeScript + Zod           | Schema validation, type assertions             | ~ms      | ✅ Via typecheck |
-| **End-to-end**  | Vitest + chained services  | Multi-step product flow via in-memory stores   | ~10–50ms | ✅ Always        |
+| Layer           | Tools                      | Scope                                            | Speed    | Runs in CI       |
+| --------------- | -------------------------- | ------------------------------------------------ | -------- | ---------------- |
+| **Unit**        | Vitest                     | Single function, class, or module in isolation   | ~ms      | ✅ Always        |
+| **Synthesis**   | Vitest                     | Answer aggregation, normalization, gap detection | ~ms      | ✅ Always        |
+| **Analysis**    | Vitest                     | Per-phase structured analysis from answers       | ~ms      | ✅ Always        |
+| **Roadmap**     | Vitest                     | Milestone and task draft generation              | ~ms      | ✅ Always        |
+| **Prompt Gen**  | Vitest                     | 7-section AI execution prompts                   | ~ms      | ✅ Always        |
+| **Validation**  | Vitest                     | Schema-driven quality checks, repair loop        | ~ms      | ✅ Always        |
+| **Persistence** | Vitest                     | Versioned answer/artifact separation             | ~ms      | ✅ Always        |
+| **Integration** | Vitest + in-memory stores  | Service wired to its stores, no network          | ~ms–10ms | ✅ Always        |
+| **Snapshot**    | Vitest (`toMatchSnapshot`) | Structural output stability (graph, prompt)      | ~ms      | ✅ Always        |
+| **Contract**    | TypeScript + Zod           | Schema validation, type assertions               | ~ms      | ✅ Via typecheck |
+| **End-to-end**  | Vitest + chained services  | Multi-step product flow via in-memory stores     | ~10–50ms | ✅ Always        |
 
 ### 1.2 What Each Layer Covers
 
@@ -230,9 +236,9 @@ For each module, write tests in this order:
 
 ## 7. Summary
 
-- **17 test files**, ~238 tests today
-- **5 test layers**: Unit, Integration, Snapshot, Contract, E2E
-- **P0 regressions**: schema drift, prompt shape drift, export format changes, regeneration bugs
+- **31 test files**, **554 tests** today
+- **9 test layers**: Unit, Synthesis, Analysis, Roadmap, PromptGen, Validation, Persistence, Integration, Snapshot, Contract, E2E
+- **P0 regressions**: schema drift, prompt shape drift, export format changes, regeneration bugs, lifecycle order drift, cross-artifact consistency
 - **CI gates**: lint → format → typecheck → test → build (existing)
 - **Key conventions**: co-located tests, factory fixtures, in-memory stores, no mocking library
-- **Next priorities**: expand edge case coverage for task graph/prompt/blueprint, add coverage for export determinism, add analytics emission tests
+- **Next priorities**: wire real AI provider calls into pipeline, add DB-backed persistence, add coverage for provider integration
