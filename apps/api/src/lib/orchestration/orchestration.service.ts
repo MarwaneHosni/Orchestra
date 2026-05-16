@@ -17,7 +17,7 @@ export const CreateProjectSchema = z.object({
 
 export const SubmitAnswerSchema = z.object({
   questionId: z.string().min(1, "Question ID is required"),
-  value: z.string().min(1, "Answer cannot be empty"),
+  value: z.string().min(0),
   confidence: z.enum(["high", "medium", "low"]).optional(),
 });
 

@@ -162,7 +162,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
     if (!question) return;
     setSubmitting(true);
     try {
-      await submitAnswer(sessionId, question.id, "(skipped)");
+      await submitAnswer(sessionId, question.id, "");
       setHistory((prev) => [...prev, { question, value: "" }]);
       setAnnouncement("Question skipped");
       await loadNext();
