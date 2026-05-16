@@ -52,7 +52,7 @@ export function instrumentProviderCall<T>(
 }
 
 export function instrumentGenerationFunnel(
-  projectId: string,
+  _projectId: string,
   status: "attempted" | "completed" | "failed",
   metadata?: { phaseCount?: number; confidence?: number; errorCategory?: string },
 ): void {
@@ -74,7 +74,7 @@ export function instrumentGenerationFunnel(
   }
 }
 
-export function instrumentExport(projectId: string, format: string, type: string): void {
+export function instrumentExport(_projectId: string, format: string, type: string): void {
   const metrics = getMetrics();
   const labels: MetricLabel[] = [
     { name: "format", value: format },

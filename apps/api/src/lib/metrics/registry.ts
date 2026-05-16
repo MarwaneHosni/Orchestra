@@ -104,9 +104,11 @@ function parseLabelKey(key: string): MetricLabel[] {
 
 class Counter {
   constructor(
-    private name: string,
+    _name: string,
     private metric: CounterMetric,
-  ) {}
+  ) {
+    void _name;
+  }
 
   inc(labels?: MetricLabel[], value?: number): void {
     const resolved = labels ?? [];
@@ -126,9 +128,11 @@ class Counter {
 
 class Gauge {
   constructor(
-    private name: string,
+    _name: string,
     private metric: GaugeMetric,
-  ) {}
+  ) {
+    void _name;
+  }
 
   set(labels: MetricLabel[], value: number): void {
     const key = labelKey(labels);
@@ -153,9 +157,11 @@ class Gauge {
 
 class Histogram {
   constructor(
-    private name: string,
+    _name: string,
     private metric: HistogramMetric,
-  ) {}
+  ) {
+    void _name;
+  }
 
   observe(labels: MetricLabel[], value: number): void {
     const key = labelKey(labels);

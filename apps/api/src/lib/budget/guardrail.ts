@@ -219,7 +219,7 @@ export class GuardrailService {
     return { allowed: true, reason: null, retryAfterMs: null, blockedBy: null };
   }
 
-  checkRegeneration(projectId: string, userId: string): GuardrailCheckResult {
+  checkRegeneration(_projectId: string, userId: string): GuardrailCheckResult {
     const rateCheck = this.checkOperation(OPERATION_REGENERATION, userId);
     if (!rateCheck.result.allowed) return rateCheck.result;
 
@@ -235,7 +235,7 @@ export class GuardrailService {
     return { allowed: true, reason: null, retryAfterMs: null, blockedBy: null };
   }
 
-  checkProviderValidation(credentialId: string, userId: string): GuardrailCheckResult {
+  checkProviderValidation(_credentialId: string, userId: string): GuardrailCheckResult {
     const rateCheck = this.checkOperation(OPERATION_PROVIDER_VALIDATION, userId);
     if (!rateCheck.result.allowed) return rateCheck.result;
 

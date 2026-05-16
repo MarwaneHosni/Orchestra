@@ -7,7 +7,6 @@ export class CircuitBreaker {
   private failureCount = 0;
   private successCount = 0;
   private lastFailureTime = 0;
-  private lastStateChange = Date.now();
   private config: CircuitBreakerConfig;
 
   constructor(overrides?: Partial<CircuitBreakerConfig> & { name: string }) {
@@ -68,14 +67,12 @@ export class CircuitBreaker {
     this.state = "CLOSED";
     this.failureCount = 0;
     this.successCount = 0;
-    this.lastStateChange = Date.now();
   }
 
   private transitionTo(newState: CircuitState): void {
     if (this.state === newState) return;
     const prevState = this.state;
     this.state = newState;
-    this.lastStateChange = Date.now();
     logAudit("circuit.state_change", "system", this.config.name, {
       circuitName: this.config.name,
       fromState: prevState,

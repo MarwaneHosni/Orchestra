@@ -72,7 +72,7 @@ test.describe("API — core workflow E2E", () => {
 
     // Use the created project's planId for subsequent graph tests
     test.setTimeout(60000);
-  }).timeout(30000);
+  });
 
   test("1. generates a task graph after project creation", async () => {
     const res = await fetch(`${API}/api/v1/plans/e2e-plan-${test.info().title.replace(/\s/g, "-")}/tasks`);

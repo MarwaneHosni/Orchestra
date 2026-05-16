@@ -106,14 +106,17 @@ export function buildContextPack(
           type: "missing_optional",
         });
       } else if (!present && isGated) {
-        gaps.push({
+        const gap: GapMarker = {
           questionRef: ref,
           questionText: q.text,
           phaseType,
           type: "missing_due_to_gate",
-          gateQuestionRef: q.dependsOn?.questionRef,
-          gateExpected: q.dependsOn?.expectedValue,
-        });
+        };
+        if (q.dependsOn) {
+          gap.gateQuestionRef = q.dependsOn.questionRef;
+          gap.gateExpected = q.dependsOn.expectedValue;
+        }
+        gaps.push(gap);
       }
 
       if (present && q.required && answer!.value.trim().length === 0) {
