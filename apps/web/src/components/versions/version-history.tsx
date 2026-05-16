@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { VersionNode } from "./version-node";
 import { VersionCompare } from "./version-compare";
 import { ExportActionCenter } from "./export-action-center";
@@ -22,12 +22,19 @@ export function VersionHistory({ sessionId }: VersionHistoryProps) {
   const [diff, setDiff] = useState<VersionDiff | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
   const [diffError, setDiffError] = useState("");
+  const hasAutoSelectedRef = useRef(false);
 
   useEffect(() => {
     const load = async () => {
       try {
         const result = await getSnapshots(sessionId);
-        setSnapshots(result.data ?? []);
+        const items = result.data ?? [];
+        setSnapshots(items);
+        if (items.length > 0 && !hasAutoSelectedRef.current) {
+          hasAutoSelectedRef.current = true;
+          const latest = items.reduce((a, b) => (a.version > b.version ? a : b));
+          setSelectedId(latest.id);
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load versions");
       } finally {
@@ -120,7 +127,8 @@ export function VersionHistory({ sessionId }: VersionHistoryProps) {
         <div>
           <h1 className="text-2xl font-semibold text-text-primary">Version History</h1>
           <p className="mt-1 text-sm text-text-secondary">
-            {sorted.length} snapshot{sorted.length !== 1 ? "s" : ""} — Select two to compare
+            {sorted.length} snapshot{sorted.length !== 1 ? "s" : ""} — Click a snapshot to export, or select
+            two to compare
           </p>
         </div>
       </div>
