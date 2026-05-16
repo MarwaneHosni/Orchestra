@@ -184,6 +184,42 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
     setAnnouncement(`Returned to previous question: ${prev.question.text}`);
   };
 
+  const [quickFilling, setQuickFilling] = useState(false);
+
+  const quickFillDefault = (q: QuestionPayload): string => {
+    if (q.options?.includes("Not sure yet")) return "Not sure yet";
+    switch (q.type) {
+      case "select":
+      case "multi_select":
+        return q.options?.[0] ?? "";
+      case "boolean":
+        return "true";
+      case "scale":
+        return "3";
+      default:
+        return "I am not sure yet — do what you think is more optimal";
+    }
+  };
+
+  const handleQuickFill = async () => {
+    setQuickFilling(true);
+    setError("");
+    try {
+      let next = await getNextQuestion(sessionId);
+      while (next.question) {
+        const val = quickFillDefault(next.question);
+        await submitAnswer(sessionId, next.question.id, val);
+        next = await getNextQuestion(sessionId);
+      }
+      await transitionSession(sessionId, "ready_for_generation");
+      await generateBlueprint(sessionId);
+      router.push(`/projects/${sessionId}/summary`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to quick-fill");
+      setQuickFilling(false);
+    }
+  };
+
   const handleGenerate = async () => {
     setGenerating(true);
     setError("");
@@ -247,6 +283,17 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
       <StepIndicator current="interview" compact />
 
       <ProgressBar currentPhaseIndex={phaseIndex} total={total} answered={answered} />
+
+      <div className="flex justify-end">
+        <button
+          onClick={handleQuickFill}
+          disabled={quickFilling}
+          aria-busy={quickFilling}
+          className="rounded-lg border border-dashed border-orchestra-300 bg-orchestra-50 px-4 py-2 text-sm font-medium text-orchestra-700 hover:bg-orchestra-100 disabled:opacity-50"
+        >
+          {quickFilling ? "Filling & generating..." : "Quick fill & generate (skip all questions)"}
+        </button>
+      </div>
 
       {currentPhaseType && (
         <div className="flex items-center gap-2 border-b border-border pb-3">
