@@ -2,6 +2,7 @@ import type { AIProvider, GenerationInput, GenerationResult, ModelInfo, Validati
 import { ProviderRequestError, fetchWithTimeout } from "./types.js";
 
 const BASE_URL = "https://opencode.ai/zen/go/v1";
+const GENERATE_TIMEOUT_MS = 180_000;
 
 const GO_MODEL_IDS = new Set([
   "glm-5.1",
@@ -21,7 +22,7 @@ export class OpencodeGoProvider implements AIProvider {
 
   constructor(private apiKey: string) {}
 
-  private async apiFetch(path: string, options?: RequestInit): Promise<Response> {
+  private async apiFetch(path: string, options?: RequestInit & { timeout?: number }): Promise<Response> {
     return fetchWithTimeout(`${BASE_URL}${path}`, {
       ...options,
       headers: {
@@ -86,11 +87,11 @@ export class OpencodeGoProvider implements AIProvider {
     const res = await this.apiFetch("/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      timeout: GENERATE_TIMEOUT_MS,
       body: JSON.stringify({
         model: apiModel,
         messages,
         temperature: input.temperature ?? 0.7,
-        max_tokens: input.maxTokens ?? 4096,
         stream: false,
       }),
     });
@@ -144,13 +145,17 @@ export class OpencodeGoProvider implements AIProvider {
     );
 
     const body = JSON.parse(rawText) as {
-      choices?: { message?: { content?: string }; finish_reason?: string }[];
+      choices?: { message?: Record<string, unknown>; finish_reason?: string }[];
       usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
       model?: string;
     };
 
+    const msg = body.choices?.[0]?.message;
+    const content =
+      (msg?.content as string | undefined) || (msg?.reasoning_content as string | undefined) || "";
+
     return {
-      content: body.choices?.[0]?.message?.content ?? "",
+      content,
       model: body.model ?? input.model,
       usage: {
         promptTokens: body.usage?.prompt_tokens ?? 0,

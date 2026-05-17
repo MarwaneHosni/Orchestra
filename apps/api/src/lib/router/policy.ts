@@ -72,6 +72,7 @@ export const POLICIES: RoutingPolicy[] = [
     preferred: [
       { provider: "openrouter", model: "deepseek/deepseek-v4-flash:free", tier: "cheap" },
       { provider: "opencode-go", model: "deepseek-v4-flash", tier: "cheap" },
+      { provider: "opencode-go", model: "kimi-k2.6", tier: "balanced" },
       { provider: "openai", model: "gpt-4o-mini", tier: "cheap" },
     ],
     fallback: [
