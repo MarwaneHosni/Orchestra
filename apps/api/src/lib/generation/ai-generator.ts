@@ -339,6 +339,26 @@ export class AIBlueprintGenerator {
     }
 
     // Build roadmap
+    const validEfforts = ["small", "medium", "large", "unknown"];
+    const normalizeEffort = (e: unknown): string => {
+      if (typeof e === "string" && validEfforts.includes(e)) return e;
+      if (typeof e === "string") {
+        const lower = e.toLowerCase();
+        if (validEfforts.includes(lower)) return lower;
+        if (lower === "xs" || lower === "tiny") return "small";
+        if (lower === "xl" || lower === "huge" || lower === "big") return "large";
+      }
+      return "unknown";
+    };
+
+    const rawRoadmapPhases = (data.roadmapPhases ?? data.phases) as Record<string, unknown>[] | undefined;
+    const roadmapPhases = Array.isArray(rawRoadmapPhases)
+      ? rawRoadmapPhases.map((p) => ({
+          ...p,
+          effort: normalizeEffort(p.effort),
+        }))
+      : [];
+
     const roadmapResult = RoadmapOutputSchema.safeParse({
       planId,
       planVersion,
@@ -347,8 +367,8 @@ export class AIBlueprintGenerator {
       createdAt: now,
       schemaVersion: "orchestra-generated-v1",
       artifactType: "roadmap",
-      phases: data.roadmapPhases ?? data.phases,
-      totalEffort: data.totalEffort ?? "medium",
+      phases: roadmapPhases,
+      totalEffort: normalizeEffort(data.totalEffort ?? "medium"),
       recommendedApproach: data.recommendedApproach,
       generationMetadata: {
         model,
