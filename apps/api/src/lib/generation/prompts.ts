@@ -111,27 +111,39 @@ You are given the full interview data below. Analyze each user answer carefully 
 
 Top-level fields required:
 - "phases": ARRAY of 12 objects in this exact order: ideation, requirements, architecture, security, database, backend, frontend, core-features, ai-systems, testing, deployment, monitoring
-  Each phase: { phaseType, phaseName, summary (detailed 2-3 sentences based on user answers), narrative (4-5 sentences reflecting the specific user input), status, confidence (0-1), keyDecisions [2-4 items based on answers], 
-    "executionPrompt": a complete, detailed execution prompt for tasks in this phase. It MUST be a markdown string with these 7 sections:
-      ## Objective
-      ## Context (include the project description, phase goal, and key background from user answers)
-      ## Constraints (include ALL constraints, assumptions, and risks identified from the interview)
-      ## Expected Output
-      ## Validation Criteria (specific, testable items)
-      ## Architectural Alignment
-      ## Agent Tips (include security, edge cases, dependency warnings, common bugs specific to this phase) }
-- "assumptions": ARRAY of { description: string } — list ALL specific assumptions the user mentioned
-- "constraints": ARRAY of { description: string } — list ALL specific constraints the user mentioned
-- "risks": ARRAY of { description: string } — list ALL specific risks the user identified
+  Each phase object must contain: phaseType, phaseName, summary, narrative, status, confidence, keyDecisions, executionPrompt
+- "assumptions": ARRAY of { description: string }
+- "constraints": ARRAY of { description: string }
+- "risks": ARRAY of { description: string }
 - "overallConfidence": 0-1
-- "overallSummary": string (min 20 chars, summarize the project based on user's actual answers)
+- "overallSummary": string (min 20 chars)
 - "roadmapPhases": ARRAY of 12 { phaseType, phaseName, order, effort, prerequisites }
 - "totalEffort": "small"|"medium"|"large"
 
-CRITICAL: Base your output on the actual user answers below. Each phase summary, narrative, and executionPrompt MUST reflect what the user said, not generic text.
-The executionPrompt for each phase should be unique and tailored to the answers for that phase.
-"phases" must be an ARRAY, not an object. "assumptions/constraints/risks" must be arrays of {description} objects, not strings.
-Only output JSON. No markdown, no text outside.`;
+FIELD SPECIFICATIONS:
+  summary: detailed 2-3 sentences based on user answers
+  narrative: 4-5 sentences reflecting the specific user input
+  status: one of "sufficient" | "insufficient" | "missing" | "ai_augmented"
+  confidence: 0-1
+  keyDecisions: array of 2-4 strings based on answers
+  executionPrompt: a complete, detailed markdown execution prompt for tasks in this phase.
+    Format it with these 7 sections using markdown headings (##):
+      ## Objective — what needs to be built
+      ## Context — project description, phase goal, key background from user answers
+      ## Constraints — ALL constraints, assumptions, and risks from the interview
+      ## Expected Output — what the execution should produce
+      ## Validation Criteria — specific, testable items as bullet list
+      ## Architectural Alignment — how this fits the project architecture
+      ## Agent Tips — security, edge cases, dependency warnings, common bugs for this phase
+
+CRITICAL JSON RULES:
+- "phases" must be an ARRAY, not an object
+- "assumptions/constraints/risks" must be arrays of {description} objects, not strings
+- The executionPrompt is a STRING containing markdown. Any double quotes inside it must be escaped with a backslash.
+- Do NOT use {{ or }} or any curly braces inside the executionPrompt that aren't part of its text content
+- Base ALL output on the actual user answers below
+- Each phase executionPrompt must be unique and tailored to the answers for that phase
+- Output ONLY the JSON object. No markdown fences, no text before or after.`;
 }
 
 export function buildTaskPromptMessage(

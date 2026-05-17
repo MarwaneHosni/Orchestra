@@ -8,7 +8,6 @@ import { generateTasks } from "../task-graph/generator.js";
 import { assemblePrompt } from "../prompt/index.js";
 import { graphStore, promptStore } from "../shared-stores.js";
 import type { PhaseInput } from "../task-graph/types.js";
-import type { PromptArtifact } from "../prompt/types.js";
 
 export type GenerationMode = "ai_success" | "ai_fallback_deterministic" | "deterministic_only";
 
@@ -140,14 +139,15 @@ export async function generateWithAI(
     // 7. Assemble prompts for each task — use AI-generated executionPrompt if available, else assemblePrompt
     for (const task of graph.tasks) {
       const phaseData = blueprint.phases.find((p) => p.phaseType === task.phaseType);
+      const aiPrompt = phaseData?.executionPrompt;
 
-      if (phaseData?.executionPrompt) {
-        const aiArtifact: PromptArtifact = {
+      if (aiPrompt && aiPrompt.length >= 100) {
+        promptStore.save({
           id: crypto.randomUUID(),
           taskId: task.id,
           planId: task.planId,
           planVersion,
-          promptText: phaseData.executionPrompt,
+          promptText: aiPrompt,
           sections: {
             objective: "",
             context: "",
@@ -161,8 +161,7 @@ export async function generateWithAI(
           status: "complete",
           failureReason: null,
           createdAt: new Date().toISOString(),
-        };
-        promptStore.save(aiArtifact);
+        });
       } else {
         assemblePrompt(
           {
