@@ -9,6 +9,12 @@ import { assemblePrompt } from "../prompt/index.js";
 import { graphStore, promptStore } from "../shared-stores.js";
 import type { PhaseInput } from "../task-graph/types.js";
 import type { PromptArtifact } from "../prompt/types.js";
+import {
+  createWorkflowRun,
+  updateWorkflowStep,
+  completeWorkflowRun,
+} from "../repositories/workflow-repository.js";
+import { saveAnalysisResults } from "../repositories/analysis-repository.js";
 
 export type GenerationMode = "ai_success" | "ai_fallback_deterministic" | "deterministic_only";
 
@@ -28,9 +34,33 @@ export async function generateWithAI(
   planId: string,
   planVersion: number,
 ): Promise<OrchestrationResult> {
+  const workflowId = crypto.randomUUID();
+  const now = () => new Date().toISOString();
+
+  // Create workflow run
+  createWorkflowRun(workflowId, planId);
+
   // 1. Build analysis from answers
-  const pack = buildContextPack(projectId, projectName, sessionId, answers);
-  const analysis = analyzeAnswers(pack);
+  let analysis: ReturnType<typeof analyzeAnswers>;
+  try {
+    const pack = buildContextPack(projectId, projectName, sessionId, answers);
+    updateWorkflowStep(workflowId, "synthesis", "completed");
+
+    analysis = analyzeAnswers(pack);
+    updateWorkflowStep(workflowId, "analysis", "completed");
+
+    // Persist analysis results
+    saveAnalysisResults(planId, analysis);
+  } catch (err) {
+    completeWorkflowRun(
+      workflowId,
+      "failed",
+      undefined,
+      undefined,
+      err instanceof Error ? err.message : "Synthesis/analysis failed",
+    );
+    return { output: null as any, mode: "deterministic_only" };
+  }
 
   // 2. Always ensure a mock credential exists as last-resort fallback
   const store = getCredentialStore();
@@ -40,7 +70,7 @@ export async function generateWithAI(
   );
 
   if (!hasMock) {
-    const now = new Date().toISOString();
+    const _now = now();
     store.insert({
       id: "mock-credential",
       userId: "00000000-0000-0000-0000-000000000000",
@@ -52,10 +82,10 @@ export async function generateWithAI(
       keyReference: null,
       defaultModel: "mock-blueprint-v1",
       modelsAvailable: null,
-      lastVerifiedAt: now,
+      lastVerifiedAt: _now,
       errorMessage: null,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: _now,
+      updatedAt: _now,
     });
     allCreds = store.list();
   }
@@ -63,6 +93,7 @@ export async function generateWithAI(
   const hasValidCreds = allCreds.some((c) => c.status === "valid" || c.status === "unverified");
 
   if (!hasValidCreds) {
+    completeWorkflowRun(workflowId, "failed", undefined, undefined, "No valid provider credentials");
     return { output: null as any, mode: "deterministic_only" };
   }
 
@@ -78,47 +109,33 @@ export async function generateWithAI(
 
   // 4. Create AI generator
   const aiGen = new AIBlueprintGenerator(router, (provider: string) => {
-    // Mock provider doesn't need an API key
     if (provider === "mock") return "mock-key";
-    // Look up credential by provider name (exact match only — never use OpenRouter key for OpenAI)
     for (const c of allCreds) {
       if (c.provider === provider) {
         const raw = store.getRaw(c.id);
         if (raw?.encryptedApiKey) {
           const decrypted = decryptKey(raw.encryptedApiKey);
-          console.log(
-            "[ORCHESTRATOR DEBUG]",
-            JSON.stringify({
-              step: "getApiKey",
-              provider,
-              credentialId: c.id,
-              credentialStatus: c.status,
-              keyPreview: decrypted.slice(0, 8) + "...",
-              keyLength: decrypted.length,
-            }),
-          );
           return decrypted;
         }
       }
     }
-    console.log(
-      "[ORCHESTRATOR DEBUG]",
-      JSON.stringify({
-        step: "getApiKey_not_found",
-        provider,
-        availableProviders: allCreds.map((c) => ({ provider: c.provider, status: c.status })),
-      }),
-    );
     return undefined;
   });
 
   // 5. Call AI
+  updateWorkflowStep(workflowId, "blueprint", "running");
   const result = await aiGen.generate(analysis, planId, planVersion, projectDescription);
 
   if (result.success && result.data) {
+    updateWorkflowStep(workflowId, "blueprint", "completed");
     const { blueprint } = result.data;
 
+    // Persist AI generation metadata to workflow
+    completeWorkflowRun(workflowId, "running", result.provider, result.model);
+
     // 6. Generate task graph from AI-authored phases
+    updateWorkflowStep(workflowId, "roadmap", "completed");
+
     const phases: PhaseInput[] = blueprint.phases.map((p) => ({
       phaseType: p.phaseType,
       phaseName: p.phaseName,
@@ -130,14 +147,22 @@ export async function generateWithAI(
     let graph;
     try {
       graph = generateTasks(planId, planVersion, phases);
+      updateWorkflowStep(workflowId, "taskGraph", "completed");
     } catch {
-      // If task generation fails (e.g. unknown phase types), fall back
+      completeWorkflowRun(
+        workflowId,
+        "failed",
+        result.provider,
+        result.model,
+        "Task graph generation failed",
+      );
       return { output: null as any, mode: "deterministic_only" };
     }
 
     graphStore.saveGraph(graph);
 
-    // 7. Assemble prompts for each task — use AI-generated executionPrompt if available, else assemblePrompt
+    // 7. Assemble prompts for each task
+    updateWorkflowStep(workflowId, "promptGen", "running");
     for (const task of graph.tasks) {
       const phaseData = blueprint.phases.find((p) => p.phaseType === task.phaseType);
       const aiPrompt = phaseData?.executionPrompt;
@@ -161,34 +186,10 @@ export async function generateWithAI(
           version: 1,
           status: "complete",
           failureReason: null,
-          createdAt: new Date().toISOString(),
+          createdAt: now(),
         };
         promptStore.save(artifact);
-        console.log(
-          "[PROMPT DEBUG]",
-          JSON.stringify({
-            step: "saved_ai_prompt",
-            taskId: task.id,
-            planId: task.planId,
-            planVersion,
-            phaseType: task.phaseType,
-            promptLength: aiPrompt.length,
-            promptStoreTaskCount: promptStore.getByPlan(task.planId, planVersion)?.length ?? 0,
-          }),
-        );
       } else {
-        const reason = !phaseData?.executionPrompt ? "no_executionPrompt_field" : "too_short";
-        console.log(
-          "[PROMPT DEBUG]",
-          JSON.stringify({
-            step: "fallback_to_assemblePrompt",
-            taskId: task.id,
-            planId: task.planId,
-            phaseType: task.phaseType,
-            reason,
-            executionPromptLength: phaseData?.executionPrompt?.length ?? 0,
-          }),
-        );
         assemblePrompt(
           {
             task,
@@ -211,6 +212,10 @@ export async function generateWithAI(
         );
       }
     }
+    updateWorkflowStep(workflowId, "promptGen", "completed");
+
+    // Mark workflow complete
+    completeWorkflowRun(workflowId, "completed", result.provider, result.model);
 
     return {
       output: blueprint,
@@ -220,6 +225,8 @@ export async function generateWithAI(
     };
   }
 
-  // AI failed — fall back to deterministic
+  // AI failed
+  updateWorkflowStep(workflowId, "blueprint", "failed");
+  completeWorkflowRun(workflowId, "failed", result.provider, result.model, result.error);
   return { output: null as any, mode: "ai_fallback_deterministic" };
 }
