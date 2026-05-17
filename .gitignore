@@ -10,3 +10,7 @@ coverage/
 .DS_Store
 data/
 docker-data/
+
+# SQLite database
+*.db
+orchestra.db
