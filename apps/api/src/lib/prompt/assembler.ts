@@ -1,15 +1,9 @@
-import type { PromptSection, AgentTips, PromptArtifact, PromptStore } from "./types.js";
+import type { PromptSection, AgentTips, PromptArtifact, PromptStore, TaskContext } from "./types.js";
 import { formatPrompt } from "./templates.js";
 import { validatePrompt } from "./validator.js";
 import type { TaskNode } from "../task-graph/types.js";
 
-export interface TaskContext {
-  task: TaskNode;
-  planName: string;
-  allTasks: TaskNode[];
-  predecessorOutputs: string[];
-  phaseSummary: string;
-}
+export { TaskContext };
 
 export function assemblePrompt(context: TaskContext, store?: PromptStore, planVersion = 1): PromptArtifact {
   const sections = buildSections(context);
@@ -47,12 +41,20 @@ function buildSections(context: TaskContext): PromptSection {
   const predecessorNames =
     context.predecessorOutputs.length > 0
       ? context.predecessorOutputs.map((o) => `- ${o}`).join("\n")
-      : "None — this is the first task in the sequence.";
+      : "None \u2014 this is the first task in the sequence.";
 
   const relatedTaskTitles = context.allTasks
     .filter((t) => t.id !== task.id && task.dependencies.some((d) => d.taskId === t.id))
     .map((t) => `- ${t.title} (${t.phaseType})`)
     .join("\n");
+
+  const phaseDetails: string[] = [];
+  if (context.aiPhaseSummary) phaseDetails.push(`Phase summary: ${context.aiPhaseSummary}`);
+  if (context.aiPhaseNarrative) phaseDetails.push(`Phase narrative: ${context.aiPhaseNarrative}`);
+  if (context.aiKeyDecisions && context.aiKeyDecisions.length > 0) {
+    phaseDetails.push(`Key decisions:\n${context.aiKeyDecisions.map((d) => `  - ${d}`).join("\n")}`);
+  }
+  const phaseDetailStr = phaseDetails.length > 0 ? `\n${phaseDetails.join("\n\n")}\n` : "";
 
   return {
     objective: `Implement: ${task.title}`,
@@ -60,23 +62,23 @@ function buildSections(context: TaskContext): PromptSection {
       `Phase: ${task.phaseType}`,
       `Task type: ${task.type}`,
       `Priority: ${task.priority}`,
-      ``,
+      "",
       `Phase summary: ${context.phaseSummary}`,
-      ``,
+      phaseDetailStr,
       `Predecessor outputs:`,
       predecessorNames,
-      ``,
+      "",
       `Related tasks:`,
       relatedTaskTitles || "No related tasks.",
-      ``,
-      `This task is ${task.dependencies.length > 0 ? `blocked by ${task.dependencies.length} predecessor(s)` : "the first task — no dependencies"} and is estimated to require ${task.estimatedPromptRounds} prompt round(s).`,
+      "",
+      `This task is ${task.dependencies.length > 0 ? `blocked by ${task.dependencies.length} predecessor(s)` : "the first task \u2014 no dependencies"} and is estimated to require ${task.estimatedPromptRounds} prompt round(s).`,
     ].join("\n"),
 
     constraints: buildConstraints(task, context),
 
     expectedOutput: [
       `Complete the following work:`,
-      ``,
+      "",
       `1. ${task.title}`,
       `2. Ensure the output meets the acceptance criteria below`,
       `3. If applicable, update or create the relevant files in the project`,
@@ -89,29 +91,46 @@ function buildSections(context: TaskContext): PromptSection {
       `This task is part of the "${task.phaseType}" phase.`,
       `The overall project "${context.planName}" follows the architecture defined in the project blueprint.`,
       `This task contributes to: ${task.title}`,
+      context.aiOverallSummary ? `Project context: ${context.aiOverallSummary}` : null,
       task.type === "config"
         ? "Configuration tasks establish the foundation for subsequent implementation tasks."
-        : "",
+        : null,
       task.type === "test"
         ? "Verification tasks validate that implementation meets the defined criteria."
-        : "",
+        : null,
       task.type === "code"
         ? "Implementation tasks build the core functionality specified in this phase."
-        : "",
+        : null,
     ]
-      .filter(Boolean)
+      .filter((x): x is string => x !== null)
       .join("\n"),
 
     agentTips: buildAgentTips(task, context),
   };
 }
 
-function buildConstraints(task: TaskNode, _context: TaskContext): string[] {
+function buildConstraints(task: TaskNode, context: TaskContext): string[] {
   const constraints: string[] = [
     `Task must be completable within ${task.estimatedPromptRounds} prompt round(s)`,
     `Output must be coherent and independently verifiable`,
     `Follow the existing project conventions and code style`,
   ];
+
+  if (context.aiAssumptions && context.aiAssumptions.length > 0) {
+    constraints.push(
+      `Assumptions from interview:\n${context.aiAssumptions.map((a) => `  - ${a.description}`).join("\n")}`,
+    );
+  }
+
+  if (context.aiConstraints && context.aiConstraints.length > 0) {
+    constraints.push(
+      `Constraints from interview:\n${context.aiConstraints.map((c) => `  - ${c.description}`).join("\n")}`,
+    );
+  }
+
+  if (context.aiRisks && context.aiRisks.length > 0) {
+    constraints.push(`Risks to mitigate:\n${context.aiRisks.map((r) => `  - ${r.description}`).join("\n")}`);
+  }
 
   if (task.type === "config") {
     constraints.push("Configuration must not break existing functionality");
@@ -152,7 +171,7 @@ function buildAgentTips(task: TaskNode, _context: TaskContext): AgentTips {
     commonBugs: [
       "Off-by-one errors in loops and array indexing",
       "Race conditions in async operations without proper synchronization",
-      "Silent error swallowing — ensure errors are logged or propagated",
+      "Silent error swallowing \u2014 ensure errors are logged or propagated",
       "Inconsistent naming or type mismatches between related modules",
     ],
   };
@@ -164,7 +183,7 @@ function buildAgentTips(task: TaskNode, _context: TaskContext): AgentTips {
 
   if (task.type === "config") {
     tips.security.push(
-      "Configuration files should not contain secrets — use environment variables or secret references",
+      "Configuration files should not contain secrets \u2014 use environment variables or secret references",
     );
     tips.commonBugs.push("Default configuration values may not be appropriate for production");
   }

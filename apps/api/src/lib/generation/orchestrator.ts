@@ -137,15 +137,23 @@ export async function generateWithAI(
 
     graphStore.saveGraph(graph);
 
-    // 7. Assemble prompts for each task
+    // 7. Assemble prompts for each task, enriched with AI blueprint data
     for (const task of graph.tasks) {
+      const phaseData = blueprint.phases.find((p) => p.phaseType === task.phaseType);
       assemblePrompt(
         {
           task,
           planName: projectName,
           allTasks: graph.tasks,
           predecessorOutputs: [],
-          phaseSummary: task.phaseType,
+          phaseSummary: phaseData?.summary ?? task.phaseType,
+          ...(phaseData?.narrative !== undefined ? { aiPhaseNarrative: phaseData.narrative } : {}),
+          ...(phaseData?.summary !== undefined ? { aiPhaseSummary: phaseData.summary } : {}),
+          ...(phaseData?.keyDecisions !== undefined ? { aiKeyDecisions: phaseData.keyDecisions } : {}),
+          ...(blueprint.assumptions.length > 0 ? { aiAssumptions: blueprint.assumptions } : {}),
+          ...(blueprint.constraints.length > 0 ? { aiConstraints: blueprint.constraints } : {}),
+          ...(blueprint.risks.length > 0 ? { aiRisks: blueprint.risks } : {}),
+          ...(blueprint.overallSummary ? { aiOverallSummary: blueprint.overallSummary } : {}),
         },
         promptStore,
         planVersion,

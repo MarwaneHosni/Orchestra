@@ -23,6 +23,13 @@ export interface TaskContext {
   allTasks: TaskNode[];
   predecessorOutputs: string[];
   phaseSummary: string;
+  aiPhaseNarrative?: string;
+  aiPhaseSummary?: string;
+  aiKeyDecisions?: string[];
+  aiAssumptions?: { id?: string; description: string; source?: string }[];
+  aiConstraints?: { id?: string; description: string; source?: string }[];
+  aiRisks?: { id?: string; description: string; source?: string }[];
+  aiOverallSummary?: string;
 }
 
 export interface PromptArtifact {
