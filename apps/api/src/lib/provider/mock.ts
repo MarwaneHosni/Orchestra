@@ -33,6 +33,21 @@ export class MockAIProvider implements AIProvider {
         `Prioritize maintainability and testability`,
       ],
       sourceAnswers: [],
+      executionPrompt: [
+        `## Objective\nImplement the ${PHASE_LABELS[phaseType] ?? phaseType} phase deliverables.`,
+        ``,
+        `## Context\nThis is part of the project plan for the TODO Web App. The ${PHASE_LABELS[phaseType] ?? phaseType} phase focuses on establishing core project foundations based on interview analysis.`,
+        ``,
+        `## Constraints\n- Task must be completable within 3 prompt rounds\n- Output must be coherent and independently verifiable\n- Follow existing project conventions and code style`,
+        ``,
+        `## Expected Output\nComplete the work for this phase as defined in the task specification.`,
+        ``,
+        `## Validation Criteria\n- Task deliverables meet the defined requirements\n- Implementation follows the project architecture`,
+        ``,
+        `## Architectural Alignment\nThis task implements part of the ${PHASE_LABELS[phaseType] ?? phaseType} phase within the overall project architecture.`,
+        ``,
+        `## Agent Tips\n- Validate all inputs and sanitize outputs\n- Do not hardcode secrets or credentials\n- Consider empty states and error conditions`,
+      ].join("\n"),
     }));
 
     const roadmapPhases = PHASE_ORDER.map((phaseType, i) => ({
