@@ -1,4 +1,6 @@
-const BASE = "http://localhost:3000";
+import { API_BASE_URL } from "./api-config.js";
+
+const BASE = API_BASE_URL;
 
 export interface CreateProjectResult {
   projectId: string;
