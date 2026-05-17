@@ -7,8 +7,9 @@ import { OpencodeGoProvider } from "../provider/opencode-go.js";
 import type { RouterService } from "../router/router.js";
 import type { RouterDecision, ModelSelection } from "../router/types.js";
 import type { AnalysisPack } from "../analysis/types.js";
-import type { BlueprintOutput, RoadmapOutput } from "../contract/output-schema.js";
+import type { BlueprintOutput, RoadmapOutput, PhaseType } from "../contract/output-schema.js";
 import { BlueprintOutputSchema, RoadmapOutputSchema, PHASE_ORDER } from "../contract/output-schema.js";
+import { PHASE_LABELS } from "../interview/questions.js";
 import { instrumentProviderCall } from "../metrics/index.js";
 import type { AIGenerationResult } from "./prompts.js";
 import { buildSystemPrompt, buildAnalysisMessage } from "./prompts.js";
@@ -357,11 +358,42 @@ export class AIBlueprintGenerator {
       return "unknown";
     };
 
+    // Build reverse label-to-key map once
+    const phaseLabelToKey = new Map<string, string>();
+    for (const key of PHASE_ORDER) {
+      const label = PHASE_LABELS[key];
+      if (label) phaseLabelToKey.set(label.toLowerCase(), key);
+      // Also store the key itself for direct matches
+      phaseLabelToKey.set(key.toLowerCase(), key);
+    }
+
+    const normalizePhaseRef = (ref: unknown): string => {
+      if (typeof ref !== "string") return "";
+      const trimmed = ref.trim().toLowerCase();
+      if ((PHASE_ORDER as readonly string[]).includes(trimmed)) return trimmed;
+      const direct = phaseLabelToKey.get(trimmed);
+      if (direct) return direct;
+      for (const [label, key] of phaseLabelToKey) {
+        if (label.includes(trimmed) || trimmed.includes(label)) return key;
+      }
+      for (const [label, key] of phaseLabelToKey) {
+        for (const word of trimmed.split(/[\s_\-&,]+/).filter(Boolean)) {
+          if (label.includes(word)) return key;
+        }
+      }
+      return "";
+    };
+
     const rawRoadmapPhases = (data.roadmapPhases ?? data.phases) as Record<string, unknown>[] | undefined;
     const roadmapPhases = Array.isArray(rawRoadmapPhases)
       ? rawRoadmapPhases.map((p) => ({
           ...p,
+          phaseType: (normalizePhaseRef(p.phaseType) as PhaseType) || ("ideation" as PhaseType),
           effort: normalizeEffort(p.effort),
+          prerequisites: ((Array.isArray(p.prerequisites) ? p.prerequisites : []) as unknown[])
+            .map((ref) => normalizePhaseRef(ref))
+            .filter((s): s is string => s !== "")
+            .map((s) => s as PhaseType),
         }))
       : [];
 
