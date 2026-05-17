@@ -27,8 +27,7 @@ export function createInMemoryGraphStore(): GraphStore {
   return {
     saveGraph(g) {
       const key = planKey(g.planId, g.planVersion);
-      if (byKey.has(key))
-        throw new Error(`Graph already exists for plan ${g.planId} version ${g.planVersion}`);
+      if (byKey.has(key)) return;
       byKey.set(key, g);
       getPlanList(g.planId).push(g);
     },

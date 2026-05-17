@@ -448,12 +448,11 @@ describe("TaskGraphStore", () => {
     expect(store.getGraphsByPlan("plan-store-2")).toHaveLength(2);
     expect(store.getGraphsByPlan("plan-store-3")).toHaveLength(1);
   });
-  it("rejects duplicate (planId, planVersion)", () => {
+  it("ignores duplicate (planId, planVersion) silently", () => {
     const store = createInMemoryGraphStore();
     store.saveGraph(generateTasks("plan-dup", 1, [makePhase("ideation")]));
-    expect(() => store.saveGraph(generateTasks("plan-dup", 1, [makePhase("ideation")]))).toThrow(
-      "already exists",
-    );
+    expect(() => store.saveGraph(generateTasks("plan-dup", 1, [makePhase("ideation")]))).not.toThrow();
+    expect(store.getGraph("plan-dup", 1)).toBeDefined();
   });
 });
 
