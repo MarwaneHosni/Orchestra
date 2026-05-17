@@ -90,6 +90,7 @@ export const PhaseContentSchema = z.object({
   confidence: z.number().min(0).max(1),
   keyDecisions: z.array(z.string()).default([]),
   sourceAnswers: z.array(AnswerRefSchema).default([]),
+  executionPrompt: z.string().optional(),
 });
 
 export const StructuredItemSchema = z.object({

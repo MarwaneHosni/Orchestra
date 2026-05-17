@@ -8,6 +8,7 @@ import { generateTasks } from "../task-graph/generator.js";
 import { assemblePrompt } from "../prompt/index.js";
 import { graphStore, promptStore } from "../shared-stores.js";
 import type { PhaseInput } from "../task-graph/types.js";
+import type { PromptArtifact } from "../prompt/types.js";
 
 export type GenerationMode = "ai_success" | "ai_fallback_deterministic" | "deterministic_only";
 
@@ -136,29 +137,54 @@ export async function generateWithAI(
 
     graphStore.saveGraph(graph);
 
-    // 7. Assemble prompts for each task, enriched with AI blueprint data
+    // 7. Assemble prompts for each task — use AI-generated executionPrompt if available, else assemblePrompt
     for (const task of graph.tasks) {
       const phaseData = blueprint.phases.find((p) => p.phaseType === task.phaseType);
-      assemblePrompt(
-        {
-          task,
-          planName: projectName,
-          allTasks: graph.tasks,
-          predecessorOutputs: [],
-          phaseSummary: phaseData?.summary ?? task.phaseType,
-          ...(phaseData?.narrative !== undefined ? { aiPhaseNarrative: phaseData.narrative } : {}),
-          ...(phaseData?.summary !== undefined ? { aiPhaseSummary: phaseData.summary } : {}),
-          ...(phaseData?.status !== undefined ? { aiPhaseStatus: phaseData.status } : {}),
-          ...(phaseData?.confidence !== undefined ? { aiPhaseConfidence: phaseData.confidence } : {}),
-          ...(phaseData?.keyDecisions !== undefined ? { aiKeyDecisions: phaseData.keyDecisions } : {}),
-          ...(blueprint.assumptions.length > 0 ? { aiAssumptions: blueprint.assumptions } : {}),
-          ...(blueprint.constraints.length > 0 ? { aiConstraints: blueprint.constraints } : {}),
-          ...(blueprint.risks.length > 0 ? { aiRisks: blueprint.risks } : {}),
-          ...(blueprint.overallSummary ? { aiOverallSummary: blueprint.overallSummary } : {}),
-        },
-        promptStore,
-        planVersion,
-      );
+
+      if (phaseData?.executionPrompt) {
+        const aiArtifact: PromptArtifact = {
+          id: crypto.randomUUID(),
+          taskId: task.id,
+          planId: task.planId,
+          planVersion,
+          promptText: phaseData.executionPrompt,
+          sections: {
+            objective: "",
+            context: "",
+            constraints: [],
+            expectedOutput: "",
+            validationCriteria: [],
+            architecturalAlignment: "",
+            agentTips: { security: [], edgeCases: [], dependencyWarnings: [], commonBugs: [] },
+          },
+          version: 1,
+          status: "complete",
+          failureReason: null,
+          createdAt: new Date().toISOString(),
+        };
+        promptStore.save(aiArtifact);
+      } else {
+        assemblePrompt(
+          {
+            task,
+            planName: projectName,
+            allTasks: graph.tasks,
+            predecessorOutputs: [],
+            phaseSummary: phaseData?.summary ?? task.phaseType,
+            ...(phaseData?.narrative !== undefined ? { aiPhaseNarrative: phaseData.narrative } : {}),
+            ...(phaseData?.summary !== undefined ? { aiPhaseSummary: phaseData.summary } : {}),
+            ...(phaseData?.status !== undefined ? { aiPhaseStatus: phaseData.status } : {}),
+            ...(phaseData?.confidence !== undefined ? { aiPhaseConfidence: phaseData.confidence } : {}),
+            ...(phaseData?.keyDecisions !== undefined ? { aiKeyDecisions: phaseData.keyDecisions } : {}),
+            ...(blueprint.assumptions.length > 0 ? { aiAssumptions: blueprint.assumptions } : {}),
+            ...(blueprint.constraints.length > 0 ? { aiConstraints: blueprint.constraints } : {}),
+            ...(blueprint.risks.length > 0 ? { aiRisks: blueprint.risks } : {}),
+            ...(blueprint.overallSummary ? { aiOverallSummary: blueprint.overallSummary } : {}),
+          },
+          promptStore,
+          planVersion,
+        );
+      }
     }
 
     return {
