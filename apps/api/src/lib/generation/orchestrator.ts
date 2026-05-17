@@ -32,12 +32,14 @@ export async function generateWithAI(
   const pack = buildContextPack(projectId, projectName, sessionId, answers);
   const analysis = analyzeAnswers(pack);
 
-  // 2. Check if any provider credentials are stored; auto-create mock if none exist
+  // 2. Always ensure a mock credential exists as last-resort fallback
   const store = getCredentialStore();
   let allCreds = store.list();
-  const hasAnyCreds = allCreds.length > 0;
+  const hasMock = allCreds.some(
+    (c) => c.provider === "mock" && (c.status === "valid" || c.status === "unverified"),
+  );
 
-  if (!hasAnyCreds) {
+  if (!hasMock) {
     const now = new Date().toISOString();
     store.insert({
       id: "mock-credential",
@@ -76,13 +78,37 @@ export async function generateWithAI(
 
   // 4. Create AI generator
   const aiGen = new AIBlueprintGenerator(router, (provider: string) => {
+    // Mock provider doesn't need an API key
+    if (provider === "mock") return "mock-key";
     // Look up credential by provider name (exact match only — never use OpenRouter key for OpenAI)
     for (const c of allCreds) {
       if (c.provider === provider) {
         const raw = store.getRaw(c.id);
-        if (raw?.encryptedApiKey) return decryptKey(raw.encryptedApiKey);
+        if (raw?.encryptedApiKey) {
+          const decrypted = decryptKey(raw.encryptedApiKey);
+          console.log(
+            "[ORCHESTRATOR DEBUG]",
+            JSON.stringify({
+              step: "getApiKey",
+              provider,
+              credentialId: c.id,
+              credentialStatus: c.status,
+              keyPreview: decrypted.slice(0, 8) + "...",
+              keyLength: decrypted.length,
+            }),
+          );
+          return decrypted;
+        }
       }
     }
+    console.log(
+      "[ORCHESTRATOR DEBUG]",
+      JSON.stringify({
+        step: "getApiKey_not_found",
+        provider,
+        availableProviders: allCreds.map((c) => ({ provider: c.provider, status: c.status })),
+      }),
+    );
     return undefined;
   });
 

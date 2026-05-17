@@ -3,6 +3,7 @@ import { OpenAIProvider } from "../provider/openai.js";
 import { AnthropicProvider } from "../provider/anthropic.js";
 import { OpenRouterProvider } from "../provider/openrouter.js";
 import { MockAIProvider } from "../provider/mock.js";
+import { OpencodeGoProvider } from "../provider/opencode-go.js";
 import type { RouterService } from "../router/router.js";
 import type { RouterDecision, ModelSelection } from "../router/types.js";
 import type { AnalysisPack } from "../analysis/types.js";
@@ -64,8 +65,28 @@ export class AIBlueprintGenerator {
     const startTime = Date.now();
     const selection = decision.selection;
 
+    console.log(
+      "[AI-GEN DEBUG]",
+      JSON.stringify({
+        step: "callProvider",
+        depth,
+        selection: { provider: selection.provider, model: selection.model, tier: selection.tier },
+        fallbackChainLength: decision.fallbackChain.length,
+        isFallback,
+      }),
+    );
+
     const provider = this.createProvider(selection);
     if (!provider) {
+      console.log(
+        "[AI-GEN DEBUG]",
+        JSON.stringify({
+          step: "provider_not_created",
+          provider: selection.provider,
+          model: selection.model,
+          reason: "getApiKey returned undefined or createProvider returned undefined",
+        }),
+      );
       // Try fallback — remove current fallback from chain to avoid infinite loops
       while (decision.fallbackChain.length > 0) {
         const fallback = decision.fallbackChain[0]!;
@@ -81,6 +102,16 @@ export class AIBlueprintGenerator {
       }
       return this.failureResult(`No provider available for ${selection.provider}`, decision, startTime);
     }
+
+    console.log(
+      "[AI-GEN DEBUG]",
+      JSON.stringify({
+        step: "provider_created",
+        provider: selection.provider,
+        model: selection.model,
+        providerType: provider.constructor.name,
+      }),
+    );
 
     const systemPrompt = buildSystemPrompt();
     const messages = buildAnalysisMessage(analysis);
@@ -137,6 +168,17 @@ export class AIBlueprintGenerator {
       return this.failureResult("AI response could not be parsed as valid JSON", decision, startTime);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
+      console.log(
+        "[AI-GEN DEBUG]",
+        JSON.stringify({
+          step: "provider_error",
+          provider: selection.provider,
+          model: selection.model,
+          error: errorMsg,
+          fallbackChainLength: decision.fallbackChain.length,
+          depth,
+        }),
+      );
       if (decision.fallbackChain.length > 0) {
         return this.tryFallback(decision, analysis, planId, planVersion, startTime, errorMsg, depth + 1);
       }
@@ -354,6 +396,8 @@ export class AIBlueprintGenerator {
         return new OpenRouterProvider(apiKey);
       case "mock":
         return new MockAIProvider(apiKey);
+      case "opencode-go":
+        return new OpencodeGoProvider(apiKey);
       default:
         return undefined;
     }

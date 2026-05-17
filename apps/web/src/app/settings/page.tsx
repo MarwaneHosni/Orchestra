@@ -12,12 +12,28 @@ const PROVIDER_OPTIONS = [
   { value: "openai", label: "OpenAI", placeholder: "sk-..." },
   { value: "anthropic", label: "Anthropic", placeholder: "sk-ant-..." },
   { value: "openrouter", label: "OpenRouter", placeholder: "sk-or-..." },
+  { value: "opencode-go", label: "OpenCode Go", placeholder: "oc-go-..." },
 ];
 
 const MODEL_OPTIONS = [
   { provider: "openai", models: ["gpt-4o-mini", "gpt-4o", "gpt-4.1"] },
   { provider: "anthropic", models: ["claude-3-5-haiku-latest", "claude-sonnet-4-20250514"] },
   { provider: "openrouter", models: ["openai/gpt-4o-mini", "openai/gpt-4o", "anthropic/claude-sonnet-4"] },
+  {
+    provider: "opencode-go",
+    models: [
+      "deepseek-v4-flash",
+      "deepseek-v4-pro",
+      "kimi-k2.6",
+      "kimi-k2.5",
+      "glm-5.1",
+      "glm-5",
+      "mimo-v2.5-pro",
+      "mimo-v2.5",
+      "qwen3.6-plus",
+      "qwen3.5-plus",
+    ],
+  },
 ];
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {

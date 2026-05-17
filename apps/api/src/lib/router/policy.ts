@@ -6,6 +6,7 @@ export const POLICIES: RoutingPolicy[] = [
     minTier: "cheap",
     preferred: [
       { provider: "openrouter", model: "deepseek/deepseek-v4-flash:free", tier: "cheap" },
+      { provider: "opencode-go", model: "deepseek-v4-flash", tier: "cheap" },
       { provider: "openai", model: "gpt-4o-mini", tier: "cheap" },
       { provider: "anthropic", model: "claude-3-5-haiku-latest", tier: "cheap" },
     ],
@@ -70,9 +71,14 @@ export const POLICIES: RoutingPolicy[] = [
     minTier: "cheap",
     preferred: [
       { provider: "openrouter", model: "deepseek/deepseek-v4-flash:free", tier: "cheap" },
+      { provider: "opencode-go", model: "deepseek-v4-flash", tier: "cheap" },
       { provider: "openai", model: "gpt-4o-mini", tier: "cheap" },
     ],
-    fallback: [{ provider: "openrouter", model: "anthropic/claude-sonnet-4", tier: "strong" }],
+    fallback: [
+      { provider: "opencode-go", model: "deepseek-v4-pro", tier: "balanced" },
+      { provider: "openrouter", model: "anthropic/claude-sonnet-4", tier: "strong" },
+      { provider: "mock", model: "mock-blueprint-v1", tier: "cheap" },
+    ],
   },
 ];
 
