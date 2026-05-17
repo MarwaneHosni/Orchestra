@@ -1,7 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { generateTasks, deriveGraph, createInMemoryGraphStore } from "../lib/task-graph/generator.js";
-import { assemblePrompt, createInMemoryPromptStore } from "../lib/prompt/index.js";
+import { generateTasks, deriveGraph } from "../lib/task-graph/generator.js";
+import { assemblePrompt } from "../lib/prompt/index.js";
+import { graphStore, promptStore } from "../lib/shared-stores.js";
 import { NotFoundError, RateLimitedError } from "../lib/errors.js";
 import { GuardrailService } from "../lib/budget/guardrail.js";
 import { createInMemoryBudgetStore } from "../lib/budget/budget.js";
@@ -33,9 +34,6 @@ export const ExecutionTaskSchema = z.object({
 });
 
 export type ExecutionTask = z.infer<typeof ExecutionTaskSchema>;
-
-const graphStore = createInMemoryGraphStore();
-const promptStore = createInMemoryPromptStore();
 
 function defaultPhases(): PhaseInput[] {
   return [

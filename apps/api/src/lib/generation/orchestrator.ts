@@ -4,12 +4,10 @@ import { analyzeAnswers } from "../analysis/analyzer.js";
 import { AIBlueprintGenerator } from "./ai-generator.js";
 import { RouterService } from "../router/router.js";
 import { getCredentialStore, decryptKey } from "../credentials/store.js";
-import { generateTasks, createInMemoryGraphStore } from "../task-graph/generator.js";
-import { assemblePrompt, createInMemoryPromptStore } from "../prompt/index.js";
+import { generateTasks } from "../task-graph/generator.js";
+import { assemblePrompt } from "../prompt/index.js";
+import { graphStore, promptStore } from "../shared-stores.js";
 import type { PhaseInput } from "../task-graph/types.js";
-
-const graphStore = createInMemoryGraphStore();
-const promptStore = createInMemoryPromptStore();
 
 export type GenerationMode = "ai_success" | "ai_fallback_deterministic" | "deterministic_only";
 
