@@ -143,26 +143,35 @@ export async function registerExecutionTaskRoutes(app: FastifyInstance) {
 
       if (!graph) {
         const existingGraphs = graphStore.getGraphsByPlan(planId);
-        const phases = defaultPhases();
-        const genSpan = tracer.startSpan("tasks.generate", span.spanId);
 
-        try {
-          if (requestedVersion === 1) {
-            graph = generateTasks(planId, 1, phases);
-          } else if (existingGraphs.length === 0) {
-            graph = generateTasks(planId, requestedVersion, phases);
-          } else {
-            const sourceVersion = Math.max(...existingGraphs.map((g) => g.planVersion));
-            const sourceGraph = existingGraphs.find((g) => g.planVersion === sourceVersion)!;
-            graph = deriveGraph(planId, requestedVersion, phases, sourceGraph);
-          }
-          tracer.endSpan(genSpan, "ok");
-        } catch (err) {
-          tracer.endSpan(genSpan, "error", err instanceof Error ? err.message : String(err));
-          throw err;
+        // If version 1 not found, try the latest stored version
+        if (requestedVersion === 1 && existingGraphs.length > 0) {
+          const latest = Math.max(...existingGraphs.map((g) => g.planVersion));
+          graph = graphStore.getGraph(planId, latest);
         }
 
-        graphStore.saveGraph(graph);
+        if (!graph) {
+          const phases = defaultPhases();
+          const genSpan = tracer.startSpan("tasks.generate", span.spanId);
+
+          try {
+            if (requestedVersion === 1) {
+              graph = generateTasks(planId, 1, phases);
+            } else if (existingGraphs.length === 0) {
+              graph = generateTasks(planId, requestedVersion, phases);
+            } else {
+              const sourceVersion = Math.max(...existingGraphs.map((g) => g.planVersion));
+              const sourceGraph = existingGraphs.find((g) => g.planVersion === sourceVersion)!;
+              graph = deriveGraph(planId, requestedVersion, phases, sourceGraph);
+            }
+            tracer.endSpan(genSpan, "ok");
+          } catch (err) {
+            tracer.endSpan(genSpan, "error", err instanceof Error ? err.message : String(err));
+            throw err;
+          }
+
+          graphStore.saveGraph(graph);
+        }
       }
 
       span.tags["planId"] = planId;
