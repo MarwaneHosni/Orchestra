@@ -112,13 +112,17 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
           className={confidenceColor}
         />
         <MetricCard label="Phases" value={`${blueprint.phases.length}`} />
-        <MetricCard label="Flags" value={`${blueprint.ambiguityFlags.length}`} sub="ambiguity items" />
+        <MetricCard
+          label="Flags"
+          value={`${(blueprint.ambiguityFlags ?? []).length}`}
+          sub="ambiguity items"
+        />
       </div>
 
       <section>
         <h2 className="mb-4 text-lg font-semibold text-text-primary">Phase Progress</h2>
         <div className="space-y-2">
-          {blueprint.phases.map((phase) => (
+          {(blueprint.phases ?? []).map((phase) => (
             <div
               key={phase.phaseType}
               className={cn(
@@ -134,7 +138,7 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
                   <p className="text-sm font-medium text-text-primary">{phase.phaseName}</p>
                   <p className="text-xs text-text-secondary">
                     Confidence: {Math.round(phase.confidence * 100)}%
-                    {phase.ambiguityFlags.length > 0 && ` · ${phase.ambiguityFlags.length} flag(s)`}
+                    {phase.ambiguityFlags?.length > 0 && ` · ${phase.ambiguityFlags.length} flag(s)`}
                   </p>
                 </div>
               </div>
@@ -159,7 +163,7 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
         </div>
       </section>
 
-      {blueprint.assumptions.length > 0 && (
+      {blueprint.assumptions?.length > 0 && (
         <section>
           <h2 className="mb-3 text-lg font-semibold text-text-primary">
             Assumptions ({blueprint.assumptions.length})
@@ -175,7 +179,7 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
         </section>
       )}
 
-      {blueprint.constraints.length > 0 && (
+      {blueprint.constraints?.length > 0 && (
         <section>
           <h2 className="mb-3 text-lg font-semibold text-text-primary">
             Constraints ({blueprint.constraints.length})
@@ -191,7 +195,7 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
         </section>
       )}
 
-      {blueprint.risks.length > 0 && (
+      {blueprint.risks?.length > 0 && (
         <section>
           <h2 className="mb-3 text-lg font-semibold text-text-primary">Risks ({blueprint.risks.length})</h2>
           <div className="space-y-2">
@@ -205,7 +209,7 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
         </section>
       )}
 
-      {blueprint.ambiguityFlags.length > 0 && (
+      {(blueprint.ambiguityFlags ?? []).length > 0 && (
         <section>
           <h2 className="mb-3 text-lg font-semibold text-text-primary">
             Flags ({blueprint.ambiguityFlags.length})
