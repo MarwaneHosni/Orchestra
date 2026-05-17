@@ -123,7 +123,7 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
 
         const existingPlans = getStore().getPlansByProject(project.id);
         const planVersion = existingPlans.length + 1;
-        const planId = crypto.randomUUID();
+        const planId = sessionId;
 
         const answers = getStore().getLatestAnswersBySession(sessionId);
         const aiResult = await generateWithAI(

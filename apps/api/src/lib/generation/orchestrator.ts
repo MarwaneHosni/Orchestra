@@ -8,6 +8,7 @@ import { generateTasks } from "../task-graph/generator.js";
 import { assemblePrompt } from "../prompt/index.js";
 import { graphStore, promptStore } from "../shared-stores.js";
 import type { PhaseInput } from "../task-graph/types.js";
+import type { PromptArtifact } from "../prompt/types.js";
 
 export type GenerationMode = "ai_success" | "ai_fallback_deterministic" | "deterministic_only";
 
@@ -142,7 +143,7 @@ export async function generateWithAI(
       const aiPrompt = phaseData?.executionPrompt;
 
       if (aiPrompt && aiPrompt.length >= 100) {
-        promptStore.save({
+        const artifact: PromptArtifact = {
           id: crypto.randomUUID(),
           taskId: task.id,
           planId: task.planId,
@@ -161,8 +162,33 @@ export async function generateWithAI(
           status: "complete",
           failureReason: null,
           createdAt: new Date().toISOString(),
-        });
+        };
+        promptStore.save(artifact);
+        console.log(
+          "[PROMPT DEBUG]",
+          JSON.stringify({
+            step: "saved_ai_prompt",
+            taskId: task.id,
+            planId: task.planId,
+            planVersion,
+            phaseType: task.phaseType,
+            promptLength: aiPrompt.length,
+            promptStoreTaskCount: promptStore.getByPlan(task.planId, planVersion)?.length ?? 0,
+          }),
+        );
       } else {
+        const reason = !phaseData?.executionPrompt ? "no_executionPrompt_field" : "too_short";
+        console.log(
+          "[PROMPT DEBUG]",
+          JSON.stringify({
+            step: "fallback_to_assemblePrompt",
+            taskId: task.id,
+            planId: task.planId,
+            phaseType: task.phaseType,
+            reason,
+            executionPromptLength: phaseData?.executionPrompt?.length ?? 0,
+          }),
+        );
         assemblePrompt(
           {
             task,
