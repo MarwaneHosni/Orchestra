@@ -65,16 +65,22 @@ export class OpencodeGoProvider implements AIProvider {
     }
   }
 
+  private modelId(inputModel: string): string {
+    return inputModel.includes("/") ? inputModel : `opencode-go/${inputModel}`;
+  }
+
   async generate(input: GenerationInput): Promise<GenerationResult> {
     const messages: { role: string; content: string }[] = [];
     if (input.systemPrompt) messages.push({ role: "system", content: input.systemPrompt });
     messages.push(...input.messages);
 
+    const apiModel = this.modelId(input.model);
     console.log(
       "[OPENCODE-GO DEBUG]",
       JSON.stringify({
         step: "sending_request",
         model: input.model,
+        apiModel,
         apiKeyPreview: this.apiKey.slice(0, 8) + "...",
         apiKeyLength: this.apiKey.length,
         url: `${BASE_URL}/chat/completions`,
@@ -85,10 +91,11 @@ export class OpencodeGoProvider implements AIProvider {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: input.model,
+        model: apiModel,
         messages,
         temperature: input.temperature ?? 0.7,
-        max_tokens: input.maxTokens ?? 2048,
+        max_tokens: input.maxTokens ?? 4096,
+        stream: false,
       }),
     });
 
@@ -127,7 +134,20 @@ export class OpencodeGoProvider implements AIProvider {
       );
     }
 
-    const body = (await res.json()) as {
+    const rawText = await res.text();
+    console.log(
+      "[OPENCODE-GO DEBUG]",
+      JSON.stringify({
+        step: "response_body",
+        model: input.model,
+        status: res.status,
+        contentType: res.headers.get("content-type"),
+        rawLength: rawText.length,
+        rawPreview: rawText.slice(0, 500),
+      }),
+    );
+
+    const body = JSON.parse(rawText) as {
       choices?: { message?: { content?: string }; finish_reason?: string }[];
       usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
       model?: string;
