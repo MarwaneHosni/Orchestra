@@ -229,12 +229,15 @@ export class AIBlueprintGenerator {
     const data = parsed as Record<string, unknown>;
     const now = new Date().toISOString();
 
-    // Normalize status values: AI may return "completed", "done", etc. instead of valid enums
+    // Normalize status values: AI may return "completed", "done", "COMPLETED", etc. instead of valid enums
     const validStatuses = ["sufficient", "insufficient", "missing", "ai_augmented"];
     const normalizeStatus = (s: unknown): string => {
-      if (typeof s === "string" && validStatuses.includes(s)) return s;
-      if (s === "completed" || s === "done" || s === "ready") return "sufficient";
-      if (s === "in_progress" || s === "incomplete" || s === "partial") return "insufficient";
+      if (typeof s !== "string") return "ai_augmented";
+      const lower = s.toLowerCase().replace(/[\s_-]/g, "");
+      if (validStatuses.includes(lower)) return lower;
+      if (lower === "completed" || lower === "done" || lower === "ready" || lower === "passed")
+        return "sufficient";
+      if (lower === "inprogress" || lower === "incomplete" || lower === "partial") return "insufficient";
       return "ai_augmented";
     };
 

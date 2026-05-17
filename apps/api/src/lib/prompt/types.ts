@@ -25,6 +25,8 @@ export interface TaskContext {
   phaseSummary: string;
   aiPhaseNarrative?: string;
   aiPhaseSummary?: string;
+  aiPhaseStatus?: string;
+  aiPhaseConfidence?: number;
   aiKeyDecisions?: string[];
   aiAssumptions?: { id?: string; description: string; source?: string }[];
   aiConstraints?: { id?: string; description: string; source?: string }[];

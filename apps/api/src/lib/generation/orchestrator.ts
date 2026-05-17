@@ -148,6 +148,8 @@ export async function generateWithAI(
           phaseSummary: phaseData?.summary ?? task.phaseType,
           ...(phaseData?.narrative !== undefined ? { aiPhaseNarrative: phaseData.narrative } : {}),
           ...(phaseData?.summary !== undefined ? { aiPhaseSummary: phaseData.summary } : {}),
+          ...(phaseData?.status !== undefined ? { aiPhaseStatus: phaseData.status } : {}),
+          ...(phaseData?.confidence !== undefined ? { aiPhaseConfidence: phaseData.confidence } : {}),
           ...(phaseData?.keyDecisions !== undefined ? { aiKeyDecisions: phaseData.keyDecisions } : {}),
           ...(blueprint.assumptions.length > 0 ? { aiAssumptions: blueprint.assumptions } : {}),
           ...(blueprint.constraints.length > 0 ? { aiConstraints: blueprint.constraints } : {}),

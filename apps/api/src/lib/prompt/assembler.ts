@@ -51,6 +51,11 @@ function buildSections(context: TaskContext): PromptSection {
   const phaseDetails: string[] = [];
   if (context.aiPhaseSummary) phaseDetails.push(`Phase summary: ${context.aiPhaseSummary}`);
   if (context.aiPhaseNarrative) phaseDetails.push(`Phase narrative: ${context.aiPhaseNarrative}`);
+  if (context.aiPhaseStatus) {
+    phaseDetails.push(
+      `AI assessment: ${context.aiPhaseStatus}${context.aiPhaseConfidence !== undefined ? ` (confidence: ${Math.round(context.aiPhaseConfidence * 100)}%)` : ""}`,
+    );
+  }
   if (context.aiKeyDecisions && context.aiKeyDecisions.length > 0) {
     phaseDetails.push(`Key decisions:\n${context.aiKeyDecisions.map((d) => `  - ${d}`).join("\n")}`);
   }
