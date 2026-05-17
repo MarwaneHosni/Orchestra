@@ -59,6 +59,10 @@ export async function initDb(): Promise<ReturnType<typeof drizzle>> {
   // Set busy timeout to avoid SQLITE_BUSY errors
   database.run("PRAGMA busy_timeout=5000");
 
+  // Auto-create tables if they don't exist
+  const { createTables } = await import("./bootstrap.js");
+  createTables();
+
   _initialized = true;
   return _db;
 }
@@ -79,6 +83,38 @@ export function runTransaction<T>(fn: () => T): T {
     db.run(sql`ROLLBACK`);
     throw err;
   }
+}
+
+export function getSqliteDb(): Database {
+  if (!_sqliteDb) throw new Error("SQLite not initialized");
+  return _sqliteDb;
+}
+
+export function rawRun(sql: string, ...params: unknown[]): void {
+  getSqliteDb().run(sql, params as any);
+}
+
+export function rawGet<T = Record<string, unknown>>(sql: string, ...params: unknown[]): T | undefined {
+  const stmt = getSqliteDb().prepare(sql);
+  if (params.length > 0) stmt.bind(params as any);
+  if (stmt.step()) {
+    const obj = stmt.getAsObject();
+    stmt.free();
+    return obj as T;
+  }
+  stmt.free();
+  return undefined;
+}
+
+export function rawAll<T = Record<string, unknown>>(sql: string, ...params: unknown[]): T[] {
+  const stmt = getSqliteDb().prepare(sql);
+  stmt.bind(params as any);
+  const results: T[] = [];
+  while (stmt.step()) {
+    results.push(stmt.getAsObject() as T);
+  }
+  stmt.free();
+  return results;
 }
 
 export function exportDb(): void {

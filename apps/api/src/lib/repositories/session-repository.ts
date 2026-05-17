@@ -153,13 +153,7 @@ export function createSqliteSessionStore(): SessionStore {
       getDb()
         .update(schema.answers)
         .set({ isLatest: 0 as any, supersededAt: now() })
-        .where(
-          and(
-            eq(schema.answers.sessionId, sessionId),
-            eq(schema.answers.questionId, questionId),
-            sql`${schema.answers.isLatest} = 1`,
-          ),
-        )
+        .where(and(eq(schema.answers.sessionId, sessionId), eq(schema.answers.questionId, questionId)))
         .run();
     },
 

@@ -88,20 +88,19 @@ export function updateWorkflowStep(
   const run = getWorkflowRun(id);
   if (!run) throw new Error(`Workflow run '${id}' not found`);
 
-  const stepKey = step as string;
   const currentStatus = run.stepStatuses[step];
-  validateStepTransition(stepKey, currentStatus, newStatus);
+  validateStepTransition(step as string, currentStatus, newStatus);
 
   const now = new Date().toISOString();
   const columnMap: Record<string, string> = {
-    synthesis: "synthesis_status",
-    analysis: "analysis_status",
-    blueprint: "blueprint_status",
-    roadmap: "roadmap_status",
-    taskGraph: "task_graph_status",
-    promptGen: "prompt_gen_status",
+    synthesis: "synthesisStatus",
+    analysis: "analysisStatus",
+    blueprint: "blueprintStatus",
+    roadmap: "roadmapStatus",
+    taskGraph: "taskGraphStatus",
+    promptGen: "promptGenStatus",
   };
-  const col = columnMap[stepKey];
+  const col = columnMap[step as string];
   if (!col) return;
 
   getDb()
@@ -157,16 +156,36 @@ export function detectInterruptedWorkflows(): WorkflowRunRecord[] {
 export function repairIncompleteStep(id: string, step: keyof WorkflowRunRecord["stepStatuses"]): void {
   const run = getWorkflowRun(id);
   if (!run) return;
-  // Mark a step as failed if it was left in "running" on crash
-  if (run.stepStatuses[step] === "running" || run.stepStatuses[step] === "pending") {
-    updateWorkflowStep(id, step, "failed");
+  const current = run.stepStatuses[step];
+  if (current === "running" || current === "pending") {
+    const now = new Date().toISOString();
+    const columnMap: Record<string, string> = {
+      synthesis: "synthesisStatus",
+      analysis: "analysisStatus",
+      blueprint: "blueprintStatus",
+      roadmap: "roadmapStatus",
+      taskGraph: "taskGraphStatus",
+      promptGen: "promptGenStatus",
+    };
+    const col = columnMap[step as string];
+    if (col) {
+      getDb()
+        .update(schema.workflowRuns)
+        .set({ [col]: "failed", updatedAt: now } as any)
+        .where(eq(schema.workflowRuns.id, id))
+        .run();
+    }
   }
-  // If all steps are failed/completed, mark the whole workflow as failed
   const runAfter = getWorkflowRun(id)!;
   const allDone = STEP_KEYS.every(
     (k) => runAfter.stepStatuses[k] === "completed" || runAfter.stepStatuses[k] === "failed",
   );
   if (allDone && runAfter.status === "running") {
-    completeWorkflowRun(id, "failed", undefined, undefined, "Workflow interrupted — steps did not complete");
+    const n = new Date().toISOString();
+    getDb()
+      .update(schema.workflowRuns)
+      .set({ status: "failed" as any, completedAt: n, updatedAt: n } as any)
+      .where(eq(schema.workflowRuns.id, id))
+      .run();
   }
 }
