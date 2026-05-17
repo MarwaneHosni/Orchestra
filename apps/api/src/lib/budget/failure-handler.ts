@@ -1,5 +1,4 @@
-import type { ClassifiedFailure, RetryConfig, RetryState } from "./types.js";
-import { DEFAULT_RETRY } from "./types.js";
+import type { ClassifiedFailure } from "./types.js";
 
 export function classifyFailure(error: unknown): ClassifiedFailure {
   if (error && typeof error === "object" && "statusCode" in error) {
@@ -67,73 +66,4 @@ export function classifyFailure(error: unknown): ClassifiedFailure {
     operatorMessage: `Unhandled error: ${error instanceof Error ? error.message : String(error)}`,
     statusCode: null,
   };
-}
-
-export function createRetryState(): RetryState {
-  return { attempt: 0, nextDelayMs: DEFAULT_RETRY.baseDelayMs };
-}
-
-export function shouldRetry(state: RetryState, config?: RetryConfig): boolean {
-  const cfg = config ?? DEFAULT_RETRY;
-  return state.attempt < cfg.maxRetries;
-}
-
-export function computeBackoff(state: RetryState): number {
-  const delay = state.nextDelayMs;
-  state.attempt++;
-  state.nextDelayMs = Math.min(state.nextDelayMs * 2, 30_000);
-  return delay;
-}
-
-/**
- * Execute an async operation with bounded retry and observable audit events.
- * Emits `retry.attempt` on each retry and `retry.exhausted` when all retries
- * are consumed without success.
- */
-export async function executeWithRetry<T>(
-  operation: () => Promise<T>,
-  context: { operationName: string; scopeId: string },
-  config?: RetryConfig,
-): Promise<T> {
-  const cfg = config ?? DEFAULT_RETRY;
-  const { operationName, scopeId } = context;
-  const state = createRetryState();
-
-  // Dynamically import logAudit to avoid circular deps
-  const { logAudit } = await import("../audit/logger.js");
-
-  while (true) {
-    try {
-      return await operation();
-    } catch (err) {
-      const classified = classifyFailure(err);
-
-      if (classified.category === "terminal" || !shouldRetry(state, cfg)) {
-        if (state.attempt > 0) {
-          logAudit("retry.exhausted", scopeId, operationName, {
-            operationName,
-            scopeId,
-            attempts: state.attempt,
-            finalError: classified.operatorMessage,
-            category: classified.category,
-          });
-        }
-        throw err;
-      }
-
-      // Emit audit event for each retry attempt
-      logAudit("retry.attempt", scopeId, operationName, {
-        operationName,
-        scopeId,
-        attempt: state.attempt + 1,
-        maxRetries: cfg.maxRetries,
-        delayMs: state.nextDelayMs,
-        errorCategory: classified.category,
-        errorMessage: classified.operatorMessage,
-      });
-
-      const delay = computeBackoff(state);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-  }
 }
