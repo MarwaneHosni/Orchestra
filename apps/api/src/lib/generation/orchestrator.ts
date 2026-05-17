@@ -21,6 +21,7 @@ export interface OrchestrationResult {
 export async function generateWithAI(
   projectId: string,
   projectName: string,
+  projectDescription: string,
   sessionId: string,
   answers: AnswerRecord[],
   planId: string,
@@ -111,7 +112,7 @@ export async function generateWithAI(
   });
 
   // 5. Call AI
-  const result = await aiGen.generate(analysis, planId, planVersion);
+  const result = await aiGen.generate(analysis, planId, planVersion, projectDescription);
 
   if (result.success && result.data) {
     const { blueprint } = result.data;

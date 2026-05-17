@@ -129,6 +129,7 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
         const aiResult = await generateWithAI(
           project.id,
           project.name,
+          project.description,
           sessionId,
           answers,
           planId,

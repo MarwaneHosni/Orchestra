@@ -14,6 +14,8 @@ import type { AIGenerationResult } from "./prompts.js";
 import { buildSystemPrompt, buildAnalysisMessage } from "./prompts.js";
 
 export class AIBlueprintGenerator {
+  private projectDescription: string = "";
+
   constructor(
     private router: RouterService,
     private getApiKey: (provider: string) => string | undefined,
@@ -24,7 +26,9 @@ export class AIBlueprintGenerator {
     analysis: AnalysisPack,
     planId: string,
     planVersion: number,
+    projectDescription: string = "",
   ): Promise<AIGenerationResult<{ blueprint: BlueprintOutput; roadmap: RoadmapOutput }>> {
+    this.projectDescription = projectDescription;
     try {
       const decision = this.router.select("blueprint", {});
       return this.callProvider(decision, analysis, planId, planVersion, false);
@@ -114,14 +118,13 @@ export class AIBlueprintGenerator {
     );
 
     const systemPrompt = buildSystemPrompt();
-    const messages = buildAnalysisMessage(analysis);
+    const messages = buildAnalysisMessage(analysis, this.projectDescription);
 
     const input: GenerationInput = {
       model: selection.model,
       systemPrompt,
       messages,
       temperature: 0.3,
-      maxTokens: 1500,
     };
 
     try {
