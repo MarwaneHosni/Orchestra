@@ -12,12 +12,27 @@ export interface RateLimiterConfig {
 
 export class InMemoryRateLimiter {
   private windows = new Map<string, { count: number; resetAt: number }>();
+  private lastSweep = Date.now();
+  private readonly sweepIntervalMs: number;
 
   constructor(
     private config: { maxRequests: number; windowMs: number } = { maxRequests: 60, windowMs: 60_000 },
-  ) {}
+    sweepIntervalMs = 60_000,
+  ) {
+    this.sweepIntervalMs = sweepIntervalMs;
+  }
+
+  private sweep(): void {
+    const now = Date.now();
+    if (now - this.lastSweep < this.sweepIntervalMs) return;
+    this.lastSweep = now;
+    for (const [key, entry] of this.windows) {
+      if (now >= entry.resetAt) this.windows.delete(key);
+    }
+  }
 
   check(key: string): RateLimitResult {
+    this.sweep();
     const now = Date.now();
     let entry = this.windows.get(key);
 

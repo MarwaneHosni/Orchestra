@@ -10,6 +10,7 @@ export interface AbuseAlert {
 export class AbuseDetector {
   private records = new Map<string, AbuseRecord>();
   private config: AbuseConfig;
+  private lastSweep = Date.now();
 
   constructor(config?: Partial<AbuseConfig>) {
     this.config = {
@@ -19,7 +20,22 @@ export class AbuseDetector {
     };
   }
 
+  private sweep(): void {
+    const now = Date.now();
+    // Sweep expired records every 60s
+    if (now - this.lastSweep < 60_000) return;
+    this.lastSweep = now;
+    for (const [scope, record] of this.records) {
+      const cutoff = now - this.config.windowMs;
+      record.failures = record.failures.filter((f) => f.timestamp >= cutoff);
+      if (record.failures.length === 0 && (record.blockedUntil === null || now >= record.blockedUntil)) {
+        this.records.delete(scope);
+      }
+    }
+  }
+
   recordFailure(scope: string): AbuseAlert | null {
+    this.sweep();
     const now = Date.now();
     let record = this.records.get(scope);
 

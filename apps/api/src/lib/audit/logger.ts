@@ -1,6 +1,8 @@
 import type { AuditEntry, AuditEventType } from "./types.js";
 import { redactObject } from "./redactor.js";
 
+const MAX_AUDIT_ENTRIES = 10_000;
+
 export interface AuditStore {
   append(entry: AuditEntry): void;
   query(filter?: Partial<AuditEntry>): AuditEntry[];
@@ -19,12 +21,28 @@ export function createInMemoryAuditStore(): AuditStore {
     return list;
   }
 
+  function evictOldest(): void {
+    if (entries.length <= MAX_AUDIT_ENTRIES) return;
+    const toRemove = entries.length - MAX_AUDIT_ENTRIES;
+    const removed = entries.splice(0, toRemove);
+    // Also remove from byEventType indexes
+    const removedIds = new Set(removed.map((r) => r.id));
+    for (const [, list] of byEventType) {
+      for (let i = list.length - 1; i >= 0; i--) {
+        if (removedIds.has(list[i]!.id)) list.splice(i, 1);
+      }
+    }
+  }
+
   return {
     append(e) {
       entries.push(e);
       getEventList(e.eventType).push(e);
+      if (entries.length > MAX_AUDIT_ENTRIES * 1.5) evictOldest();
     },
     query(filter) {
+      // Evict stale entries before query to keep results fresh
+      if (entries.length > MAX_AUDIT_ENTRIES) evictOldest();
       if (!filter) return [...entries];
       const { eventType, ...rest } = filter;
       const candidates = eventType ? getEventList(eventType) : entries;

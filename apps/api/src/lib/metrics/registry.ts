@@ -22,19 +22,27 @@ export class MetricsRegistry {
   private counters = new Map<string, CounterMetric>();
   private gauges = new Map<string, GaugeMetric>();
   private histograms = new Map<string, HistogramMetric>();
+  private readonly maxSamplesPerMetric = 100;
+
+  /** @internal used by Counter/Gauge to limit sample growth */
+  limitSamples(samples: { labels: MetricLabel[]; value: number }[]): void {
+    if (samples.length <= this.maxSamplesPerMetric) return;
+    // Keep only the most recently created samples (last N)
+    samples.splice(0, samples.length - this.maxSamplesPerMetric);
+  }
 
   counter(name: string, help: string): Counter {
     if (!this.counters.has(name)) {
       this.counters.set(name, { type: "counter", name, help, samples: [] });
     }
-    return new Counter(name, this.counters.get(name)!);
+    return new Counter(name, this.counters.get(name)!, this);
   }
 
   gauge(name: string, help: string): Gauge {
     if (!this.gauges.has(name)) {
       this.gauges.set(name, { type: "gauge", name, help, samples: [] });
     }
-    return new Gauge(name, this.gauges.get(name)!);
+    return new Gauge(name, this.gauges.get(name)!, this);
   }
 
   histogram(name: string, help: string, buckets?: number[]): Histogram {
@@ -106,6 +114,7 @@ class Counter {
   constructor(
     _name: string,
     private metric: CounterMetric,
+    private registry: MetricsRegistry,
   ) {
     void _name;
   }
@@ -118,6 +127,7 @@ class Counter {
       existing.value += value ?? 1;
     } else {
       this.metric.samples.push({ labels: resolved, value: value ?? 1 });
+      this.registry.limitSamples(this.metric.samples);
     }
   }
 
@@ -130,6 +140,7 @@ class Gauge {
   constructor(
     _name: string,
     private metric: GaugeMetric,
+    private registry: MetricsRegistry,
   ) {
     void _name;
   }
@@ -141,6 +152,7 @@ class Gauge {
       existing.value = value;
     } else {
       this.metric.samples.push({ labels, value });
+      this.registry.limitSamples(this.metric.samples);
     }
   }
 
@@ -151,6 +163,7 @@ class Gauge {
       existing.value += value ?? 1;
     } else {
       this.metric.samples.push({ labels, value: value ?? 1 });
+      this.registry.limitSamples(this.metric.samples);
     }
   }
 }
