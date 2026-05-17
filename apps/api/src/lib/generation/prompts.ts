@@ -143,7 +143,9 @@ CRITICAL JSON RULES:
 - Do NOT use {{ or }} or any curly braces inside the executionPrompt that aren't part of its text content
 - Base ALL output on the actual user answers below
 - Each phase executionPrompt must be unique and tailored to the answers for that phase
-- Output ONLY the JSON object. No markdown fences, no text before or after.`;
+- You may think step by step first, then output the complete JSON object at the end.
+- Do not include curly braces { } anywhere outside the JSON object itself.
+- No markdown fences around the JSON. Just output the raw JSON.`;
 }
 
 export function buildTaskPromptMessage(

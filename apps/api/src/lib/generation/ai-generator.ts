@@ -125,7 +125,7 @@ export class AIBlueprintGenerator {
       model: selection.model,
       systemPrompt,
       messages,
-      temperature: 0.3,
+      temperature: 0.7,
     };
 
     try {
@@ -209,16 +209,25 @@ export class AIBlueprintGenerator {
       }),
     );
 
-    let parsed: unknown;
-    try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        console.log("[AI PARSE ERROR] No JSON object found in response");
-        return null;
+    let parsed: unknown = null;
+    // Walk backwards from the last } to find the outermost valid JSON object.
+    // This handles AI reasoning text with stray { } before or around the JSON.
+    {
+      let idx = content.lastIndexOf("}");
+      while (idx >= 0) {
+        const openIdx = content.lastIndexOf("{", idx);
+        if (openIdx < 0) break;
+        try {
+          const candidate = content.slice(openIdx, idx + 1);
+          parsed = JSON.parse(candidate);
+          break;
+        } catch {
+          idx = content.lastIndexOf("}", idx - 1);
+        }
       }
-      parsed = JSON.parse(jsonMatch[0]);
-    } catch (err) {
-      console.log("[AI PARSE ERROR] JSON parse failed:", err instanceof Error ? err.message : String(err));
+    }
+    if (!parsed) {
+      console.log("[AI PARSE ERROR] No valid JSON object found in response");
       return null;
     }
 
