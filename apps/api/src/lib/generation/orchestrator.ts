@@ -9,6 +9,7 @@ import { assemblePrompt } from "../prompt/index.js";
 import { graphStore, promptStore } from "../shared-stores.js";
 import type { PhaseInput } from "../task-graph/types.js";
 import type { PromptArtifact } from "../prompt/types.js";
+import { runTransaction } from "../../db/sqlite/index.js";
 import {
   createWorkflowRun,
   updateWorkflowStep,
@@ -159,60 +160,68 @@ export async function generateWithAI(
       return { output: null as any, mode: "deterministic_only" };
     }
 
-    graphStore.saveGraph(graph);
-
-    // 7. Assemble prompts for each task
+    // 7. Assemble prompts for each task — transactional
     updateWorkflowStep(workflowId, "promptGen", "running");
-    for (const task of graph.tasks) {
-      const phaseData = blueprint.phases.find((p) => p.phaseType === task.phaseType);
-      const aiPrompt = phaseData?.executionPrompt;
 
-      if (aiPrompt && aiPrompt.length >= 100) {
-        const artifact: PromptArtifact = {
-          id: crypto.randomUUID(),
-          taskId: task.id,
-          planId: task.planId,
-          planVersion,
-          promptText: aiPrompt,
-          sections: {
-            objective: "",
-            context: "",
-            constraints: [],
-            expectedOutput: "",
-            validationCriteria: [],
-            architecturalAlignment: "",
-            agentTips: { security: [], edgeCases: [], dependencyWarnings: [], commonBugs: [] },
-          },
-          version: 1,
-          status: "complete",
-          failureReason: null,
-          createdAt: now(),
-        };
-        promptStore.save(artifact);
-      } else {
-        assemblePrompt(
-          {
-            task,
-            planName: projectName,
-            allTasks: graph.tasks,
-            predecessorOutputs: [],
-            phaseSummary: phaseData?.summary ?? task.phaseType,
-            ...(phaseData?.narrative !== undefined ? { aiPhaseNarrative: phaseData.narrative } : {}),
-            ...(phaseData?.summary !== undefined ? { aiPhaseSummary: phaseData.summary } : {}),
-            ...(phaseData?.status !== undefined ? { aiPhaseStatus: phaseData.status } : {}),
-            ...(phaseData?.confidence !== undefined ? { aiPhaseConfidence: phaseData.confidence } : {}),
-            ...(phaseData?.keyDecisions !== undefined ? { aiKeyDecisions: phaseData.keyDecisions } : {}),
-            ...(blueprint.assumptions.length > 0 ? { aiAssumptions: blueprint.assumptions } : {}),
-            ...(blueprint.constraints.length > 0 ? { aiConstraints: blueprint.constraints } : {}),
-            ...(blueprint.risks.length > 0 ? { aiRisks: blueprint.risks } : {}),
-            ...(blueprint.overallSummary ? { aiOverallSummary: blueprint.overallSummary } : {}),
-          },
-          promptStore,
-          planVersion,
-        );
-      }
+    try {
+      runTransaction(() => {
+        graphStore.saveGraph(graph);
+
+        for (const task of graph.tasks) {
+          const phaseData = blueprint.phases.find((p) => p.phaseType === task.phaseType);
+          const aiPrompt = phaseData?.executionPrompt;
+
+          if (aiPrompt && aiPrompt.length >= 100) {
+            const artifact: PromptArtifact = {
+              id: crypto.randomUUID(),
+              taskId: task.id,
+              planId: task.planId,
+              planVersion,
+              promptText: aiPrompt,
+              sections: {
+                objective: "",
+                context: "",
+                constraints: [],
+                expectedOutput: "",
+                validationCriteria: [],
+                architecturalAlignment: "",
+                agentTips: { security: [], edgeCases: [], dependencyWarnings: [], commonBugs: [] },
+              },
+              version: 1,
+              status: "complete",
+              failureReason: null,
+              createdAt: now(),
+            };
+            promptStore.save(artifact);
+          } else {
+            assemblePrompt(
+              {
+                task,
+                planName: projectName,
+                allTasks: graph.tasks,
+                predecessorOutputs: [],
+                phaseSummary: phaseData?.summary ?? task.phaseType,
+                ...(phaseData?.narrative !== undefined ? { aiPhaseNarrative: phaseData.narrative } : {}),
+                ...(phaseData?.summary !== undefined ? { aiPhaseSummary: phaseData.summary } : {}),
+                ...(phaseData?.status !== undefined ? { aiPhaseStatus: phaseData.status } : {}),
+                ...(phaseData?.confidence !== undefined ? { aiPhaseConfidence: phaseData.confidence } : {}),
+                ...(phaseData?.keyDecisions !== undefined ? { aiKeyDecisions: phaseData.keyDecisions } : {}),
+                ...(blueprint.assumptions.length > 0 ? { aiAssumptions: blueprint.assumptions } : {}),
+                ...(blueprint.constraints.length > 0 ? { aiConstraints: blueprint.constraints } : {}),
+                ...(blueprint.risks.length > 0 ? { aiRisks: blueprint.risks } : {}),
+                ...(blueprint.overallSummary ? { aiOverallSummary: blueprint.overallSummary } : {}),
+              },
+              promptStore,
+              planVersion,
+            );
+          }
+        }
+      });
+      updateWorkflowStep(workflowId, "promptGen", "completed");
+    } catch {
+      completeWorkflowRun(workflowId, "failed", result.provider, result.model, "Prompt generation failed");
+      return { output: null as any, mode: "ai_fallback_deterministic" };
     }
-    updateWorkflowStep(workflowId, "promptGen", "completed");
 
     // Mark workflow complete
     completeWorkflowRun(workflowId, "completed", result.provider, result.model);
