@@ -6,6 +6,7 @@ const envSchema = z.object({
   HOST: z.string().default("0.0.0.0"),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
   DATABASE_URL: z.string().url().optional(),
+  SQLITE_DB_PATH: z.string().default("./orchestra.db"),
 });
 
 export type Env = z.infer<typeof envSchema>;

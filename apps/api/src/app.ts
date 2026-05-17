@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { loadConfig } from "./lib/config.js";
 import { errorHandler } from "./lib/errors.js";
+import { initDb } from "./db/sqlite/index.js";
 import { registerHealthRoutes } from "./routes/health.js";
 import { registerVersionRoutes } from "./routes/version.js";
 import { registerObservabilityRoutes } from "./routes/observability.js";
@@ -9,6 +10,9 @@ import { registerDomainRoutes } from "./domains/index.js";
 
 export async function buildApp() {
   const config = loadConfig();
+
+  // Initialize SQLite database
+  await initDb();
 
   const app = Fastify({
     logger: {
