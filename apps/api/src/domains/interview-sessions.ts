@@ -139,8 +139,43 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
 
         if (aiResult.mode === "ai_success") {
           // AI succeeded — use the AI-generated blueprint
-          // Plan record creation is handled inside generateWithAI → persistGeneration flow
-          // But we need a basic plan record for the store
+          // Normalize AI output to match the expected frontend shape
+          const aiOutput = aiResult.output as Record<string, unknown>;
+          const rawPhases = (aiOutput.phases ?? []) as Record<string, unknown>[];
+          output = {
+            projectId: project.id,
+            sessionId,
+            planVersion,
+            generatedAt: new Date().toISOString(),
+            projectName: project.name,
+            projectDescription: project.description,
+            ...aiOutput,
+            phases: rawPhases.map((p) => ({
+              ...p,
+              answers: [],
+              ambiguityFlags: [],
+            })),
+            ambiguityFlags: [],
+            assumptions: ((aiOutput.assumptions ?? []) as Record<string, unknown>[]).map((a) => ({
+              id: a.id ?? "",
+              description: a.description ?? "",
+              source: a.source ?? "",
+              provenance: a.provenance ?? "",
+            })),
+            constraints: ((aiOutput.constraints ?? []) as Record<string, unknown>[]).map((c) => ({
+              id: c.id ?? "",
+              description: c.description ?? "",
+              source: c.source ?? "",
+              provenance: c.provenance ?? "",
+            })),
+            risks: ((aiOutput.risks ?? []) as Record<string, unknown>[]).map((r) => ({
+              id: r.id ?? "",
+              description: r.description ?? "",
+              source: r.source ?? "",
+              provenance: r.provenance ?? "",
+            })),
+          };
+          // Plan record creation
           const now = new Date().toISOString();
           getStore().insertPlan({
             id: planId,

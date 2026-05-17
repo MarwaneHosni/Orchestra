@@ -65,16 +65,12 @@ export class OpencodeGoProvider implements AIProvider {
     }
   }
 
-  private modelId(inputModel: string): string {
-    return inputModel.includes("/") ? inputModel : `opencode-go/${inputModel}`;
-  }
-
   async generate(input: GenerationInput): Promise<GenerationResult> {
     const messages: { role: string; content: string }[] = [];
     if (input.systemPrompt) messages.push({ role: "system", content: input.systemPrompt });
     messages.push(...input.messages);
 
-    const apiModel = this.modelId(input.model);
+    const apiModel = input.model;
     console.log(
       "[OPENCODE-GO DEBUG]",
       JSON.stringify({
