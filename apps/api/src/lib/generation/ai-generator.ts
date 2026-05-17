@@ -209,23 +209,54 @@ export class AIBlueprintGenerator {
       }),
     );
 
-    let parsed: unknown = null;
-    // Walk backwards from the last } to find the outermost valid JSON object.
-    // This handles AI reasoning text with stray { } before or around the JSON.
+    let parsed: unknown;
+    // Scan all valid JSON objects in the response, pick the best match.
+    // Walk backwards from each } trying to find valid JSON.
+    // Among all valid JSON objects found, pick the one with "phases" key first, then the largest.
     {
-      let idx = content.lastIndexOf("}");
-      while (idx >= 0) {
-        const openIdx = content.lastIndexOf("{", idx);
-        if (openIdx < 0) break;
-        try {
-          const candidate = content.slice(openIdx, idx + 1);
-          parsed = JSON.parse(candidate);
-          break;
-        } catch {
-          idx = content.lastIndexOf("}", idx - 1);
+      let best: unknown = null;
+      let bestSize = 0;
+      const visitedEnds = new Set<number>();
+      for (const aiKey of ["phases", "roadmapPhases", "tasks"]) {
+        const keyIdx = content.lastIndexOf(`"${aiKey}"`);
+        if (keyIdx < 0) continue;
+        let endIdx = content.indexOf("}", keyIdx);
+        while (endIdx >= 0 && !visitedEnds.has(endIdx)) {
+          visitedEnds.add(endIdx);
+          const startIdx = content.lastIndexOf("{", endIdx);
+          if (startIdx < 0) break;
+          try {
+            const candidate = content.slice(startIdx, endIdx + 1);
+            const obj = JSON.parse(candidate);
+            const size = candidate.length;
+            if (obj && typeof obj === "object" && (obj as Record<string, unknown>)[aiKey] !== undefined) {
+              if (size > bestSize) {
+                best = obj;
+                bestSize = size;
+              }
+            }
+          } catch {
+            // not valid, try earlier end
+          }
+          const nextEnd = content.lastIndexOf("}", endIdx - 1);
+          if (nextEnd < 0 || nextEnd < keyIdx) break;
+          endIdx = nextEnd;
         }
+        if (best) break;
       }
+      parsed = best;
     }
+    console.log(
+      "[AI PARSE DEBUG]",
+      JSON.stringify({
+        found: !!parsed,
+        hasPhases:
+          parsed !== null && typeof parsed === "object" && "phases" in (parsed as Record<string, unknown>),
+        rawLength: content.length,
+        parsedLength: parsed ? JSON.stringify(parsed).length : 0,
+        preview: parsed ? JSON.stringify(parsed).slice(0, 200) : "null",
+      }),
+    );
     if (!parsed) {
       console.log("[AI PARSE ERROR] No valid JSON object found in response");
       return null;
