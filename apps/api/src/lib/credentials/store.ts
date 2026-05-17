@@ -51,6 +51,10 @@ export function getCredentialStore(): CredentialStore {
   return _store;
 }
 
+export function _replaceCredentialStore(store: CredentialStore): void {
+  _store = store;
+}
+
 export function encryptKey(plaintext: string): string {
   const payload = encrypt(plaintext);
   return serializeEncrypted(payload);

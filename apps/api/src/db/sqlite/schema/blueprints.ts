@@ -19,6 +19,7 @@ export const blueprints = sqliteTable(
     format: text("format", { enum: blueprintFormats }).default("json").notNull(),
     version: integer("version").default(1).notNull(),
     status: text("status", { enum: blueprintStatuses }).default("generating").notNull(),
+    staleAt: text("stale_at"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
   },
