@@ -210,39 +210,56 @@ export class AIBlueprintGenerator {
     );
 
     let parsed: unknown;
-    // Scan all valid JSON objects in the response, pick the best match.
-    // Walk backwards from each } trying to find valid JSON.
-    // Among all valid JSON objects found, pick the one with "phases" key first, then the largest.
+    // Find the outermost valid JSON object in the response by tracking brace depth.
+    // This handles code fences (```json), reasoning text, and scattered content.
     {
       let best: unknown = null;
       let bestSize = 0;
-      const visitedEnds = new Set<number>();
-      for (const aiKey of ["phases", "roadmapPhases", "tasks"]) {
-        const keyIdx = content.lastIndexOf(`"${aiKey}"`);
-        if (keyIdx < 0) continue;
-        let endIdx = content.indexOf("}", keyIdx);
-        while (endIdx >= 0 && !visitedEnds.has(endIdx)) {
-          visitedEnds.add(endIdx);
-          const startIdx = content.lastIndexOf("{", endIdx);
-          if (startIdx < 0) break;
-          try {
-            const candidate = content.slice(startIdx, endIdx + 1);
-            const obj = JSON.parse(candidate);
-            const size = candidate.length;
-            if (obj && typeof obj === "object" && (obj as Record<string, unknown>)[aiKey] !== undefined) {
-              if (size > bestSize) {
-                best = obj;
-                bestSize = size;
+      let searchFrom = 0;
+      // Iterate all positions of '{' in the content
+      while (searchFrom < content.length) {
+        const openIdx = content.indexOf("{", searchFrom);
+        if (openIdx < 0) break;
+        // Walk forward tracking brace depth to find matching }
+        let depth = 0;
+        let inString = false;
+        let closeIdx = -1;
+        for (let i = openIdx; i < content.length; i++) {
+          const ch = content[i];
+          if (inString) {
+            if (ch === "\\")
+              i++; // skip escaped char
+            else if (ch === '"') inString = false;
+          } else {
+            if (ch === '"') inString = true;
+            else if (ch === "{") depth++;
+            else if (ch === "}") {
+              depth--;
+              if (depth === 0) {
+                closeIdx = i;
+                break;
               }
             }
-          } catch {
-            // not valid, try earlier end
           }
-          const nextEnd = content.lastIndexOf("}", endIdx - 1);
-          if (nextEnd < 0 || nextEnd < keyIdx) break;
-          endIdx = nextEnd;
         }
-        if (best) break;
+        if (closeIdx < 0) break; // unbalanced braces, stop searching
+        const candidate = content.slice(openIdx, closeIdx + 1);
+        try {
+          const obj = JSON.parse(candidate);
+          if (obj && typeof obj === "object") {
+            const hasKey = ["phases", "roadmapPhases", "tasks"].some(
+              (k) => (obj as Record<string, unknown>)[k] !== undefined,
+            );
+            const size = candidate.length;
+            if (hasKey && size > bestSize) {
+              best = obj;
+              bestSize = size;
+            }
+          }
+        } catch {
+          // skip invalid JSON
+        }
+        searchFrom = openIdx + 1;
       }
       parsed = best;
     }
