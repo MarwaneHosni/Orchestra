@@ -109,4 +109,8 @@ export class AbuseDetector {
     const cutoff = Date.now() - this.config.windowMs;
     return record.failures.filter((f) => f.timestamp >= cutoff).length;
   }
+
+  dispose(): void {
+    this.records.clear();
+  }
 }

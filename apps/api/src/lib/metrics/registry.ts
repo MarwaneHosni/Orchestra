@@ -31,6 +31,16 @@ export class MetricsRegistry {
     samples.splice(0, samples.length - this.maxSamplesPerMetric);
   }
 
+  /** @internal used by Histogram to limit sample growth */
+  limitHistogramSamples(
+    samples: Map<string, { buckets: { le: string; count: number }[]; sum: number; count: number }>,
+  ): void {
+    if (samples.size <= this.maxSamplesPerMetric) return;
+    // Remove oldest entries (Map preserves insertion order)
+    const keysToDelete = [...samples.keys()].slice(0, samples.size - this.maxSamplesPerMetric);
+    for (const key of keysToDelete) samples.delete(key);
+  }
+
   counter(name: string, help: string): Counter {
     if (!this.counters.has(name)) {
       this.counters.set(name, { type: "counter", name, help, samples: [] });
@@ -56,7 +66,7 @@ export class MetricsRegistry {
         samples: new Map(),
       });
     }
-    return new Histogram(name, this.histograms.get(name)!);
+    return new Histogram(name, this.histograms.get(name)!, this);
   }
 
   renderPrometheus(): string {
@@ -95,6 +105,12 @@ export class MetricsRegistry {
   }
 
   reset(): void {
+    this.counters.clear();
+    this.gauges.clear();
+    this.histograms.clear();
+  }
+
+  dispose(): void {
     this.counters.clear();
     this.gauges.clear();
     this.histograms.clear();
@@ -172,6 +188,7 @@ class Histogram {
   constructor(
     _name: string,
     private metric: HistogramMetric,
+    private registry: MetricsRegistry,
   ) {
     void _name;
   }
@@ -183,6 +200,7 @@ class Histogram {
       const buckets = this.metric.buckets.map((le) => ({ le: String(le), count: 0 }));
       entry = { buckets, sum: 0, count: 0 };
       this.metric.samples.set(key, entry);
+      this.registry.limitHistogramSamples(this.metric.samples);
     }
     entry.count++;
     entry.sum += value;

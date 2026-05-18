@@ -59,4 +59,8 @@ export class InMemoryRateLimiter {
   reset(key: string): void {
     this.windows.delete(key);
   }
+
+  dispose(): void {
+    this.windows.clear();
+  }
 }

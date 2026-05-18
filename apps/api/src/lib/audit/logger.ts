@@ -6,6 +6,7 @@ const MAX_AUDIT_ENTRIES = 10_000;
 export interface AuditStore {
   append(entry: AuditEntry): void;
   query(filter?: Partial<AuditEntry>): AuditEntry[];
+  dispose(): void;
 }
 
 export function createInMemoryAuditStore(): AuditStore {
@@ -41,7 +42,6 @@ export function createInMemoryAuditStore(): AuditStore {
       if (entries.length > MAX_AUDIT_ENTRIES * 1.5) evictOldest();
     },
     query(filter) {
-      // Evict stale entries before query to keep results fresh
       if (entries.length > MAX_AUDIT_ENTRIES) evictOldest();
       if (!filter) return [...entries];
       const { eventType, ...rest } = filter;
@@ -53,6 +53,10 @@ export function createInMemoryAuditStore(): AuditStore {
         }
         return true;
       });
+    },
+    dispose() {
+      entries.length = 0;
+      byEventType.clear();
     },
   };
 }

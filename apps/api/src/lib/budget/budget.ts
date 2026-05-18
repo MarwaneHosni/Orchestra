@@ -8,9 +8,27 @@ export interface BudgetStore {
   upsertState(state: BudgetState): void;
 }
 
-export function createInMemoryBudgetStore(): BudgetStore {
+export function createInMemoryBudgetStore(maxEntries = 1000): BudgetStore {
   const configs = new Map<string, BudgetConfig>();
   const states = new Map<string, BudgetState>();
+  const insertionOrder: string[] = [];
+
+  function touch(id: string): void {
+    // Move to end (most recently used)
+    const idx = insertionOrder.indexOf(id);
+    if (idx !== -1) insertionOrder.splice(idx, 1);
+    insertionOrder.push(id);
+  }
+
+  function evictIfNeeded(): void {
+    while (insertionOrder.length > maxEntries) {
+      const oldest = insertionOrder.shift();
+      if (oldest) {
+        configs.delete(oldest);
+        states.delete(oldest);
+      }
+    }
+  }
 
   return {
     getConfig(id) {
@@ -18,12 +36,16 @@ export function createInMemoryBudgetStore(): BudgetStore {
     },
     setConfig(c) {
       configs.set(c.projectId, c);
+      touch(c.projectId);
+      evictIfNeeded();
     },
     getState(id) {
       return states.get(id);
     },
     upsertState(s) {
       states.set(s.projectId, s);
+      touch(s.projectId);
+      evictIfNeeded();
     },
   };
 }
