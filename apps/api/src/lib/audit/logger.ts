@@ -7,6 +7,7 @@ export interface AuditStore {
   append(entry: AuditEntry): void;
   query(filter?: Partial<AuditEntry>): AuditEntry[];
   dispose(): void;
+  readonly size: number;
 }
 
 export function createInMemoryAuditStore(): AuditStore {
@@ -36,6 +37,9 @@ export function createInMemoryAuditStore(): AuditStore {
   }
 
   return {
+    get size() {
+      return entries.length;
+    },
     append(e) {
       entries.push(e);
       getEventList(e.eventType).push(e);

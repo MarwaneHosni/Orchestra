@@ -10,6 +10,7 @@ import { _replaceCredentialStore } from "./lib/credentials/store.js";
 import { registerHealthRoutes } from "./routes/health.js";
 import { registerVersionRoutes } from "./routes/version.js";
 import { registerObservabilityRoutes } from "./routes/observability.js";
+import { registerDiagnosticsRoutes } from "./routes/diagnostics.js";
 import { registerDomainRoutes } from "./domains/index.js";
 
 export async function buildApp() {
@@ -57,7 +58,22 @@ export async function buildApp() {
   await registerHealthRoutes(app);
   await registerVersionRoutes(app);
   await registerObservabilityRoutes(app);
+  await registerDiagnosticsRoutes(app);
   await registerDomainRoutes(app);
+
+  // Start periodic memory monitoring (every 60s, unref'd so it doesn't keep process alive)
+  try {
+    const { startMemoryWatch } = await import("./lib/metrics/memory-watch.js");
+    const { graphStore, promptStore } = await import("./lib/shared-stores.js");
+    startMemoryWatch(() => ({
+      graph_byKey: () => (graphStore as any).byKey?.size ?? 0,
+      graph_byPlan: () => (graphStore as any).byPlan?.size ?? 0,
+      prompt_byTask: () => (promptStore as any).byTask?.size ?? 0,
+      prompt_byPlan: () => (promptStore as any).byPlan?.size ?? 0,
+    }));
+  } catch (err) {
+    app.log.warn({ err }, "Memory watch not started");
+  }
 
   return app;
 }
