@@ -36,5 +36,8 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Check for stub regressions
+        run: node scripts/check-no-stubs.mjs
+
       - name: Build
         run: pnpm build
