@@ -165,17 +165,44 @@ export function deriveGraph(
 }
 
 function getFirstSentence(text: string): string | null {
-  const cleaned = text.replace(/^##\s+\S+\s*/gm, "").trim();
+  const cleaned = text.replace(/^##\s+\S+[\s:-]*/gm, "").trim();
   const match = cleaned.match(/^([^.!?]*[.!?])/);
   if (match && match[1]!.length > 15) return match[1]!.trim();
-  if (cleaned.length > 15) return cleaned.slice(0, 100).trim() + ".";
+  if (cleaned.length > 15) {
+    const truncated = cleaned.slice(0, 100);
+    const lastSpace = truncated.lastIndexOf(" ");
+    return (lastSpace > 15 ? truncated.slice(0, lastSpace) : truncated) + ".";
+  }
   return null;
 }
 
 function extractObjective(executionPrompt: string): string | null {
-  const match = executionPrompt.match(/## Objective\s*\n([\s\S]*?)(?=\n## |$)/);
+  const match = executionPrompt.match(/## Objective[\s:-]*\n([\s\S]*?)(?=\n## |$)/);
   if (!match) return null;
   return getFirstSentence(match[1]!.trim());
+}
+
+function extractVerificationPhrase(phase: PhaseInput): string | null {
+  const decisions = phase.keyDecisions;
+  if (decisions && decisions.length > 0) {
+    const last = decisions[decisions.length - 1];
+    if (last && last.length > 10 && !last.toLowerCase().includes("implement")) return `Verify ${last[0]!.toLowerCase() + last.slice(1)}`;
+  }
+  if (phase.executionPrompt) {
+    const fromObjective = extractObjective(phase.executionPrompt);
+    if (fromObjective) {
+      const clean = fromObjective.replace(/^(Build|Create|Design|Implement|Set up|Develop)\s+/i, "").trim();
+      return `Verify ${clean}`;
+    }
+  }
+  if (phase.narrative) {
+    const fromNarrative = getFirstSentence(phase.narrative);
+    if (fromNarrative) {
+      const clean = fromNarrative.replace(/^(Build|Create|Design|Implement|Set up|Develop)\s+/i, "").trim();
+      return `Verify ${clean}`;
+    }
+  }
+  return null;
 }
 
 function deriveTaskTitle(
@@ -190,7 +217,6 @@ function deriveTaskTitle(
   const narrative = phase.narrative;
   const prompt = phase.executionPrompt;
 
-  // 1. First task (config/setup) — extract from Objective or narrative
   if (isFirst && prompt) {
     const fromObjective = extractObjective(prompt);
     if (fromObjective) return fromObjective;
@@ -200,21 +226,24 @@ function deriveTaskTitle(
     if (fromNarrative) return fromNarrative;
   }
 
-  // 2. Core tasks — use keyDecisions if available
   if (isCore && decisions && decisions.length > 0) {
     const decisionIdx = Math.min(index - 1, decisions.length - 1);
     const decision = decisions[decisionIdx];
-    if (decision && decision.length > 10) return decision;
+    if (decision && decision.length > 10 && decision.length < 120) return decision;
   }
   if (isCore && narrative) {
     const fromNarrative = getFirstSentence(narrative);
     if (fromNarrative) return fromNarrative;
   }
 
-  // 3. Fall back to generic templates
+  if (isLast) {
+    const fromPhase = extractVerificationPhrase(phase);
+    if (fromPhase) return fromPhase;
+    return `Verify ${phase.phaseName} implementation`;
+  }
+
   if (isFirst) return `Set up ${phase.phaseName} foundations`;
-  if (isCore) return `Implement ${phase.phaseName} core logic`;
-  return `Verify ${phase.phaseName} implementation`;
+  return `Implement ${phase.phaseName} core logic`;
 }
 
 function createTask(
