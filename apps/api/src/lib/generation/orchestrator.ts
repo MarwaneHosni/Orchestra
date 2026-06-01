@@ -192,7 +192,7 @@ function buildTaskContext(
   for (const dep of task.dependencies) {
     const depTask = taskMap.get(dep.taskId);
     if (depTask) {
-      predecessorOutputs.push(`${depTask.title} [${depTask.status}]`);
+      predecessorOutputs.push(`${depTask.title} [${depTask.phaseType}, ${depTask.status}]`);
     }
   }
 
