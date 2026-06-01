@@ -19,6 +19,8 @@ import {
 import { saveAnalysisResults } from "../repositories/analysis-repository.js";
 import { createUsageRecord, createInMemoryUsageStore } from "../accounting/index.js";
 import type { TokenUsage } from "../provider/types.js";
+import type { AIProvider, GenerationInput, Message } from "../provider/types.js";
+import type { ModelSelection } from "../router/types.js";
 import { validateExecutionPrompt, extractSectionContent, PROMPT_SCHEMA_VERSION } from "../prompt/structural-validator.js";
 import type { PromptSection } from "../prompt/types.js";
 import type { TaskContext } from "../prompt/types.js";
@@ -26,6 +28,12 @@ import type { StructuralValidationError } from "../prompt/schema.js";
 import { emitProgress } from "../events/progress-emitter.js";
 import { createEvent, STAGE_ORDER } from "../events/schema.js";
 import { createModuleLogger } from "../logging/logger.js";
+import { OpenAIProvider } from "../provider/openai.js";
+import { AnthropicProvider } from "../provider/anthropic.js";
+import { OpenRouterProvider } from "../provider/openrouter.js";
+import { MockAIProvider } from "../provider/mock.js";
+import { OpencodeGoProvider } from "../provider/opencode-go.js";
+import { instrumentProviderCall } from "../metrics/index.js";
 
 const log = createModuleLogger("orchestrator");
 
@@ -236,15 +244,113 @@ function generatePromptFromContext(context: TaskContext): string | null {
 }
 
 /**
- * Placeholder for Option B — AI retry on failed sections.
- * Will be wired to send the prompt + validation errors back to the AI for correction.
- * Synchronous for now (Option B will make this async).
+ * Build a targeted fix prompt asking the AI to correct specific validation errors
+ * in its execution prompt markdown. Returns the user-facing prompt string.
  */
-function retryPromptWithAI(
-  _aiPrompt: string,
-  _errors: StructuralValidationError[],
-  _context: TaskContext,
-): string | null {
+function buildFixPrompt(
+  aiPrompt: string,
+  errors: StructuralValidationError[],
+  context: TaskContext,
+): string {
+  const errorBullets = errors
+    .map((e) => `- Section "${e.section}": ${e.message}`)
+    .join("\n");
+
+  return [
+    `The following execution prompt for task "${context.task.title}" (phase: ${context.task.phaseType}) has structural validation errors.`,
+    ``,
+    `Validation errors:`,
+    errorBullets,
+    ``,
+    `Original prompt (with errors):`,
+    `---`,
+    aiPrompt,
+    `---`,
+    ``,
+    `Return ONLY the corrected markdown with the same 7 sections (## Objective, ## Context, ## Constraints, ## Expected Output, ## Validation Criteria, ## Architectural Alignment, ## Agent Tips) in the correct order.`,
+    `Fix ALL the reported errors. Keep the content specific to this task and phase.`,
+    `Do NOT include any explanation or commentary — output only the corrected markdown.`,
+  ].join("\n");
+}
+
+/**
+ * Create a provider instance from a model selection.
+ */
+function createFixProvider(selection: ModelSelection): AIProvider | undefined {
+  const { provider } = selection;
+  const credStore = getCredentialStore();
+  const allCreds = credStore.list();
+  const cred = allCreds.find((c) => c.provider === provider);
+  if (!cred) return undefined;
+  const raw = credStore.getRaw(cred.id);
+  if (!raw?.encryptedApiKey) return undefined;
+  const apiKey = decryptKey(raw.encryptedApiKey);
+  if (!apiKey) return undefined;
+
+  switch (provider) {
+    case "openai": return new OpenAIProvider(apiKey);
+    case "anthropic": return new AnthropicProvider(apiKey);
+    case "openrouter": return new OpenRouterProvider(apiKey);
+    case "mock": return new MockAIProvider(apiKey);
+    case "opencode-go": return new OpencodeGoProvider(apiKey);
+    default: return undefined;
+  }
+}
+
+/**
+ * Send a failed AI execution prompt + validation errors back to the AI for correction.
+ * Uses the same provider router to select a model, up to 2 retry attempts.
+ * Returns the corrected markdown string, or null if all attempts fail.
+ */
+async function retryPromptWithAI(
+  aiPrompt: string,
+  errors: StructuralValidationError[],
+  context: TaskContext,
+  router: RouterService,
+): Promise<string | null> {
+  const fixPrompt = buildFixPrompt(aiPrompt, errors, context);
+
+  // Select a model for the fix — use cheap tier since this is a targeted edit
+  const decision = router.select("prompt_generation");
+  const selections = [decision.selection, ...decision.fallbackChain.slice(0, 2)];
+
+  for (const selection of selections) {
+    const provider = createFixProvider(selection);
+    if (!provider) continue;
+
+    try {
+      const input: GenerationInput = {
+        model: selection.model,
+        systemPrompt: "You are an expert at fixing AI-generated execution prompts. Given a prompt with structural validation errors, fix ONLY the reported issues while preserving the content. Return ONLY the corrected markdown.",
+        messages: [{ role: "user", content: fixPrompt }],
+        temperature: 0.3,
+      };
+
+      const result = await instrumentProviderCall(selection.provider, selection.model, () =>
+        provider.generate(input),
+      );
+
+      // Extract the corrected markdown — strip any code fences
+      let corrected = result.content.trim();
+      const fenceMatch = corrected.match(/```(?:markdown)?\s*([\s\S]*?)```/);
+      if (fenceMatch) {
+        corrected = fenceMatch[1]!.trim();
+      }
+
+      // Validate the fix
+      if (corrected.length >= 100) {
+        const validation = validateExecutionPrompt(corrected);
+        if (validation.valid) {
+          log.info({ model: selection.model, provider: selection.provider, taskId: context.task.id, phaseType: context.task.phaseType }, "ai_prompt_retry_success");
+          return corrected;
+        }
+        log.debug({ taskId: context.task.id, errors: validation.errors }, "ai_prompt_retry_still_invalid");
+      }
+    } catch (err) {
+      log.warn({ err: err instanceof Error ? err.message : err, provider: selection.provider, model: selection.model }, "ai_prompt_retry_provider_error");
+    }
+  }
+
   return null;
 }
 
@@ -398,6 +504,21 @@ export async function generateWithAI(
     // 7. Assemble prompts for each task — transactional
     updateWorkflowStep(workflowId, "promptGen", "running");
 
+    // Pre-compute AI retry fixes for failed prompts (before transaction, since AI calls are async)
+    const promptFixes = new Map<string, string | null>();
+    for (const task of graph.tasks) {
+      const phaseData = blueprint.phases.find((p) => p.phaseType === task.phaseType);
+      const aiPrompt = phaseData?.executionPrompt;
+      if (aiPrompt && aiPrompt.length >= 500) {
+        const validation = validateExecutionPrompt(aiPrompt);
+        if (!validation.valid) {
+          const context = buildTaskContext(task, phaseData, blueprint, projectName, graph);
+          const fix = await retryPromptWithAI(aiPrompt, validation.errors, context, router);
+          promptFixes.set(task.id, fix);
+        }
+      }
+    }
+
     try {
       let withAiPrompt = 0;
       let aiPromptUsed = 0;
@@ -436,12 +557,11 @@ export async function generateWithAI(
               };
               getPromptStore().save(artifact);
             } else {
-              // Validation failed — try to repair the AI prompt before falling back
+              // Validation failed — use pre-computed AI retry, then repair fallback
               const context = buildTaskContext(task, phaseData, blueprint, projectName, graph);
               log.warn({ taskId: task.id, phaseType: task.phaseType, errors: validation.errors }, "execution_prompt_validation_failed");
 
-              // Option B hook: AI retry first (placeholder, returns null for now)
-              const aiRetry = retryPromptWithAI(aiPrompt, validation.errors, context);
+              const aiRetry = promptFixes.get(task.id) ?? null;
               const fixed = aiRetry ?? repairPromptSections(aiPrompt, validation.errors, context);
 
               if (fixed) {
