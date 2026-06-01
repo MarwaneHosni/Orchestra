@@ -30,9 +30,21 @@ export function PromptPreview({ taskId, sessionId, onClose }: PromptPreviewProps
         const res = await fetch(`${getApiBaseUrl()}/api/v1/plans/plan-${sessionId}/tasks/${taskId}/prompt`);
         if (!res.ok) throw new Error("Failed to load prompt");
         const data = await res.json();
+        console.log("[DEBUG] prompt-preview response", {
+          sessionId,
+          taskId,
+          status: res.status,
+          promptLength: data.promptText?.length,
+          preview: data.promptText?.slice(0, 200),
+        });
         setPrompt(data.promptText);
         setAnnouncement("Prompt loaded");
       } catch (e) {
+        console.error("[DEBUG] prompt-preview error", {
+          sessionId,
+          taskId,
+          error: e instanceof Error ? e.message : e,
+        });
         setError(e instanceof Error ? e.message : "Failed to load");
         setAnnouncement("Failed to load prompt");
       } finally {
