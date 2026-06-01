@@ -28,7 +28,8 @@ const SECTION_ORDER = [
   "Agent Tips",
 ];
 
-function parsePrompt(markdown: string): ParsedSection[] {
+function parsePrompt(markdown: string | null | undefined): ParsedSection[] {
+  if (!markdown) return [];
   const sections: ParsedSection[] = [];
   const lines = markdown.split("\n");
   let currentHeading = "";
@@ -178,7 +179,7 @@ export function PromptPreview({ taskId, sessionId, onClose }: PromptPreviewProps
         const res = await fetch(`${getApiBaseUrl()}/api/v1/plans/plan-${sessionId}/tasks/${taskId}/prompt`);
         if (!res.ok) throw new Error("Failed to load prompt");
         const data = await res.json();
-        setPrompt(data.promptText);
+        setPrompt(data.promptText ?? null);
         setAnnouncement("Prompt loaded");
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load");
