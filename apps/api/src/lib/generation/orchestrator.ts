@@ -9,6 +9,7 @@ import { assemblePrompt, formatPrompt } from "../prompt/index.js";
 import { getGraphStore, getPromptStore } from "../shared-stores.js";
 import type { PhaseInput } from "../task-graph/types.js";
 import type { TaskNode } from "../task-graph/types.js";
+import { taskTypeVerb } from "../task-graph/verbs.js";
 import type { PromptArtifact } from "../prompt/types.js";
 import { runTransaction } from "../../db/sqlite/index.js";
 import {
@@ -100,8 +101,8 @@ function repairPromptSections(
     switch (error.section) {
       case "objective":
         sections.objective = context.phaseSummary
-          ? `Implement: ${context.task.title}.\n\n${context.phaseSummary}`
-          : `Implement: ${context.task.title}`;
+          ? `${taskTypeVerb(context.task.type)}: ${context.task.title}.\n\n${context.phaseSummary}`
+          : `${taskTypeVerb(context.task.type)}: ${context.task.title}`;
         break;
 
       case "context":
@@ -220,7 +221,7 @@ function buildTaskContext(
  */
 function generatePromptFromContext(context: TaskContext): string | null {
   const sections: PromptSection = {
-    objective: `Implement: ${context.task.title}. ${context.phaseSummary ?? ""}`,
+    objective: `${taskTypeVerb(context.task.type)}: ${context.task.title}. ${context.phaseSummary ?? ""}`,
     context: [
       `Phase: ${context.task.phaseType}`,
       context.aiPhaseSummary ? `\nPhase summary: ${context.aiPhaseSummary}` : "",

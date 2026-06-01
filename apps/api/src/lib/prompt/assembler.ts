@@ -2,6 +2,7 @@ import type { PromptSection, AgentTips, PromptArtifact, PromptStore, TaskContext
 import { formatPrompt } from "./templates.js";
 import { validatePrompt } from "./validator.js";
 import type { TaskNode } from "../task-graph/types.js";
+import { taskTypeVerb } from "../task-graph/verbs.js";
 
 export { TaskContext };
 
@@ -63,7 +64,7 @@ function buildSections(context: TaskContext): PromptSection {
 
   return {
     objective: [
-      `Implement: ${task.title}`,
+      `${taskTypeVerb(task.type)}: ${task.title}`,
       ``,
       `This task is part of the ${task.phaseType} phase: ${context.phaseSummary}`,
       task.acceptanceCriteria.length > 0 ? `\nAcceptance criteria: ${task.acceptanceCriteria.join("; ")}` : "",
