@@ -1,6 +1,7 @@
 export { assemblePrompt } from "./assembler.js";
 export { validatePrompt } from "./validator.js";
 export { formatPrompt } from "./templates.js";
+export { validateExecutionPrompt } from "./structural-validator.js";
 export { createInMemoryPromptStore } from "./types.js";
 export type {
   PromptSection,
@@ -10,4 +11,4 @@ export type {
   TaskContext,
   PromptStore,
 } from "./types.js";
-export { REQUIRED_SECTIONS, MIN_PROMPT_LENGTH, MAX_PROMPT_LENGTH } from "./types.js";
+export { MAX_PROMPT_LENGTH } from "./types.js";

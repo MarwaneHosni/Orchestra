@@ -1,31 +1,20 @@
 import type { PromptArtifact, PromptValidationResult } from "./types.js";
-import { REQUIRED_SECTIONS, MIN_PROMPT_LENGTH, MAX_PROMPT_LENGTH } from "./types.js";
+import { MAX_PROMPT_LENGTH } from "./types.js";
+import { validateExecutionPrompt } from "./structural-validator.js";
 
 export function validatePrompt(artifact: PromptArtifact): PromptValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  // Check all required sections exist
-  for (const section of REQUIRED_SECTIONS) {
-    const value = (artifact.sections as unknown as Record<string, unknown>)[section];
-    if (value === undefined || value === null) {
-      errors.push(`Missing required section: ${section}`);
-    } else if (typeof value === "string" && value.trim().length === 0) {
-      errors.push(`Section "${section}" is empty`);
-    } else if (Array.isArray(value) && value.length === 0) {
-      errors.push(`Section "${section}" has no entries`);
-    }
+  // Delegate 7-section structural checks to the canonical validator (uses
+  // EXECUTION_PROMPT_SECTIONS minContentLength from schema.ts — single source of truth).
+  const structural = validateExecutionPrompt(artifact.promptText);
+  for (const se of structural.errors) {
+    errors.push(se.message);
   }
 
-  // Check prompt length
-  const length = artifact.promptText.length;
-  if (length < MIN_PROMPT_LENGTH) {
-    errors.push(`Prompt is too short (${length} chars). Minimum is ${MIN_PROMPT_LENGTH}.`);
-  } else if (length > MAX_PROMPT_LENGTH) {
-    warnings.push(`Prompt is very long (${length} chars). Consider splitting.`);
-  }
-
-  // Check agent tips have content
+  // Check agent tips have content (unique to validatePrompt — structural validator
+  // only checks agent tips section length, not specific tip categories).
   const tips = artifact.sections.agentTips;
   if (tips) {
     const totalTips =
@@ -35,12 +24,11 @@ export function validatePrompt(artifact: PromptArtifact): PromptValidationResult
     }
   }
 
-  // Check key sections are substantial
-  if (artifact.sections.objective && artifact.sections.objective.length < 10) {
-    errors.push("Objective is too short — must describe what to build");
-  }
-  if (artifact.sections.expectedOutput && artifact.sections.expectedOutput.length < 20) {
-    errors.push("Expected output is too short — must describe what to produce");
+  // Check total prompt length (warning only — structural validator enforces
+  // per-section minimums, this catches abnormally long prompts).
+  const length = artifact.promptText.length;
+  if (length > MAX_PROMPT_LENGTH) {
+    warnings.push(`Prompt is very long (${length} chars). Consider splitting.`);
   }
 
   return { valid: errors.length === 0, errors, warnings };

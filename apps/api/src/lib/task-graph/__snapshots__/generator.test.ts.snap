@@ -18,10 +18,10 @@ exports[`TaskGraphGenerator - snapshot stability > formatPrompt output is determ
     "Common Bugs",
   ],
   "sections": [
-    "objective length: 29",
-    "context length: 255",
+    "objective length: 168",
+    "context length: 345",
     "constraints count: 5",
-    "expectedOutput length: 177",
+    "expectedOutput length: 404",
     "validationCriteria count: 2",
     "architecturalAlignment length: 255",
     "agentTips security: 4",
@@ -30,7 +30,7 @@ exports[`TaskGraphGenerator - snapshot stability > formatPrompt output is determ
     "agentTips commonBugs: 6",
   ],
   "status": "complete",
-  "totalLength": 2236,
+  "totalLength": 2692,
 }
 `;
 
@@ -118,24 +118,35 @@ Implementation tasks build the core functionality specified in this phase.",
     "Follow the Single Responsibility Principle",
   ],
   "context": "Phase: backend
-Task type: code
-Priority: high
+Task type: code | Priority: high
 
 Phase summary: Backend error handling
+
+
+This task has 0 predecessor(s) and is estimated to require 2 prompt round(s).
+
+Acceptance criteria:
+  - Errors are caught and logged
+  - Stack traces never leak
 
 Predecessor outputs:
 - Middleware created
 
 Related tasks:
-No related tasks.
+  - No related tasks for this phase.",
+  "expectedOutput": "Complete the following work for task "API error handling":
 
-This task is the first task — no dependencies and is estimated to require 2 prompt round(s).",
-  "expectedOutput": "Complete the following work:
+1. Implement the functionality described in the objective
+2. Follow the constraints and architectural alignment guidelines
+3. Ensure all acceptance criteria are met:
+   - Errors are caught and logged
+   - Stack traces never leak
+4. Update or create the relevant files in the project
+5. Verify the implementation handles the described edge cases",
+  "objective": "Implement: API error handling
+This task is part of the backend phase: Backend error handling
 
-1. API error handling
-2. Ensure the output meets the acceptance criteria below
-3. If applicable, update or create the relevant files in the project",
-  "objective": "Implement: API error handling",
+Acceptance criteria: Errors are caught and logged; Stack traces never leak",
   "validationCriteria": [
     "Errors are caught and logged",
     "Stack traces never leak",

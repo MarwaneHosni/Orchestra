@@ -143,10 +143,12 @@ describe("validatePrompt", () => {
   it("fails when objective is empty", () => {
     const ctx = makeContext();
     const artifact = assemblePrompt(ctx);
+    // Strip the objective content from the markdown to simulate an empty section
+    artifact.promptText = artifact.promptText.replace(/^(## Objective\n)(?:.|\n)*?(?=^## )/m, "## Objective\n");
     artifact.sections.objective = "";
     const result = validatePrompt(artifact);
     expect(result.valid).toBe(false);
-    expect(result.errors.some((e) => e.includes("objective"))).toBe(true);
+    expect(result.errors.some((e) => e.toLowerCase().includes("objective"))).toBe(true);
   });
 
   it("fails when agent tips are empty", () => {

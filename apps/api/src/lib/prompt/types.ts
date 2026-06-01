@@ -53,17 +53,6 @@ export interface PromptValidationResult {
   warnings: string[];
 }
 
-export const REQUIRED_SECTIONS = [
-  "objective",
-  "context",
-  "constraints",
-  "expectedOutput",
-  "validationCriteria",
-  "architecturalAlignment",
-  "agentTips",
-] as const;
-
-export const MIN_PROMPT_LENGTH = 200;
 export const MAX_PROMPT_LENGTH = 5000;
 
 export interface PromptStore {

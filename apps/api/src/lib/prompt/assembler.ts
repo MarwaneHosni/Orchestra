@@ -62,35 +62,44 @@ function buildSections(context: TaskContext): PromptSection {
   const phaseDetailStr = phaseDetails.length > 0 ? `\n${phaseDetails.join("\n\n")}\n` : "";
 
   return {
-    objective: `Implement: ${task.title}`,
+    objective: [
+      `Implement: ${task.title}`,
+      ``,
+      `This task is part of the ${task.phaseType} phase: ${context.phaseSummary}`,
+      task.acceptanceCriteria.length > 0 ? `\nAcceptance criteria: ${task.acceptanceCriteria.join("; ")}` : "",
+    ].filter(Boolean).join("\n"),
     context: [
       `Phase: ${task.phaseType}`,
-      `Task type: ${task.type}`,
-      `Priority: ${task.priority}`,
-      "",
+      `Task type: ${task.type} | Priority: ${task.priority}`,
+      ``,
       `Phase summary: ${context.phaseSummary}`,
-      phaseDetailStr,
+      phaseDetailStr || "",
+      `\nThis task has ${task.dependencies.length} predecessor(s) and is estimated to require ${task.estimatedPromptRounds} prompt round(s).`,
+      `\nAcceptance criteria:`,
+      ...(task.acceptanceCriteria.length > 0 ? task.acceptanceCriteria.map((c) => `  - ${c}`) : ["  - No specific criteria defined"]),
+      ``,
       `Predecessor outputs:`,
       predecessorNames,
-      "",
+      ``,
       `Related tasks:`,
-      relatedTaskTitles || "No related tasks.",
-      "",
-      `This task is ${task.dependencies.length > 0 ? `blocked by ${task.dependencies.length} predecessor(s)` : "the first task \u2014 no dependencies"} and is estimated to require ${task.estimatedPromptRounds} prompt round(s).`,
+      relatedTaskTitles || "  - No related tasks for this phase.",
     ].join("\n"),
 
     constraints: buildConstraints(task, context),
 
     expectedOutput: [
-      `Complete the following work:`,
-      "",
-      `1. ${task.title}`,
-      `2. Ensure the output meets the acceptance criteria below`,
-      `3. If applicable, update or create the relevant files in the project`,
+      `Complete the following work for task "${task.title}":`,
+      ``,
+      `1. Implement the functionality described in the objective`,
+      `2. Follow the constraints and architectural alignment guidelines`,
+      `3. Ensure all acceptance criteria are met:`,
+      ...(task.acceptanceCriteria.length > 0 ? task.acceptanceCriteria.map((c) => `   - ${c}`) : [`   - "${task.title}" is complete and verified`]),
+      `4. Update or create the relevant files in the project`,
+      `5. Verify the implementation handles the described edge cases`,
     ].join("\n"),
 
     validationCriteria:
-      task.acceptanceCriteria.length > 0 ? task.acceptanceCriteria : [`Task "${task.title}" is complete`],
+      task.acceptanceCriteria.length > 0 ? task.acceptanceCriteria : [`Task "${task.title}" is complete and meets requirements`],
 
     architecturalAlignment: [
       `This task is part of the "${task.phaseType}" phase.`,
