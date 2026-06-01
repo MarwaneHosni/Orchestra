@@ -177,6 +177,7 @@ function repairPromptSections(
 
 /**
  * Build a TaskContext from available phase/blueprint data.
+ * predecessorOutputs is populated from the task's dependency graph.
  */
 function buildTaskContext(
   task: TaskNode,
@@ -184,12 +185,22 @@ function buildTaskContext(
   blueprint: { assumptions: { description: string }[]; constraints: { description: string }[]; risks: { description: string }[]; overallSummary?: string },
   projectName: string,
   graph: { tasks: TaskNode[] },
+  taskMap: Map<string, TaskNode>,
 ): TaskContext {
+  // Resolve predecessor outputs from dependency tasks
+  const predecessorOutputs: string[] = [];
+  for (const dep of task.dependencies) {
+    const depTask = taskMap.get(dep.taskId);
+    if (depTask) {
+      predecessorOutputs.push(`${depTask.title} [${depTask.status}]`);
+    }
+  }
+
   return {
     task,
     planName: projectName,
     allTasks: graph.tasks,
-    predecessorOutputs: [],
+    predecessorOutputs,
     phaseSummary: phaseData?.summary ?? task.phaseType,
     ...(phaseData?.narrative !== undefined ? { aiPhaseNarrative: phaseData.narrative } : {}),
     ...(phaseData?.summary !== undefined ? { aiPhaseSummary: phaseData.summary } : {}),
@@ -525,6 +536,7 @@ export async function generateWithAI(
 
     // 7. Assemble prompts for each task — transactional
     updateWorkflowStep(workflowId, "promptGen", "running");
+    const taskMap = new Map(graph.tasks.map((t) => [t.id, t]));
 
     // Pre-compute AI retry fixes for failed prompts (before transaction, since AI calls are async)
     const promptFixes = new Map<string, string | null>();
@@ -534,7 +546,7 @@ export async function generateWithAI(
       if (aiPrompt && aiPrompt.length >= 500) {
         const validation = validateExecutionPrompt(aiPrompt);
         if (!validation.valid) {
-          const context = buildTaskContext(task, phaseData, blueprint, projectName, graph);
+          const context = buildTaskContext(task, phaseData, blueprint, projectName, graph, taskMap);
           const fix = await retryPromptWithAI(aiPrompt, validation.errors, context, router);
           promptFixes.set(task.id, fix);
         }
@@ -580,7 +592,7 @@ export async function generateWithAI(
               getPromptStore().save(artifact);
             } else {
               // Validation failed — use pre-computed AI retry, then repair fallback
-              const context = buildTaskContext(task, phaseData, blueprint, projectName, graph);
+              const context = buildTaskContext(task, phaseData, blueprint, projectName, graph, taskMap);
               log.warn({ taskId: task.id, phaseType: task.phaseType, errors: validation.errors }, "execution_prompt_validation_failed");
 
               const aiRetry = promptFixes.get(task.id) ?? null;
@@ -621,7 +633,7 @@ export async function generateWithAI(
               log.warn({ taskId: task.id, phaseType: task.phaseType, promptLength: aiPrompt.length }, "ai_execution_prompt_too_short");
             }
             // Generate from phase data instead of hardcoded templates
-            const context = buildTaskContext(task, phaseData, blueprint, projectName, graph);
+            const context = buildTaskContext(task, phaseData, blueprint, projectName, graph, taskMap);
             const generated = generatePromptFromContext(context);
             if (generated) {
               const genValidation = validateExecutionPrompt(generated);
