@@ -22,6 +22,7 @@ import type { TokenUsage } from "../provider/types.js";
 import type { AIProvider, GenerationInput, Message } from "../provider/types.js";
 import type { ModelSelection } from "../router/types.js";
 import { validateExecutionPrompt, extractSectionContent, PROMPT_SCHEMA_VERSION } from "../prompt/structural-validator.js";
+import { EXECUTION_PROMPT_SECTIONS } from "../prompt/schema.js";
 import type { PromptSection } from "../prompt/types.js";
 import type { TaskContext } from "../prompt/types.js";
 import type { StructuralValidationError } from "../prompt/schema.js";
@@ -245,7 +246,7 @@ function generatePromptFromContext(context: TaskContext): string | null {
 
 /**
  * Build a targeted fix prompt asking the AI to correct specific validation errors
- * in its execution prompt markdown. Returns the user-facing prompt string.
+ * in its execution prompt markdown. Includes section minimum lengths and structural requirements.
  */
 function buildFixPrompt(
   aiPrompt: string,
@@ -253,23 +254,41 @@ function buildFixPrompt(
   context: TaskContext,
 ): string {
   const errorBullets = errors
-    .map((e) => `- Section "${e.section}": ${e.message}`)
+    .map((e) => `- ${e.message}`)
     .join("\n");
 
+  // Minimum content length requirements per section
+  const SECTION_MINS: Record<string, number> = {};
+  for (const def of EXECUTION_PROMPT_SECTIONS) {
+    SECTION_MINS[def.id] = def.minContentLength;
+  }
+
   return [
-    `The following execution prompt for task "${context.task.title}" (phase: ${context.task.phaseType}) has structural validation errors.`,
+    `Fix the execution prompt for task "${context.task.title}" (phase: ${context.task.phaseType}).`,
     ``,
-    `Validation errors:`,
+    `Structural validation errors to fix:`,
     errorBullets,
     ``,
-    `Original prompt (with errors):`,
+    `Required section minimum lengths:`,
+    `  Objective: ${SECTION_MINS.objective} chars`,
+    `  Context: ${SECTION_MINS.context} chars`,
+    `  Constraints: ${SECTION_MINS.constraints} chars (list items count toward total)`,
+    `  Expected Output: ${SECTION_MINS.expectedOutput} chars`,
+    `  Validation Criteria: ${SECTION_MINS.validationCriteria} chars (list items count toward total)`,
+    `  Architectural Alignment: ${SECTION_MINS.architecturalAlignment} chars`,
+    `  Agent Tips: ${SECTION_MINS.agentTips} chars`,
+    ``,
+    `Rules:`,
+    `- All 7 sections must be present in order: Objective, Context, Constraints, Expected Output, Validation Criteria, Architectural Alignment, Agent Tips`,
+    `- Each section must meet its minimum character count — expand short sections with meaningful content`,
+    `- Keep all non-flagged content unchanged`,
+    `- Do NOT wrap the output in code fences or add explanations`,
+    `- Output ONLY the corrected markdown starting with ## Objective`,
+    ``,
+    `Original prompt:`,
     `---`,
     aiPrompt,
     `---`,
-    ``,
-    `Return ONLY the corrected markdown with the same 7 sections (## Objective, ## Context, ## Constraints, ## Expected Output, ## Validation Criteria, ## Architectural Alignment, ## Agent Tips) in the correct order.`,
-    `Fix ALL the reported errors. Keep the content specific to this task and phase.`,
-    `Do NOT include any explanation or commentary — output only the corrected markdown.`,
   ].join("\n");
 }
 
@@ -321,7 +340,7 @@ async function retryPromptWithAI(
     try {
       const input: GenerationInput = {
         model: selection.model,
-        systemPrompt: "You are an expert at fixing AI-generated execution prompts. Given a prompt with structural validation errors, fix ONLY the reported issues while preserving the content. Return ONLY the corrected markdown.",
+        systemPrompt: "You are an expert at fixing AI-generated execution prompts. The user will show you a prompt with structural validation errors (missing/empty/too-short/out-of-order sections). Fix ONLY the reported issues. Expand any sections that are too short. Do NOT change sections that passed validation. Output ONLY the corrected markdown with no code fences, no explanations, no preamble.",
         messages: [{ role: "user", content: fixPrompt }],
         temperature: 0.3,
       };
