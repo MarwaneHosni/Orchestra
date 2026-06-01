@@ -38,6 +38,9 @@ export interface PhaseInput {
   status: "sufficient" | "insufficient" | "missing";
   confidence: number;
   summary: string;
+  narrative?: string;
+  keyDecisions?: string[];
+  executionPrompt?: string;
 }
 
 export const PHASE_ORDER = [

@@ -164,6 +164,59 @@ export function deriveGraph(
   return graph;
 }
 
+function getFirstSentence(text: string): string | null {
+  const cleaned = text.replace(/^##\s+\S+\s*/gm, "").trim();
+  const match = cleaned.match(/^([^.!?]*[.!?])/);
+  if (match && match[1]!.length > 15) return match[1]!.trim();
+  if (cleaned.length > 15) return cleaned.slice(0, 100).trim() + ".";
+  return null;
+}
+
+function extractObjective(executionPrompt: string): string | null {
+  const match = executionPrompt.match(/## Objective\s*\n([\s\S]*?)(?=\n## |$)/);
+  if (!match) return null;
+  return getFirstSentence(match[1]!.trim());
+}
+
+function deriveTaskTitle(
+  phase: PhaseInput,
+  index: number,
+  total: number,
+  isFirst: boolean,
+  isCore: boolean,
+  isLast: boolean,
+): string {
+  const decisions = phase.keyDecisions;
+  const narrative = phase.narrative;
+  const prompt = phase.executionPrompt;
+
+  // 1. First task (config/setup) — extract from Objective or narrative
+  if (isFirst && prompt) {
+    const fromObjective = extractObjective(prompt);
+    if (fromObjective) return fromObjective;
+  }
+  if (isFirst && narrative) {
+    const fromNarrative = getFirstSentence(narrative);
+    if (fromNarrative) return fromNarrative;
+  }
+
+  // 2. Core tasks — use keyDecisions if available
+  if (isCore && decisions && decisions.length > 0) {
+    const decisionIdx = Math.min(index - 1, decisions.length - 1);
+    const decision = decisions[decisionIdx];
+    if (decision && decision.length > 10) return decision;
+  }
+  if (isCore && narrative) {
+    const fromNarrative = getFirstSentence(narrative);
+    if (fromNarrative) return fromNarrative;
+  }
+
+  // 3. Fall back to generic templates
+  if (isFirst) return `Set up ${phase.phaseName} foundations`;
+  if (isCore) return `Implement ${phase.phaseName} core logic`;
+  return `Verify ${phase.phaseName} implementation`;
+}
+
 function createTask(
   planId: string,
   phaseType: string,
@@ -175,12 +228,8 @@ function createTask(
   const isCore = index > 0 && index < total - 1;
   const isFirst = index === 0;
   const isLast = index === total - 1 && total > 1;
-  const title = isFirst
-    ? `Set up ${phase.phaseName} foundations`
-    : isCore
-      ? `Implement ${phase.phaseName} core logic`
-      : `Verify ${phase.phaseName} implementation`;
-  const type: TaskType = isFirst ? "config" : isLast ? "test" : "code";
+  const title = deriveTaskTitle(phase, index, total, isFirst, isCore, isLast);
+  const taskType: TaskType = isFirst ? "config" : isLast ? "test" : "code";
   const priority: TaskPriority = isFirst || index <= 1 ? "high" : "medium";
   const estimatedRounds = isFirst ? 1 : isCore ? 3 : 2;
   return {
@@ -188,7 +237,7 @@ function createTask(
     planId,
     phaseType,
     title,
-    type,
+    type: taskType,
     priority,
     status: "pending",
     order,

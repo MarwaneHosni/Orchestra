@@ -500,6 +500,9 @@ export async function generateWithAI(
       status: p.status as "sufficient" | "insufficient" | "missing",
       confidence: p.confidence,
       summary: p.summary,
+      narrative: p.narrative,
+      keyDecisions: p.keyDecisions,
+      executionPrompt: p.executionPrompt,
     }));
 
     let graph;
