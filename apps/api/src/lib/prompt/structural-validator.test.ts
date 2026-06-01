@@ -6,24 +6,24 @@ import { EXECUTION_PROMPT_SECTIONS } from "./schema.js";
 function validPrompt(): string {
   return [
     "## Objective",
-    "Build a user authentication system with JWT tokens.",
+    "Build a complete user authentication system with JWT tokens. This includes secure login, registration, password reset, and token refresh functionality. Must support role-based access control for admin and regular user roles.",
     "",
     "## Context",
-    "This project is a web application that needs secure user login.",
+    "This project is a production-grade web application that needs secure user login and session management. The application serves thousands of concurrent users across multiple geographic regions. Security is critical as the system handles personally identifiable information (PII) and financial data. The frontend is built with React and communicates with the backend via REST APIs. All authentication flows must comply with OWASP security guidelines and GDPR data protection requirements.",
     "",
     "## Constraints",
     "- Must use bcrypt for password hashing",
     "- Tokens must expire after 24 hours",
     "",
     "## Expected Output",
-    "A complete authentication module with login, register, and token refresh endpoints.",
+    "A complete authentication module with login, register, and token refresh endpoints. Includes middleware for route protection and user role verification. Must include comprehensive unit and integration test coverage.",
     "",
     "## Validation Criteria",
     "- Passwords are hashed before storage",
     "- Tokens include user ID and expiration",
     "",
     "## Architectural Alignment",
-    "This module fits into the existing Express.js middleware pipeline.",
+    "This authentication module integrates into the existing Express.js middleware pipeline. It connects with the PostgreSQL user database and Redis session store. All endpoints follow the established API versioning and error handling patterns used across the codebase.",
     "",
     "## Agent Tips",
     "### Security",
@@ -43,22 +43,22 @@ function validPromptWithPreamble(): string {
     "This is some reasoning text before the structured sections.",
     "",
     "## Objective",
-    "Build the feature.",
+    "Build a comprehensive feature for managing user subscriptions with automated billing and invoice generation. This forms the core monetization engine of the platform.",
     "",
     "## Context",
-    "This project needs this feature built correctly.",
+    "This project needs a subscription management system built correctly. It handles tiered pricing plans, automatic monthly billing, invoice generation, and payment gateway integration with Stripe. The system must support upgrades, downgrades, cancellations, and prorated refunds.",
     "",
     "## Constraints",
     "- One constraint",
     "",
     "## Expected Output",
-    "A complete implementation of the feature.",
+    "A complete implementation of the subscription management feature with billing integration, invoice PDF generation, and admin dashboard for managing customer subscriptions and payment history.",
     "",
     "## Validation Criteria",
     "- Criteria one",
     "",
     "## Architectural Alignment",
-    "Fits into the existing architecture.",
+    "Fits into the existing microservices architecture as the billing service. Communicates with the user service via events and exposes REST endpoints for the admin frontend to manage subscriptions and view billing history.",
     "",
     "## Agent Tips",
     "### Security",
@@ -158,7 +158,7 @@ describe("validateExecutionPrompt", () => {
 
   it("fails when Objective section is empty", () => {
     const prompt = validPrompt().replace(
-      "Build a user authentication system with JWT tokens.",
+      "Build a complete user authentication system with JWT tokens. This includes secure login, registration, password reset, and token refresh functionality. Must support role-based access control for admin and regular user roles.",
       "",
     );
     const result = validateExecutionPrompt(prompt);
@@ -182,7 +182,7 @@ describe("validateExecutionPrompt", () => {
 
   it("fails when a required section is too short", () => {
     const lines = validPrompt().split("\n");
-    const objIdx = lines.indexOf("Build a user authentication system with JWT tokens.");
+    const objIdx = lines.findIndex((l) => l.startsWith("Build a complete user authentication system"));
     lines[objIdx] = "Hi";
     const result = validateExecutionPrompt(lines.join("\n"));
     expect(result.valid).toBe(false);

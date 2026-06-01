@@ -128,15 +128,18 @@ FIELD SPECIFICATIONS:
   status: one of "sufficient" | "insufficient" | "missing" | "ai_augmented"
   confidence: 0-1
   keyDecisions: array of 2-4 strings based on answers
-  executionPrompt: a complete, detailed markdown execution prompt for tasks in this phase.
-    Format it with these 7 sections using markdown headings (##):
-      ## Objective — what needs to be built
-      ## Context — project description, phase goal, key background from user answers
-      ## Constraints — ALL constraints, assumptions, and risks from the interview
-      ## Expected Output — what the execution should produce
-      ## Validation Criteria — specific, testable items as bullet list
-      ## Architectural Alignment — how this fits the project architecture
-      ## Agent Tips — security, edge cases, dependency warnings, common bugs for this phase
+  executionPrompt: a VERY DETAILED markdown execution prompt (1000+ characters).
+    This raw markdown is sent DIRECTLY to another AI (e.g. ChatGPT, Claude, Copilot)
+    to implement the task. It must be self-contained and specific enough that the
+    receiving AI can execute without additional context.
+    Each section:
+      ## Objective (3-5 sentences) — exact files, functions, or components to create
+      ## Context (5-8 sentences) — project background, phase goal, specific tech/patterns
+      ## Constraints (8-15 items) — ALL tech choices, patterns, interview-derived constraints
+      ## Expected Output (3-5 sentences) — concrete deliverables with artifact names
+      ## Validation Criteria (5-10 items) — specific, measurable, testable requirements
+      ## Architectural Alignment (3-5 sentences) — interfaces, data flow, integration points
+      ## Agent Tips (5-10 per category) — phase-specific security, edge cases, dependencies
 
 CRITICAL JSON RULES:
 - "phases" must be an ARRAY, not an object

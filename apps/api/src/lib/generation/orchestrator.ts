@@ -417,7 +417,7 @@ export async function generateWithAI(
             log.warn({ taskId: task.id, phaseType: task.phaseType }, "no_ai_execution_prompt");
           }
 
-          if (aiPrompt && aiPrompt.length >= 100) {
+          if (aiPrompt && aiPrompt.length >= 500) {
             const validation = validateExecutionPrompt(aiPrompt);
             if (validation.valid) {
               aiPromptUsed++;
