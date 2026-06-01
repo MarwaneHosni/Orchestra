@@ -76,7 +76,6 @@ export const POLICIES: RoutingPolicy[] = [
       { provider: "openai", model: "gpt-4o-mini", tier: "cheap" },
     ],
     fallback: [
-      { provider: "opencode-go", model: "deepseek-v4-pro", tier: "balanced" },
       { provider: "openrouter", model: "anthropic/claude-sonnet-4", tier: "strong" },
       { provider: "mock", model: "mock-blueprint-v1", tier: "cheap" },
     ],

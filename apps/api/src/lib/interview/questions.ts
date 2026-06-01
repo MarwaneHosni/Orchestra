@@ -38,6 +38,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "What problem does your software solve? Who is the primary audience?",
     type: "text",
     required: true,
+    category: "critical",
     validation: { minLength: 20, maxLength: 2000 },
     helpText: "Describe the core problem and target users in 2-3 sentences.",
   },
@@ -55,6 +56,7 @@ export const QUESTIONS: QuestionDefinition[] = [
       "Not sure yet",
     ],
     required: true,
+    category: "high-value",
   },
   {
     phaseType: "ideation",
@@ -68,6 +70,7 @@ export const QUESTIONS: QuestionDefinition[] = [
       "Proof of concept / prototype",
     ],
     required: true,
+    category: "derivable",
   },
   {
     phaseType: "ideation",
@@ -82,6 +85,7 @@ export const QUESTIONS: QuestionDefinition[] = [
       "100,000+ users",
     ],
     required: true,
+    category: "high-value",
   },
   {
     phaseType: "ideation",
@@ -89,6 +93,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "What are the key differentiators that make this idea worth building?",
     type: "text",
     required: false,
+    category: "optional",
     validation: { maxLength: 2000 },
     helpText: "What makes this different from existing solutions?",
   },
@@ -100,6 +105,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "List the top 3-5 core features your application must have at launch.",
     type: "text",
     required: true,
+    category: "critical",
     validation: { minLength: 30, maxLength: 3000 },
     helpText: "Focus on must-have functionality, not nice-to-haves.",
   },
@@ -109,6 +115,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "Does your application need user accounts and authentication?",
     type: "boolean",
     required: true,
+    category: "critical",
   },
   {
     phaseType: "requirements",
@@ -125,6 +132,7 @@ export const QUESTIONS: QuestionDefinition[] = [
       "Not sure yet",
     ],
     required: true,
+    category: "contextual",
     dependsOn: { questionRef: "requirements.2", expectedValue: "true" },
     helpText: "Select all that apply.",
   },
@@ -134,6 +142,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "Does your application need to support multiple user roles or permission levels?",
     type: "boolean",
     required: true,
+    category: "optional",
   },
   {
     phaseType: "requirements",
@@ -141,6 +150,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "Describe the key user workflows from start to finish.",
     type: "text",
     required: true,
+    category: "critical",
     validation: { minLength: 50, maxLength: 4000 },
     helpText: "Walk through what a user does from opening the app to completing their goal.",
   },
@@ -150,6 +160,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "Are there any critical integrations with external services?",
     type: "text",
     required: false,
+    category: "advanced-only",
     validation: { maxLength: 2000 },
     helpText: "List third-party APIs, payment processors, data sources, etc.",
     captureAs: { type: "constraint" },
@@ -162,6 +173,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "Do you have preferences or constraints on the tech stack?",
     type: "text",
     required: true,
+    category: "critical",
     validation: { minLength: 10, maxLength: 2000 },
     helpText: "Languages, frameworks, databases, cloud providers — anything already decided.",
     captureAs: { type: "constraint" },
@@ -172,6 +184,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "What is the expected data flow between components?",
     type: "text",
     required: true,
+    category: "high-value",
     validation: { minLength: 30, maxLength: 3000 },
     helpText: "Describe how data moves from user input through processing to storage and back.",
   },
@@ -181,6 +194,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "Will the system need real-time features (websockets, live updates, streaming)?",
     type: "boolean",
     required: true,
+    category: "high-value",
   },
   {
     phaseType: "architecture",
@@ -189,6 +203,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     type: "select",
     options: ["Read-heavy (80%+ reads)", "Write-heavy (50%+ writes)", "Balanced (~50/50)", "Not sure yet"],
     required: true,
+    category: "optional",
   },
 
   // ── Security Planning ─────────────────────────────────────────────
@@ -198,6 +213,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "Does your application handle sensitive personal data (PII, health, financial)?",
     type: "boolean",
     required: true,
+    category: "high-value",
   },
   {
     phaseType: "security",
@@ -206,6 +222,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     type: "multi_select",
     options: ["GDPR", "HIPAA", "SOC 2", "PCI-DSS", "CCPA", "None", "Not sure yet"],
     required: true,
+    category: "high-value",
     helpText: "Select all that apply.",
     captureAs: { type: "constraint" },
   },
@@ -215,6 +232,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "Do you need to encrypt data at rest or in transit beyond standard TLS?",
     type: "boolean",
     required: true,
+    category: "contextual",
     dependsOn: { questionRef: "security.1", expectedValue: "true" },
   },
   {
@@ -223,6 +241,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "What are your main security concerns for this application?",
     type: "text",
     required: false,
+    category: "optional",
     validation: { maxLength: 2000 },
     helpText: "Authentication, authorization, data breaches, API abuse, etc.",
   },
@@ -243,6 +262,7 @@ export const QUESTIONS: QuestionDefinition[] = [
       "Cache / session data",
     ],
     required: true,
+    category: "high-value",
     helpText: "Select all data shapes you expect to work with.",
   },
   {
@@ -252,6 +272,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     type: "select",
     options: ["< 1 GB", "1 – 10 GB", "10 – 100 GB", "100 GB – 1 TB", "1 TB+", "Not sure yet"],
     required: true,
+    category: "derivable",
   },
   {
     phaseType: "database",
@@ -259,6 +280,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "Are there any specific query patterns or reporting requirements?",
     type: "text",
     required: false,
+    category: "advanced-only",
     validation: { maxLength: 2000 },
     helpText: "Aggregations, complex joins, full-text search, analytics queries, etc.",
   },
@@ -280,6 +302,7 @@ export const QUESTIONS: QuestionDefinition[] = [
       "Third-party API integration",
     ],
     required: true,
+    category: "high-value",
     helpText: "Select all that apply.",
   },
   {
@@ -288,6 +311,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "Do you need a background job / task queue system?",
     type: "boolean",
     required: true,
+    category: "derivable",
   },
   {
     phaseType: "backend",
@@ -302,6 +326,7 @@ export const QUESTIONS: QuestionDefinition[] = [
       "1M+ requests/day",
     ],
     required: true,
+    category: "derivable",
   },
   {
     phaseType: "backend",
@@ -309,6 +334,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "Do you need multi-tenancy (isolated data per customer/organization)?",
     type: "boolean",
     required: true,
+    category: "optional",
   },
 
   // ── Frontend Design ───────────────────────────────────────────────
@@ -327,6 +353,7 @@ export const QUESTIONS: QuestionDefinition[] = [
       "Mobile-responsive design",
     ],
     required: true,
+    category: "high-value",
     helpText: "Select all that apply.",
   },
   {
@@ -335,6 +362,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "Do you need server-side rendering or static site generation for SEO or performance?",
     type: "boolean",
     required: true,
+    category: "derivable",
   },
   {
     phaseType: "frontend",
@@ -343,6 +371,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     type: "multi_select",
     options: ["Internationalization (i18n)", "Accessibility (a11y / WCAG)", "Both", "Neither"],
     required: true,
+    category: "optional",
   },
 
   // ── Core Feature Implementation ───────────────────────────────────
@@ -352,6 +381,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "Of the features you listed, which is the most technically complex to implement?",
     type: "text",
     required: true,
+    category: "high-value",
     validation: { minLength: 20, maxLength: 2000 },
     helpText: "This will be prioritised in the execution plan.",
   },
@@ -361,6 +391,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "Are there any features that should be built as independent modules or microservices?",
     type: "text",
     required: false,
+    category: "optional",
     validation: { maxLength: 2000 },
     helpText: "Consider separation boundaries, team ownership, or independent deployability.",
   },
@@ -370,6 +401,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "What are your assumptions about third-party service reliability and availability?",
     type: "text",
     required: false,
+    category: "advanced-only",
     validation: { maxLength: 1500 },
     captureAs: { type: "assumption" },
   },
@@ -381,6 +413,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "Does your application use AI or machine learning features?",
     type: "boolean",
     required: true,
+    category: "high-value",
   },
   {
     phaseType: "ai-systems",
@@ -397,6 +430,7 @@ export const QUESTIONS: QuestionDefinition[] = [
       "Not sure yet",
     ],
     required: true,
+    category: "contextual",
     helpText: "Select all that apply.",
     dependsOn: { questionRef: "ai-systems.1", expectedValue: "true" },
   },
@@ -413,6 +447,7 @@ export const QUESTIONS: QuestionDefinition[] = [
       "None decided yet",
     ],
     required: false,
+    category: "contextual",
     dependsOn: { questionRef: "ai-systems.1", expectedValue: "true" },
   },
 
@@ -424,6 +459,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     type: "select",
     options: ["Critical paths only (~30%)", "Core features (~60%)", "Comprehensive (~90%+)", "Not sure yet"],
     required: true,
+    category: "derivable",
   },
   {
     phaseType: "testing",
@@ -439,6 +475,7 @@ export const QUESTIONS: QuestionDefinition[] = [
       "Performance / load tests",
     ],
     required: true,
+    category: "derivable",
     helpText: "Select all that apply.",
   },
   {
@@ -447,6 +484,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "Do you have specific quality or performance benchmarks the system must meet?",
     type: "text",
     required: false,
+    category: "advanced-only",
     validation: { maxLength: 2000 },
     helpText: "Response time SLAs, uptime requirements, error rate thresholds, etc.",
   },
@@ -467,6 +505,7 @@ export const QUESTIONS: QuestionDefinition[] = [
       "Not sure yet",
     ],
     required: true,
+    category: "derivable",
   },
   {
     phaseType: "deployment",
@@ -481,6 +520,7 @@ export const QUESTIONS: QuestionDefinition[] = [
       "None",
     ],
     required: true,
+    category: "derivable",
   },
   {
     phaseType: "deployment",
@@ -489,6 +529,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     type: "select",
     options: ["Multiple times per day", "Daily", "Weekly", "Monthly", "Ad-hoc"],
     required: true,
+    category: "optional",
   },
 
   // ── Monitoring & Maintenance ──────────────────────────────────────
@@ -507,6 +548,7 @@ export const QUESTIONS: QuestionDefinition[] = [
       "None yet",
     ],
     required: true,
+    category: "derivable",
     helpText: "Select all that apply.",
   },
   {
@@ -521,6 +563,7 @@ export const QUESTIONS: QuestionDefinition[] = [
       "No formal SLA",
     ],
     required: true,
+    category: "derivable",
   },
   {
     phaseType: "monitoring",
@@ -528,6 +571,7 @@ export const QUESTIONS: QuestionDefinition[] = [
     text: "What are the biggest operational risks you foresee for this application?",
     type: "text",
     required: false,
+    category: "advanced-only",
     validation: { maxLength: 2000 },
     captureAs: { type: "risk" },
   },

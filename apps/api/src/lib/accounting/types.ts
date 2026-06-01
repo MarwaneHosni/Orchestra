@@ -26,8 +26,11 @@ export interface UsageRecord {
   estimatedCost: number;
   actualPromptTokens: number | null;
   actualCompletionTokens: number | null;
+  actualCachedTokens: number | null;
   actualTotalTokens: number | null;
   actualCost: number | null;
+  retryAttempt: number;
+  fallbackAttempt: number;
   status: "estimated" | "completed" | "failed";
   requestId: string | null;
   createdAt: string;

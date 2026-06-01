@@ -1,4 +1,7 @@
 import type { ModelPricing } from "./types.js";
+import { createModuleLogger } from "../logging/logger.js";
+
+const log = createModuleLogger("pricing");
 
 export const MODEL_PRICING: ModelPricing[] = [
   // OpenAI
@@ -40,8 +43,30 @@ export const MODEL_PRICING: ModelPricing[] = [
     promptPricePer1K: 0,
     completionPricePer1K: 0,
   },
+
+  // OpenCode Go (currently free tier — all models shared quota)
+  { provider: "opencode-go", model: "deepseek-v4-flash", promptPricePer1K: 0, completionPricePer1K: 0 },
+  { provider: "opencode-go", model: "deepseek-v4-pro", promptPricePer1K: 0, completionPricePer1K: 0 },
+  { provider: "opencode-go", model: "glm-5.1", promptPricePer1K: 0, completionPricePer1K: 0 },
+  { provider: "opencode-go", model: "glm-5", promptPricePer1K: 0, completionPricePer1K: 0 },
+  { provider: "opencode-go", model: "kimi-k2.5", promptPricePer1K: 0, completionPricePer1K: 0 },
+  { provider: "opencode-go", model: "kimi-k2.6", promptPricePer1K: 0, completionPricePer1K: 0 },
+  { provider: "opencode-go", model: "mimo-v2.5", promptPricePer1K: 0, completionPricePer1K: 0 },
+  { provider: "opencode-go", model: "mimo-v2.5-pro", promptPricePer1K: 0, completionPricePer1K: 0 },
+  { provider: "opencode-go", model: "qwen3.6-plus", promptPricePer1K: 0, completionPricePer1K: 0 },
+  { provider: "opencode-go", model: "qwen3.5-plus", promptPricePer1K: 0, completionPricePer1K: 0 },
 ];
 
+const _unknownPricingWarnings = new Set<string>();
+
 export function getPricing(provider: string, model: string): ModelPricing | undefined {
-  return MODEL_PRICING.find((p) => p.provider === provider && p.model === model);
+  const found = MODEL_PRICING.find((p) => p.provider === provider && p.model === model);
+  if (!found) {
+    const key = `${provider}/${model}`;
+    if (!_unknownPricingWarnings.has(key)) {
+      _unknownPricingWarnings.add(key);
+      log.warn({ key }, "unknown_pricing_entry");
+    }
+  }
+  return found;
 }

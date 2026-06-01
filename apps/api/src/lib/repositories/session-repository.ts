@@ -11,6 +11,7 @@ function toSessionRecord(row: typeof schema.interviewSessions.$inferSelect): Ses
     status: row.status as SessionRecord["status"],
     currentPhaseIndex: row.currentPhaseIndex,
     currentQuestionIndex: row.currentQuestionIndex,
+    mode: "quick",
     startedAt: row.startedAt,
     completedAt: row.completedAt,
     createdAt: row.createdAt,

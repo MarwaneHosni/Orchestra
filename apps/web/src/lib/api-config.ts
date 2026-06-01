@@ -13,23 +13,32 @@
  *   const res = await fetch(`${apiUrl}/api/v1/projects`);
  */
 
-function getBaseUrl(): string {
+let _baseUrl: string | null = null;
+
+export function getApiBaseUrl(): string {
+  if (_baseUrl !== null) return _baseUrl;
+
+  let url = "";
+
   // NEXT_PUBLIC_API_URL takes precedence — used for SSR, Docker, staging, production
   if (process.env.NEXT_PUBLIC_API_URL) {
-    const url = process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
-    return url;
+    url = process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "");
   }
-  // Fallback: empty string → relative URLs (browser proxy mode)
-  return "";
-}
+  // Browser-side dev detection: if we're on Next.js dev port 3001,
+  // the API is on port 3000. This avoids the Next.js proxy timeout issue.
+  else if (typeof window !== "undefined" && window.location.port === "3001") {
+    url = "http://localhost:3000";
+  }
 
-export const API_BASE_URL = getBaseUrl();
+  _baseUrl = url;
+  return url;
+}
 
 /**
  * Build a full API URL path.
- * If API_BASE_URL is set, prepends it. Otherwise returns a relative path.
+ * If a base URL is configured, prepends it. Otherwise returns a relative path.
  */
 export function apiUrl(path: string): string {
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
-  return `${API_BASE_URL}${cleanPath}`;
+  return `${getApiBaseUrl()}${cleanPath}`;
 }

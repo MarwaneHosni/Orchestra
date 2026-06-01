@@ -19,3 +19,4 @@ export { usageRecords, usageRecordStatuses } from "./usage-records.js";
 export { activityLog, activityEventTypes } from "./activity-log.js";
 export { analysisResults } from "./analysis-results.js";
 export { workflowRuns, workflowStepStatuses, workflowRunStatuses } from "./workflow-runs.js";
+export { aiCacheEntries, aiCacheInvalidationMarkers } from "./ai-cache.js";

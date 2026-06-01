@@ -8,6 +8,15 @@ export {
   instrumentRegeneration,
   instrumentGuardrailAction,
   instrumentProviderValidation,
+  instrumentTokenUsage,
+  instrumentCacheAction,
+  instrumentCacheLatency,
+  instrumentCacheCostSavings,
+  instrumentCacheStaleEntry,
+  instrumentInterviewProgress,
+  instrumentInterviewDuration,
+  instrumentInterviewSkippedQuestions,
+  instrumentQuickModeUsage,
 } from "./instrumentation.js";
 export { RELEASE_VERSION } from "./types.js";
 export type { Span, TraceExporter, MetricLabel } from "./types.js";

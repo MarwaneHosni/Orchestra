@@ -1,14 +1,20 @@
 import { z } from "zod";
-import { QUESTIONS, PHASE_ORDER, findQuestionByRef } from "../interview/questions.js";
+import { PHASE_ORDER } from "../interview/questions.js";
 import { transitionState } from "../interview/flow.js";
 import type { InterviewState } from "../interview/flow.js";
 import { BlueprintGenerator } from "../blueprint/generator.js";
 import { normalizeText } from "../blueprint/normalizer.js";
 import { logAudit } from "../audit/logger.js";
 import { FailureSpikeDetector } from "../audit/failure-tracker.js";
-import { instrumentGenerationFunnel } from "../metrics/index.js";
+import { instrumentGenerationFunnel, instrumentInterviewProgress } from "../metrics/index.js";
 import type { AnswerRecord, CreateProjectInput, SessionRecord, PlanRecord } from "./types.js";
 import type { SessionStore } from "./store.js";
+import type { InterviewMode } from "../interview/types.js";
+import { getNextQuestion, getRefinementQuestions } from "../interview/adaptive-engine.js";
+import { createModuleLogger } from "../logging/logger.js";
+import { NotFoundError, ValidationError } from "../errors.js";
+
+const orchLog = createModuleLogger("orchestration");
 
 export const CreateProjectSchema = z.object({
   ideaText: z.string().min(10, "Idea description must be at least 10 characters").max(5000),
@@ -22,7 +28,7 @@ export const SubmitAnswerSchema = z.object({
 });
 
 export const TransitionSchema = z.object({
-  toStatus: z.enum(["draft", "in_progress", "waiting_for_answers", "ready_for_generation", "completed"]),
+  toStatus: z.enum(["draft", "in_progress", "waiting_for_answers", "ready_for_generation", "refining", "completed"]),
 });
 
 export class OrchestrationService {
@@ -31,11 +37,10 @@ export class OrchestrationService {
   private spikeDetector = new FailureSpikeDetector();
 
   private log(step: string, meta?: Record<string, unknown>) {
-    const entry = { step, ...meta, timestamp: new Date().toISOString() };
-    console.log(JSON.stringify(entry));
+    orchLog.info(meta ?? {}, step);
   }
 
-  createProject(input: CreateProjectInput): { projectId: string; sessionId: string } {
+  createProject(input: CreateProjectInput, mode: InterviewMode = "quick"): { projectId: string; sessionId: string } {
     const projectId = crypto.randomUUID();
     const sessionId = crypto.randomUUID();
     const now = new Date().toISOString();
@@ -44,7 +49,14 @@ export class OrchestrationService {
       input.projectName ??
       input.ideaText.slice(0, 60).replace(/\n/g, " ") + (input.ideaText.length > 60 ? "..." : "");
 
-    this.log("project.created", { projectId, sessionId });
+    this.log("project.created", { projectId, sessionId, mode });
+
+    if (mode === "quick") {
+      instrumentInterviewProgress("quick_mode_used");
+    } else {
+      instrumentInterviewProgress("advanced_mode_used");
+    }
+    instrumentInterviewProgress("start");
 
     this.store.insertProject({
       id: projectId,
@@ -72,6 +84,7 @@ export class OrchestrationService {
       status: "draft",
       currentPhaseIndex: 0,
       currentQuestionIndex: 0,
+      mode,
       startedAt: null,
       completedAt: null,
       createdAt: now,
@@ -83,7 +96,7 @@ export class OrchestrationService {
 
   startSession(sessionId: string): SessionRecord {
     const session = this.store.getSession(sessionId);
-    if (!session) throw new Error(`Session ${sessionId} not found`);
+    if (!session) throw new NotFoundError("InterviewSession", sessionId);
 
     if (session.status === "in_progress" || session.status === "waiting_for_answers") {
       return session;
@@ -108,47 +121,43 @@ export class OrchestrationService {
     answered: number;
   } {
     const session = this.store.getSession(sessionId);
-    if (!session) throw new Error(`Session ${sessionId} not found`);
-    if (session.status === "completed" || session.status === "ready_for_generation") {
+    if (!session) throw new NotFoundError("InterviewSession", sessionId);
+    if (session.status === "completed" || session.status === "ready_for_generation" || session.status === "refining") {
       const latest = this.store.getLatestAnswersBySession(sessionId);
-      const total = QUESTIONS.filter((q) => this.isQuestionEligible(q, latest)).length;
+      const answeredIds = new Set(latest.map((a) => a.questionId));
+      const mode = (session as any).mode ?? "quick";
+
+      if (session.status === "refining") {
+        const refinementQuestions = getRefinementQuestions(latest, answeredIds);
+        return {
+          question: null,
+          phaseIndex: 0,
+          questionIndex: 0,
+          phaseName: "",
+          total: refinementQuestions.length,
+          answered: answeredIds.size,
+        };
+      }
+
+      const adaptiveResult = getNextQuestion({ mode, answeredIds, answers: latest });
       return {
         question: null,
         phaseIndex: 0,
         questionIndex: 0,
         phaseName: "",
-        total,
-        answered: new Set(latest.map((a) => a.questionId)).size,
+        total: adaptiveResult.eligibleCount,
+        answered: adaptiveResult.answeredCount,
       };
     }
 
     const latest = this.store.getLatestAnswersBySession(sessionId);
     const state = this.toState(session);
     const answeredIds = new Set(latest.map((a) => a.questionId));
+    const mode = (session as any).mode ?? "quick";
 
-    const eligibleQuestions = QUESTIONS.filter((q) => this.isQuestionEligible(q, latest));
-    const totalQuestions = eligibleQuestions.length;
-
-    let nextQuestion: (typeof eligibleQuestions)[number] | undefined;
-
-    for (let p = state.currentPhaseIndex; p < PHASE_ORDER.length; p++) {
-      const phaseType = PHASE_ORDER[p];
-      const phaseQuestions = eligibleQuestions.filter((q) => q.phaseType === phaseType);
-      for (let qi = 0; qi < phaseQuestions.length; qi++) {
-        const q = phaseQuestions[qi];
-        if (!q) break;
-        if (!answeredIds.has(q.phaseType + "." + q.order)) {
-          nextQuestion = q;
-          this.store.updateSession(sessionId, {
-            currentPhaseIndex: p,
-            currentQuestionIndex: qi,
-            status: "waiting_for_answers",
-          });
-          break;
-        }
-      }
-      if (nextQuestion) break;
-    }
+    const adaptiveResult = getNextQuestion({ mode, answeredIds, answers: latest });
+    const totalQuestions = adaptiveResult.eligibleCount;
+    const nextQuestion = adaptiveResult.nextQuestion;
 
     if (!nextQuestion) {
       this.log("session.ready_for_generation", {
@@ -184,6 +193,7 @@ export class OrchestrationService {
         type: nextQuestion.type,
         options: nextQuestion.options ?? [],
         required: nextQuestion.required,
+        category: nextQuestion.category,
         validation: nextQuestion.validation ?? null,
         helpText: nextQuestion.helpText ?? null,
       },
@@ -202,13 +212,13 @@ export class OrchestrationService {
     confidence?: string,
   ): { answer: AnswerRecord; next: object | null; edited: boolean } {
     const session = this.store.getSession(sessionId);
-    if (!session) throw new Error(`Session ${sessionId} not found`);
+    if (!session) throw new NotFoundError("InterviewSession", sessionId);
     if (session.status === "completed") {
-      throw new Error("Session is no longer accepting answers");
+      throw new ValidationError("Session is no longer accepting answers");
     }
 
     const state = this.toState(session);
-    if (state.status === "waiting_for_answers" || state.status === "ready_for_generation") {
+    if (state.status === "waiting_for_answers" || state.status === "ready_for_generation" || state.status === "refining") {
       const updated = transitionState(state, "in_progress");
       this.store.updateSession(sessionId, { status: updated.status });
     }
@@ -225,7 +235,15 @@ export class OrchestrationService {
 
     const normalized = normalizeText(value);
     const changed = isEdit && normalized !== existing?.value;
-    this.log("answer.submitted", { sessionId, questionId, isEdit, changed, length: normalized.length });
+    const isSkipped = normalized.length === 0;
+    this.log("answer.submitted", { sessionId, questionId, isEdit, changed, length: normalized.length, skipped: isSkipped });
+
+    if (isSkipped) {
+      instrumentInterviewProgress("question_skipped");
+    } else {
+      instrumentInterviewProgress("question_answered");
+    }
+
     const answer: AnswerRecord = {
       id: crypto.randomUUID(),
       questionId,
@@ -252,7 +270,7 @@ export class OrchestrationService {
     next: object | null;
   } {
     const session = this.store.getSession(sessionId);
-    if (!session) throw new Error(`Session ${sessionId} not found`);
+    if (!session) throw new NotFoundError("InterviewSession", sessionId);
 
     const answers = this.store.getLatestAnswersBySession(sessionId);
     const next = this.getNextQuestion(sessionId);
@@ -262,13 +280,13 @@ export class OrchestrationService {
 
   getSessionAnswers(sessionId: string): AnswerRecord[] {
     const session = this.store.getSession(sessionId);
-    if (!session) throw new Error(`Session ${sessionId} not found`);
+    if (!session) throw new NotFoundError("InterviewSession", sessionId);
     return this.store.getLatestAnswersBySession(sessionId);
   }
 
   generateBlueprint(sessionId: string): object {
     const session = this.store.getSession(sessionId);
-    if (!session) throw new Error(`Session ${sessionId} not found`);
+    if (!session) throw new NotFoundError("InterviewSession", sessionId);
     if (session.status !== "ready_for_generation" && session.status !== "completed") {
       throw new Error(
         `Session must be ready_for_generation before generating a blueprint (current: ${session.status})`,
@@ -276,7 +294,7 @@ export class OrchestrationService {
     }
 
     const project = this.store.getProject(session.projectId);
-    if (!project) throw new Error(`Project ${session.projectId} not found`);
+    if (!project) throw new NotFoundError("Project", session.projectId);
 
     instrumentGenerationFunnel(session.projectId, "attempted");
     logAudit("generation.attempted", session.projectId, sessionId, {
@@ -377,7 +395,7 @@ export class OrchestrationService {
 
   transitionSession(sessionId: string, toStatus: string): SessionRecord {
     const session = this.store.getSession(sessionId);
-    if (!session) throw new Error(`Session ${sessionId} not found`);
+    if (!session) throw new NotFoundError("InterviewSession", sessionId);
 
     if (session.status === toStatus) return session;
 
@@ -397,20 +415,6 @@ export class OrchestrationService {
     };
   }
 
-  private isQuestionEligible(
-    question: { dependsOn?: { questionRef: string; expectedValue: string | string[] } },
-    answers: AnswerRecord[],
-  ): boolean {
-    const rule = question.dependsOn;
-    if (!rule) return true;
-    const resolved = findQuestionByRef(rule.questionRef);
-    if (!resolved) return true;
-    const prior = answers.find((a) => a.questionId === rule.questionRef);
-    if (!prior) return false;
-    const expected = rule.expectedValue;
-    return Array.isArray(expected) ? expected.includes(prior.value) : prior.value === expected;
-  }
-
   private toState(session: SessionRecord): InterviewState {
     return {
       sessionId: session.id,
@@ -419,6 +423,8 @@ export class OrchestrationService {
       currentPhaseIndex: session.currentPhaseIndex,
       currentQuestionIndex: session.currentQuestionIndex,
       answeredQuestionIds: [],
+      mode: (session as any).mode ?? "quick",
+      refinementComplete: false,
       startedAt: session.startedAt ? new Date(session.startedAt) : null,
       completedAt: session.completedAt ? new Date(session.completedAt) : null,
     };

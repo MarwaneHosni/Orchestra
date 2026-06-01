@@ -1,8 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { generateTasks, deriveGraph } from "../lib/task-graph/generator.js";
-import { assemblePrompt } from "../lib/prompt/index.js";
-import { graphStore, promptStore } from "../lib/shared-stores.js";
+import { getGraphStore, getPromptStore } from "../lib/shared-stores.js";
 import { NotFoundError, RateLimitedError } from "../lib/errors.js";
 import { GuardrailService } from "../lib/budget/guardrail.js";
 import { createInMemoryBudgetStore } from "../lib/budget/budget.js";
@@ -139,15 +138,15 @@ export async function registerExecutionTaskRoutes(app: FastifyInstance) {
     }
 
     try {
-      let graph = graphStore.getGraph(planId, requestedVersion);
+      let graph = getGraphStore().getGraph(planId, requestedVersion);
 
       if (!graph) {
-        const existingGraphs = graphStore.getGraphsByPlan(planId);
+        const existingGraphs = getGraphStore().getGraphsByPlan(planId);
 
         // If version 1 not found, try the latest stored version
         if (requestedVersion === 1 && existingGraphs.length > 0) {
           const latest = Math.max(...existingGraphs.map((g) => g.planVersion));
-          graph = graphStore.getGraph(planId, latest);
+          graph = getGraphStore().getGraph(planId, latest);
         }
 
         if (!graph) {
@@ -170,7 +169,7 @@ export async function registerExecutionTaskRoutes(app: FastifyInstance) {
             throw err;
           }
 
-          graphStore.saveGraph(graph);
+          getGraphStore().saveGraph(graph);
         }
       }
 
@@ -187,47 +186,9 @@ export async function registerExecutionTaskRoutes(app: FastifyInstance) {
   });
 
   app.get("/api/v1/plans/:planId/tasks/:taskId/prompt", async (request) => {
-    const { planId, taskId } = request.params as { planId: string; taskId: string };
-    let prompt = promptStore.getByTask(taskId);
-    if (prompt) {
-      console.log(
-        "[PROMPT DEBUG]",
-        JSON.stringify({
-          step: "found_in_store",
-          taskId,
-          planId,
-          promptLength: prompt.promptText.length,
-          isAiGenerated: prompt.sections.objective === "",
-        }),
-      );
-      return prompt;
-    }
-    console.log(
-      "[PROMPT DEBUG]",
-      JSON.stringify({
-        step: "not_in_store_fallback",
-        taskId,
-        planId,
-        planPromptCount: promptStore.getByPlan(planId, 1)?.length ?? 0,
-        graphCount: graphStore.getGraphsByPlan(planId).length,
-      }),
-    );
-    const graph = graphStore.getGraphsByPlan(planId);
-    if (graph.length === 0) throw new NotFoundError("Plan", planId);
-    const latestGraph = graph.reduce((a, b) => (a.planVersion > b.planVersion ? a : b));
-    const task = latestGraph.tasks.find((t) => t.id === taskId);
-    if (!task) throw new NotFoundError("Task", taskId);
-    prompt = assemblePrompt(
-      {
-        task,
-        planName: "Project",
-        allTasks: latestGraph.tasks,
-        predecessorOutputs: [],
-        phaseSummary: task.phaseType,
-      },
-      promptStore,
-      latestGraph.planVersion,
-    );
+    const { taskId } = request.params as { planId: string; taskId: string };
+    const prompt = getPromptStore().getByTask(taskId);
+    if (!prompt) throw new NotFoundError("Prompt", taskId);
     return prompt;
   });
 
@@ -255,13 +216,13 @@ export async function registerExecutionTaskRoutes(app: FastifyInstance) {
         throw new Error("version must be a positive integer");
       }
 
-      const graph = graphStore.getGraph(planId, requestedVersion);
+      const graph = getGraphStore().getGraph(planId, requestedVersion);
       if (!graph) {
         tracer.endSpan(span, "error", `Plan ${planId} not found`);
         throw new NotFoundError("Plan", planId);
       }
 
-      const prompts = promptStore.getByPlan(planId, requestedVersion);
+      const prompts = getPromptStore().getByPlan(planId, requestedVersion);
       const tasks = graph.tasks;
       const promptMap = new Map(prompts.map((p) => [p.taskId, p]));
 

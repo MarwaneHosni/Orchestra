@@ -1,5 +1,8 @@
 import type { AuditEntry, AuditEventType } from "./types.js";
 import { redactObject } from "./redactor.js";
+import { createModuleLogger } from "../logging/logger.js";
+
+const auditLog = createModuleLogger("audit");
 
 const MAX_AUDIT_ENTRIES = 10_000;
 
@@ -96,5 +99,5 @@ export function logAudit(
 ): void {
   const entry = createAuditEntry(eventType, actor, resourceId, metadata);
   getAuditStore().append(entry);
-  console.log(JSON.stringify({ _audit: true, ...entry }));
+  auditLog.info({ ...entry }, eventType);
 }

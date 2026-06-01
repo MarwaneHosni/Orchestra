@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { TaskNodeView } from "./task-node";
 import { TaskDetail } from "./task-detail";
 import { PromptPreview } from "./prompt-preview";
+import { getApiBaseUrl } from "@/lib/api-config";
 import { StepIndicator } from "@/components/ui/step-indicator";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import type { TaskData } from "./task-node";
@@ -57,7 +58,7 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch(`http://localhost:3000/api/v1/plans/${sessionId}/tasks`);
+        const res = await fetch(`${getApiBaseUrl()}/api/v1/plans/plan-${sessionId}/tasks`);
         if (!res.ok) throw new Error("Failed to load task graph");
         const data = await res.json();
         setGraph(data);
@@ -117,7 +118,7 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
     setExporting(true);
     setExportError("");
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/plans/${sessionId}/prompts/export`);
+      const res = await fetch(`${getApiBaseUrl()}/api/v1/plans/plan-${sessionId}/prompts/export`);
       if (!res.ok) throw new Error("Export failed");
       const bundle = await res.json();
       const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });

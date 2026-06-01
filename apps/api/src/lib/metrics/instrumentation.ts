@@ -84,6 +84,29 @@ export function instrumentExport(_projectId: string, format: string, type: strin
   metrics.counter("export_usage_total", "Export usage by format and type").inc(labels);
 }
 
+export function instrumentTokenUsage(
+  provider: string,
+  model: string,
+  promptTokens: number,
+  completionTokens: number,
+): void {
+  const metrics = getMetrics();
+  const labels: MetricLabel[] = [
+    { name: "provider", value: provider },
+    { name: "model", value: model },
+    { name: "release", value: RELEASE_VERSION },
+  ];
+  metrics
+    .gauge("provider_prompt_tokens", "Prompt tokens per generation by provider and model")
+    .set(labels, promptTokens);
+  metrics
+    .gauge("provider_completion_tokens", "Completion tokens per generation by provider and model")
+    .set(labels, completionTokens);
+  metrics
+    .counter("provider_tokens_total", "Total tokens consumed by provider and model")
+    .inc(labels, promptTokens + completionTokens);
+}
+
 export function instrumentRegeneration(scope: "full" | "partial", affectedPhases?: number): void {
   const metrics = getMetrics();
   const labels: MetricLabel[] = [
@@ -121,4 +144,95 @@ export function instrumentProviderValidation(provider: string, status: "valid" |
   metrics
     .counter("provider_validations_total", "Provider credential validations by provider and status")
     .inc(labels);
+}
+
+export function instrumentCacheAction(
+  action: "hit" | "miss" | "store" | "store_duplicate" | "store_error" | "invalidate" | "stale_check",
+  provider: string,
+): void {
+  const metrics = getMetrics();
+  const labels: MetricLabel[] = [
+    { name: "action", value: action },
+    { name: "provider", value: provider },
+    { name: "release", value: RELEASE_VERSION },
+  ];
+  metrics.counter("ai_cache_actions_total", "AI cache actions: hit, miss, store, invalidate").inc(labels);
+}
+
+export function instrumentCacheLatency(
+  action: "lookup" | "store" | "invalidate",
+  provider: string,
+  durationMs: number,
+): void {
+  const metrics = getMetrics();
+  const labels: MetricLabel[] = [
+    { name: "action", value: action },
+    { name: "provider", value: provider },
+    { name: "release", value: RELEASE_VERSION },
+  ];
+  metrics
+    .histogram("ai_cache_operation_duration_ms", "Duration of cache operations by action and provider")
+    .observe(labels, durationMs);
+}
+
+export function instrumentCacheCostSavings(
+  provider: string,
+  tokensSaved: number,
+  costSaved: number,
+): void {
+  const metrics = getMetrics();
+  const labels: MetricLabel[] = [
+    { name: "provider", value: provider },
+    { name: "release", value: RELEASE_VERSION },
+  ];
+  metrics
+    .counter("ai_cache_tokens_saved_total", "Total tokens saved by cache hits, by provider")
+    .inc(labels, tokensSaved);
+  metrics
+    .counter("ai_cache_cost_saved_total", "Total estimated cost saved by cache hits, by provider")
+    .inc(labels, costSaved);
+}
+
+export function instrumentCacheStaleEntry(provider: string): void {
+  const metrics = getMetrics();
+  const labels: MetricLabel[] = [
+    { name: "provider", value: provider },
+    { name: "release", value: RELEASE_VERSION },
+  ];
+  metrics.counter("ai_cache_stale_entries_total", "Stale cache entries detected and rejected").inc(labels);
+}
+
+export function instrumentInterviewProgress(action: "start" | "question_answered" | "question_skipped" | "abandoned" | "completed" | "quick_mode_used" | "advanced_mode_used"): void {
+  const metrics = getMetrics();
+  const labels: MetricLabel[] = [
+    { name: "action", value: action },
+    { name: "release", value: RELEASE_VERSION },
+  ];
+  metrics.counter("interview_actions_total", "Interview actions: start, answer, skip, abandon, complete, mode").inc(labels);
+}
+
+export function instrumentInterviewDuration(minutes: number, mode: "quick" | "advanced"): void {
+  const metrics = getMetrics();
+  const labels: MetricLabel[] = [
+    { name: "mode", value: mode },
+    { name: "release", value: RELEASE_VERSION },
+  ];
+  metrics.histogram("interview_duration_minutes", "Interview duration in minutes by mode").observe(labels, minutes);
+}
+
+export function instrumentInterviewSkippedQuestions(count: number): void {
+  const metrics = getMetrics();
+  const labels: MetricLabel[] = [
+    { name: "release", value: RELEASE_VERSION },
+  ];
+  metrics.histogram("interview_skipped_questions", "Number of questions skipped per interview").observe(labels, count);
+}
+
+export function instrumentQuickModeUsage(_projectId: string): void {
+  const metrics = getMetrics();
+  const labels: MetricLabel[] = [
+    { name: "action", value: "quick_mode_used" },
+    { name: "release", value: RELEASE_VERSION },
+  ];
+  metrics.counter("interview_quick_mode_total", "Quick Mode usage count").inc(labels);
 }

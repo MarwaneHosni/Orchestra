@@ -1,6 +1,7 @@
 import type { AIProvider, Message } from "../provider/types.js";
 import type { RouterDecision } from "../router/types.js";
 import type { AnalysisPack } from "../analysis/types.js";
+import type { UsageAttempt } from "../accounting/streaming.js";
 
 export type ModelTier = "cheap" | "balanced" | "strong";
 
@@ -19,6 +20,7 @@ export interface AIGenerationResult<T> {
   model: string;
   provider: string;
   usage: { promptTokens: number; completionTokens: number; totalTokens: number };
+  attempts: UsageAttempt[];
   finishReason: string;
   fallbackUsed: boolean;
   routerDecision: RouterDecision;

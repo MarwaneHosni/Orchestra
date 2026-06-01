@@ -1,4 +1,4 @@
-import type { AIProvider, GenerationInput } from "../provider/types.js";
+import type { AIProvider, GenerationInput, TokenUsage, GenerationResult } from "../provider/types.js";
 import { OpenAIProvider } from "../provider/openai.js";
 import { AnthropicProvider } from "../provider/anthropic.js";
 import { OpenRouterProvider } from "../provider/openrouter.js";
@@ -10,9 +10,16 @@ import type { AnalysisPack } from "../analysis/types.js";
 import type { BlueprintOutput, RoadmapOutput, PhaseType } from "../contract/output-schema.js";
 import { BlueprintOutputSchema, RoadmapOutputSchema, PHASE_ORDER } from "../contract/output-schema.js";
 import { PHASE_LABELS } from "../interview/questions.js";
-import { instrumentProviderCall } from "../metrics/index.js";
+import { instrumentProviderCall, instrumentTokenUsage } from "../metrics/index.js";
+import { calculateActualCost } from "../accounting/index.js";
 import type { AIGenerationResult } from "./prompts.js";
 import { buildSystemPrompt, buildAnalysisMessage } from "./prompts.js";
+import type { UsageAttempt } from "../accounting/streaming.js";
+import { globalCache } from "../cache/cache-service.js";
+import { buildCacheKey } from "../cache/key-builder.js";
+import { createModuleLogger } from "../logging/logger.js";
+
+const log = createModuleLogger("ai-generator");
 
 export class AIBlueprintGenerator {
   private projectDescription: string = "";
@@ -32,7 +39,7 @@ export class AIBlueprintGenerator {
     this.projectDescription = projectDescription;
     try {
       const decision = this.router.select("blueprint", {});
-      return this.callProvider(decision, analysis, planId, planVersion, false);
+      return this.callProvider(decision, analysis, planId, planVersion);
     } catch (err) {
       return {
         success: false,
@@ -40,6 +47,7 @@ export class AIBlueprintGenerator {
         model: "unknown",
         provider: "unknown",
         usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+        attempts: [],
         finishReason: "error",
         fallbackUsed: false,
         routerDecision: {
@@ -56,138 +64,179 @@ export class AIBlueprintGenerator {
     }
   }
 
+  private recordAttempt(
+    provider: string,
+    model: string,
+    usage: TokenUsage,
+    startTime: number,
+    success: boolean,
+    error?: string,
+  ): UsageAttempt {
+    return {
+      provider,
+      model,
+      usage: { ...usage },
+      durationMs: Date.now() - startTime,
+      success,
+      error,
+    };
+  }
+
+  private buildSuccessResult(
+    parsed: { blueprint: BlueprintOutput; roadmap: RoadmapOutput },
+    result: GenerationResult,
+    provider: string,
+    decision: RouterDecision,
+    startTime: number,
+    isFallback: boolean,
+    attempts: UsageAttempt[],
+  ): AIGenerationResult<{ blueprint: BlueprintOutput; roadmap: RoadmapOutput }> {
+    return {
+      success: true,
+      data: parsed,
+      model: result.model,
+      provider,
+      usage: result.usage,
+      attempts,
+      finishReason: result.finishReason,
+      fallbackUsed: isFallback,
+      routerDecision: decision,
+      durationMs: Date.now() - startTime,
+    };
+  }
+
   private async callProvider(
     decision: RouterDecision,
     analysis: AnalysisPack,
     planId: string,
     planVersion: number,
-    isFallback: boolean,
-    depth = 0,
   ): Promise<AIGenerationResult<{ blueprint: BlueprintOutput; roadmap: RoadmapOutput }>> {
-    if (depth > 5) {
-      return this.failureResult("Max retry depth exceeded", decision, Date.now());
-    }
-    const startTime = Date.now();
-    const selection = decision.selection;
-
-    console.log(
-      "[AI-GEN DEBUG]",
-      JSON.stringify({
-        step: "callProvider",
-        depth,
-        selection: { provider: selection.provider, model: selection.model, tier: selection.tier },
-        fallbackChainLength: decision.fallbackChain.length,
-        isFallback,
-      }),
-    );
-
-    const provider = this.createProvider(selection);
-    if (!provider) {
-      console.log(
-        "[AI-GEN DEBUG]",
-        JSON.stringify({
-          step: "provider_not_created",
-          provider: selection.provider,
-          model: selection.model,
-          reason: "getApiKey returned undefined or createProvider returned undefined",
-        }),
-      );
-      // Try fallback — remove current fallback from chain to avoid infinite loops
-      while (decision.fallbackChain.length > 0) {
-        const fallback = decision.fallbackChain[0]!;
-        const remaining = decision.fallbackChain.slice(1);
-        const fbDecision: RouterDecision = {
-          ...decision,
-          selection: fallback,
-          fallbackChain: remaining,
-          usedFallback: true,
-          reasoning: [...decision.reasoning, `Fallback to ${fallback.provider}/${fallback.model}`],
-        };
-        return this.callProvider(fbDecision, analysis, planId, planVersion, true, depth + 1);
-      }
-      return this.failureResult(`No provider available for ${selection.provider}`, decision, startTime);
-    }
-
-    console.log(
-      "[AI-GEN DEBUG]",
-      JSON.stringify({
-        step: "provider_created",
-        provider: selection.provider,
-        model: selection.model,
-        providerType: provider.constructor.name,
-      }),
-    );
-
+    const MAX_ATTEMPTS = 5;
     const systemPrompt = buildSystemPrompt();
     const messages = buildAnalysisMessage(analysis, this.projectDescription);
 
-    const input: GenerationInput = {
-      model: selection.model,
-      systemPrompt,
-      messages,
-      temperature: 0.7,
-    };
+    // Iterative fallback loop: each iteration tries the current decision's selection.
+    // On failure, advances to the next fallback in the chain.
+    let currentDecision = decision;
+    let attempts: UsageAttempt[] = [];
+    let overallStartTime = Date.now();
 
-    try {
-      const result = await instrumentProviderCall(selection.provider, selection.model, () =>
-        provider.generate(input),
-      );
+    for (let attemptCount = 0; attemptCount <= MAX_ATTEMPTS; attemptCount++) {
+      const isFallback = attemptCount > 0;
+      const startTime = Date.now();
+      const selection = currentDecision.selection;
 
-      const parsed = this.parseBlueprintResponse(
-        result.content,
-        analysis,
-        planId,
-        planVersion,
-        selection.provider,
-        result.model,
-      );
+      log.debug({ attempt: attemptCount, selection: { provider: selection.provider, model: selection.model, tier: selection.tier }, fallbackChain: currentDecision.fallbackChain.length }, "provider_attempt");
 
-      if (parsed) {
-        return {
-          success: true,
-          data: parsed,
-          model: result.model,
-          provider: selection.provider,
-          usage: result.usage,
-          finishReason: result.finishReason,
-          fallbackUsed: isFallback,
-          routerDecision: decision,
-          durationMs: Date.now() - startTime,
-        };
-      }
-
-      // JSON parse failed — try fallback if available
-      if (decision.fallbackChain.length > 0) {
-        return this.tryFallback(
-          decision,
-          analysis,
-          planId,
-          planVersion,
-          startTime,
-          "AI response could not be parsed as valid JSON",
-          depth + 1,
+      const provider = this.createProvider(selection);
+      if (!provider) {
+        const attempt = this.recordAttempt(
+          selection.provider, selection.model,
+          { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+          startTime, false, "Provider not created",
         );
+        attempts.push(attempt);
+
+        const next = this.advanceFallback(currentDecision, `No provider for ${selection.provider}`);
+        if (!next) {
+          return this.failureResult(`No provider available for ${selection.provider}`, currentDecision, overallStartTime, attempts);
+        }
+        currentDecision = next;
+        continue;
       }
 
-      return this.failureResult("AI response could not be parsed as valid JSON", decision, startTime);
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      console.log(
-        "[AI-GEN DEBUG]",
-        JSON.stringify({
-          step: "provider_error",
-          provider: selection.provider,
-          model: selection.model,
-          error: errorMsg,
-          fallbackChainLength: decision.fallbackChain.length,
-          depth,
-        }),
-      );
-      if (decision.fallbackChain.length > 0) {
-        return this.tryFallback(decision, analysis, planId, planVersion, startTime, errorMsg, depth + 1);
+      const input: GenerationInput = {
+        model: selection.model,
+        systemPrompt,
+        messages,
+        temperature: 0.7,
+      };
+
+      // Cache check
+      const cacheKeyInput = { systemPrompt, messages, model: selection.model, provider: selection.provider, temperature: 0.7 };
+      const keyResult = buildCacheKey(cacheKeyInput);
+      const cached = await globalCache.lookup(cacheKeyInput);
+
+      if (cached) {
+        log.info({ cacheKey: keyResult.cacheKey, model: selection.model, provider: selection.provider }, "cache_hit");
+        const cacheResult: GenerationResult = {
+          content: cached.responseContent,
+          model: cached.responseModel,
+          usage: cached.usage,
+          finishReason: cached.finishReason,
+        };
+        const parsed = this.parseBlueprintResponse(
+          cacheResult.content, analysis, planId, planVersion,
+          selection.provider, cacheResult.model, cacheResult.usage,
+          startTime, 0, isFallback,
+        );
+        if (parsed) {
+          const attempt = this.recordAttempt(selection.provider, cacheResult.model, cacheResult.usage, startTime, true);
+          return this.buildSuccessResult(parsed, cacheResult, selection.provider, currentDecision, startTime, isFallback, [...attempts, attempt]);
+        }
       }
-      return this.failureResult(errorMsg, decision, startTime);
+
+      // Live provider call
+      try {
+        const result = await instrumentProviderCall(selection.provider, selection.model, () =>
+          provider.generate(input),
+        );
+
+        instrumentTokenUsage(selection.provider, result.model, result.usage.promptTokens, result.usage.completionTokens);
+
+        const parsed = this.parseBlueprintResponse(
+          result.content, analysis, planId, planVersion,
+          selection.provider, result.model, result.usage,
+          startTime, Date.now() - startTime, isFallback,
+        );
+
+        if (parsed) {
+          // Cache the successful result
+          globalCache.store({
+            cacheKey: keyResult.cacheKey, keyResult,
+            model: selection.model, provider: selection.provider, temperature: 0.7, result,
+          }).catch((err) => log.warn({ err }, "cache_write_error"));
+
+          const attempt = this.recordAttempt(selection.provider, result.model, result.usage, startTime, true);
+          return this.buildSuccessResult(parsed, result, selection.provider, currentDecision, startTime, isFallback, [...attempts, attempt]);
+        }
+
+        // Parse failure — record and try fallback
+        const failAttempt = this.recordAttempt(selection.provider, result.model, result.usage, startTime, false, "AI response could not be parsed as valid JSON");
+        attempts.push(failAttempt);
+
+        const next = this.advanceFallback(currentDecision, "AI response could not be parsed as valid JSON");
+        if (!next) {
+          return this.failureResult("AI response could not be parsed as valid JSON", currentDecision, overallStartTime, attempts);
+        }
+        currentDecision = next;
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        const failAttempt = this.recordAttempt(selection.provider, selection.model, { promptTokens: 0, completionTokens: 0, totalTokens: 0 }, startTime, false, errorMsg);
+        attempts.push(failAttempt);
+
+        const next = this.advanceFallback(currentDecision, errorMsg);
+        if (!next) {
+          return this.failureResult(errorMsg, currentDecision, overallStartTime, attempts);
+        }
+        currentDecision = next;
+      }
     }
+
+    return this.failureResult("Max retry depth exceeded", currentDecision, overallStartTime, attempts);
+  }
+
+  private advanceFallback(decision: RouterDecision, errorMsg: string): RouterDecision | null {
+    if (decision.fallbackChain.length === 0) return null;
+    const fallbackSelection = decision.fallbackChain[0]!;
+    const remaining = decision.fallbackChain.slice(1);
+    return {
+      ...decision,
+      selection: fallbackSelection,
+      fallbackChain: remaining,
+      usedFallback: true,
+      reasoning: [...decision.reasoning, `Fallback to ${fallbackSelection.provider}/${fallbackSelection.model} after: ${errorMsg}`],
+    };
   }
 
   private parseBlueprintResponse(
@@ -197,17 +246,13 @@ export class AIBlueprintGenerator {
     planVersion: number,
     provider: string,
     model: string,
+    usage: TokenUsage,
+    startTime: number,
+    durationMs: number,
+    isFallback: boolean,
   ): { blueprint: BlueprintOutput; roadmap: RoadmapOutput } | null {
     // Log first 500 chars of AI response for debugging
-    console.log(
-      "[AI RAW RESPONSE]",
-      JSON.stringify({
-        provider,
-        model,
-        length: content.length,
-        preview: content.slice(0, 500),
-      }),
-    );
+    log.debug({ provider, model, length: content.length, preview: content.slice(0, 500) }, "raw_response");
 
     let parsed: unknown;
     // Find the outermost valid JSON object in the response by tracking brace depth.
@@ -263,24 +308,19 @@ export class AIBlueprintGenerator {
       }
       parsed = best;
     }
-    console.log(
-      "[AI PARSE DEBUG]",
-      JSON.stringify({
-        found: !!parsed,
-        hasPhases:
-          parsed !== null && typeof parsed === "object" && "phases" in (parsed as Record<string, unknown>),
-        rawLength: content.length,
-        parsedLength: parsed ? JSON.stringify(parsed).length : 0,
-        preview: parsed ? JSON.stringify(parsed).slice(0, 200) : "null",
-      }),
-    );
+    log.debug({
+      found: !!parsed,
+      hasPhases: parsed !== null && typeof parsed === "object" && "phases" in (parsed as Record<string, unknown>),
+      rawLength: content.length,
+      parsedLength: parsed ? JSON.stringify(parsed).length : 0,
+    }, "parse_result");
     if (!parsed) {
-      console.log("[AI PARSE ERROR] No valid JSON object found in response");
+      log.warn({ rawLength: content.length }, "no_valid_json_found");
       return null;
     }
 
     if (!parsed || typeof parsed !== "object") {
-      console.log("[AI PARSE ERROR] Parsed value is not an object");
+      log.warn({}, "parsed_value_not_object");
       return null;
     }
 
@@ -383,22 +423,19 @@ export class AIBlueprintGenerator {
         model,
         provider,
         generationId: crypto.randomUUID(),
-        startedAt: now,
+        startedAt: new Date(startTime).toISOString(),
         completedAt: now,
-        durationMs: 0,
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 0,
-        estimatedCost: 0,
-        fallbackUsed: false,
+        durationMs,
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        totalTokens: usage.totalTokens,
+        estimatedCost: calculateActualCost(provider, model, usage.promptTokens, usage.completionTokens),
+        fallbackUsed: isFallback,
       },
     });
 
     if (!blueprintResult.success) {
-      console.log(
-        "[AI ZOD ERROR] Blueprint validation failed:",
-        JSON.stringify(blueprintResult.error.issues, null, 2),
-      );
+      log.warn({ issues: blueprintResult.error.issues }, "blueprint_zod_error");
       return null;
     }
 
@@ -469,22 +506,19 @@ export class AIBlueprintGenerator {
         model,
         provider,
         generationId: crypto.randomUUID(),
-        startedAt: now,
+        startedAt: new Date(startTime).toISOString(),
         completedAt: now,
-        durationMs: 0,
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 0,
-        estimatedCost: 0,
-        fallbackUsed: false,
+        durationMs,
+        promptTokens: usage.promptTokens,
+        completionTokens: usage.completionTokens,
+        totalTokens: usage.totalTokens,
+        estimatedCost: calculateActualCost(provider, model, usage.promptTokens, usage.completionTokens),
+        fallbackUsed: isFallback,
       },
     });
 
     if (!roadmapResult.success) {
-      console.log(
-        "[AI ZOD ERROR] Roadmap validation failed:",
-        JSON.stringify(roadmapResult.error.issues, null, 2),
-      );
+      log.warn({ issues: roadmapResult.error.issues }, "roadmap_zod_error");
       return null;
     }
 
@@ -518,34 +552,11 @@ export class AIBlueprintGenerator {
     }
   }
 
-  private async tryFallback(
-    decision: RouterDecision,
-    analysis: AnalysisPack,
-    planId: string,
-    planVersion: number,
-    _startTime: number,
-    errorMsg: string,
-    depth: number,
-  ): Promise<AIGenerationResult<{ blueprint: BlueprintOutput; roadmap: RoadmapOutput }>> {
-    const fallbackSelection = decision.fallbackChain[0]!;
-    const remainingFallbacks = decision.fallbackChain.slice(1);
-    const fbDecision: RouterDecision = {
-      ...decision,
-      selection: fallbackSelection,
-      fallbackChain: remainingFallbacks,
-      usedFallback: true,
-      reasoning: [
-        ...decision.reasoning,
-        `Fallback to ${fallbackSelection.provider}/${fallbackSelection.model} after: ${errorMsg}`,
-      ],
-    };
-    return this.callProvider(fbDecision, analysis, planId, planVersion, true, depth + 1);
-  }
-
   private failureResult(
     error: string,
     decision: RouterDecision,
     startTime: number,
+    attempts: UsageAttempt[],
   ): AIGenerationResult<{ blueprint: BlueprintOutput; roadmap: RoadmapOutput }> {
     return {
       success: false,
@@ -553,6 +564,7 @@ export class AIBlueprintGenerator {
       model: decision.selection.model,
       provider: decision.selection.provider,
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      attempts,
       finishReason: "error",
       fallbackUsed: decision.usedFallback,
       routerDecision: decision,

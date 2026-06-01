@@ -1,5 +1,8 @@
 import type { AIProvider, GenerationInput, GenerationResult, ModelInfo, ValidationResult } from "./types.js";
 import { ProviderRequestError, fetchWithTimeout } from "./types.js";
+import { createModuleLogger } from "../logging/logger.js";
+
+const log = createModuleLogger("opencode-go");
 
 const BASE_URL = "https://opencode.ai/zen/go/v1";
 const GENERATE_TIMEOUT_MS = 180_000;
@@ -72,17 +75,7 @@ export class OpencodeGoProvider implements AIProvider {
     messages.push(...input.messages);
 
     const apiModel = input.model;
-    console.log(
-      "[OPENCODE-GO DEBUG]",
-      JSON.stringify({
-        step: "sending_request",
-        model: input.model,
-        apiModel,
-        apiKeyPreview: this.apiKey.slice(0, 8) + "...",
-        apiKeyLength: this.apiKey.length,
-        url: `${BASE_URL}/chat/completions`,
-      }),
-    );
+    log.debug({ model: input.model, hasApiKey: this.apiKey.length > 0, url: `${BASE_URL}/chat/completions` }, "sending_request");
 
     const res = await this.apiFetch("/chat/completions", {
       method: "POST",
@@ -112,17 +105,7 @@ export class OpencodeGoProvider implements AIProvider {
             ? errObj.error
             : bodyText;
 
-      console.log(
-        "[OPENCODE-GO DEBUG]",
-        JSON.stringify({
-          step: "api_error",
-          status: res.status,
-          statusText: res.statusText,
-          body: bodyText.slice(0, 1000),
-          parsedError,
-          errorMessage: errMsg,
-        }),
-      );
+      log.warn({ status: res.status, statusText: res.statusText, bodyPreview: bodyText.slice(0, 500) }, "api_error");
 
       throw new ProviderRequestError(
         "opencode-go",
@@ -132,17 +115,7 @@ export class OpencodeGoProvider implements AIProvider {
     }
 
     const rawText = await res.text();
-    console.log(
-      "[OPENCODE-GO DEBUG]",
-      JSON.stringify({
-        step: "response_body",
-        model: input.model,
-        status: res.status,
-        contentType: res.headers.get("content-type"),
-        rawLength: rawText.length,
-        rawPreview: rawText.slice(0, 500),
-      }),
-    );
+    log.debug({ model: input.model, status: res.status, rawLength: rawText.length, contentType: res.headers.get("content-type") }, "response_body");
 
     const body = JSON.parse(rawText) as {
       choices?: { message?: Record<string, unknown>; finish_reason?: string }[];

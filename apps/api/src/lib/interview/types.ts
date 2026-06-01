@@ -1,5 +1,13 @@
 export type QuestionType = "text" | "select" | "multi_select" | "boolean" | "scale";
 
+export type QuestionCategory =
+  | "critical"
+  | "high-value"
+  | "optional"
+  | "contextual"
+  | "advanced-only"
+  | "derivable";
+
 export type QuestionPhaseType =
   | "ideation"
   | "requirements"
@@ -38,6 +46,7 @@ export interface QuestionDefinition {
   type: QuestionType;
   options?: string[];
   required: boolean;
+  category: QuestionCategory;
   dependsOn?: DependencyRule;
   validation?: ValidationRule;
   captureAs?: CaptureAs;
@@ -49,7 +58,10 @@ export type InterviewStatus =
   | "in_progress"
   | "waiting_for_answers"
   | "ready_for_generation"
+  | "refining"
   | "completed";
+
+export type InterviewMode = "quick" | "advanced";
 
 export interface FlowTransition {
   from: InterviewStatus[];
@@ -67,6 +79,16 @@ export const FLOW_TRANSITIONS: FlowTransition[] = [
     condition: "All required questions answered",
   },
   { from: ["ready_for_generation"], to: "completed", condition: "Plan generated from session" },
+  {
+    from: ["ready_for_generation", "completed", "refining"],
+    to: "refining",
+    condition: "User enters post-generation refinement",
+  },
+  {
+    from: ["refining"],
+    to: "completed",
+    condition: "Refinement complete",
+  },
   {
     from: ["ready_for_generation"],
     to: "in_progress",

@@ -1,6 +1,21 @@
 import type { UsageEstimate } from "./types.js";
 import { getPricing } from "./pricing.js";
 
+const TOKENS_PER_CHAR = 0.25;
+
+export function estimatePromptTokens(messages: { role: string; content: string }[]): number {
+  let totalChars = 0;
+  for (const m of messages) {
+    totalChars += m.role.length + 2;
+    totalChars += m.content.length;
+  }
+  return Math.ceil(totalChars * TOKENS_PER_CHAR);
+}
+
+export function estimateCompletionTokens(responseContent: string): number {
+  return Math.ceil(responseContent.length * TOKENS_PER_CHAR);
+}
+
 export interface EstimationInput {
   provider: string;
   model: string;

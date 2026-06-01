@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useFocusTrap, useEscapeToClose } from "@/lib/use-focus-trap";
 import { LiveAnnouncer } from "@/components/ui/live-announcer";
+import { getApiBaseUrl } from "@/lib/api-config";
 
 interface PromptPreviewProps {
   taskId: string;
@@ -26,7 +27,7 @@ export function PromptPreview({ taskId, sessionId, onClose }: PromptPreviewProps
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`http://localhost:3000/api/v1/plans/${sessionId}/tasks/${taskId}/prompt`);
+        const res = await fetch(`${getApiBaseUrl()}/api/v1/plans/plan-${sessionId}/tasks/${taskId}/prompt`);
         if (!res.ok) throw new Error("Failed to load prompt");
         const data = await res.json();
         setPrompt(data.promptText);

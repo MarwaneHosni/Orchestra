@@ -1,5 +1,4 @@
 import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
-import { executionTasks } from "./execution-tasks.js";
 
 export const promptStatuses = ["pending", "complete", "failed", "needs_review"] as const;
 
@@ -7,10 +6,11 @@ export const promptArtifacts = sqliteTable(
   "prompt_artifacts",
   {
     id: text("id").primaryKey(),
-    taskId: text("task_id")
-      .notNull()
-      .references(() => executionTasks.id),
+    taskId: text("task_id").notNull(),
+    planId: text("plan_id").notNull().default(""),
+    planVersion: integer("plan_version").notNull().default(0),
     promptText: text("prompt_text").notNull(),
+    sectionsJson: text("sections_json"),
     resultText: text("result_text"),
     version: integer("version").default(1).notNull(),
     status: text("status", { enum: promptStatuses }).default("pending").notNull(),
@@ -20,5 +20,6 @@ export const promptArtifacts = sqliteTable(
   },
   (table) => ({
     taskIdIdx: index("prompt_artifacts_task_id_idx").on(table.taskId),
+    planIdIdx: index("prompt_artifacts_plan_id_idx").on(table.planId),
   }),
 );

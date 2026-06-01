@@ -39,6 +39,9 @@ export function createUsageRecord(input: {
   estimatedCost: number;
   actualPromptTokens?: number;
   actualCompletionTokens?: number;
+  actualCachedTokens?: number;
+  retryAttempt?: number;
+  fallbackAttempt?: number;
   status: "estimated" | "completed" | "failed";
   requestId?: string;
 }): UsageRecord {
@@ -67,8 +70,11 @@ export function createUsageRecord(input: {
     estimatedCost: input.estimatedCost,
     actualPromptTokens: input.actualPromptTokens ?? null,
     actualCompletionTokens: input.actualCompletionTokens ?? null,
+    actualCachedTokens: input.actualCachedTokens ?? null,
     actualTotalTokens: total,
     actualCost,
+    retryAttempt: input.retryAttempt ?? 0,
+    fallbackAttempt: input.fallbackAttempt ?? 0,
     status: input.status,
     requestId: input.requestId ?? null,
     createdAt: now,

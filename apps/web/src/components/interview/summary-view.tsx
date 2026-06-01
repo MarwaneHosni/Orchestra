@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { generateBlueprint } from "@/lib/api";
+import { getLatestBlueprint } from "@/lib/api";
 import type { BlueprintResult } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { StepIndicator } from "@/components/ui/step-indicator";
@@ -12,24 +12,55 @@ interface SummaryViewProps {
   sessionId: string;
 }
 
+const MAX_POLL_RETRIES = 60;
+const POLL_INTERVAL_MS = 2000;
+
 export function SummaryView({ sessionId }: SummaryViewProps) {
   const router = useRouter();
   const [blueprint, setBlueprint] = useState<BlueprintResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const pollRef = useRef(0);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const result = await generateBlueprint(sessionId);
-        setBlueprint(result);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load plan");
-      } finally {
-        setLoading(false);
+    let cancelled = false;
+    pollRef.current = 0;
+
+    const poll = async () => {
+      while (!cancelled) {
+        try {
+          const result = await getLatestBlueprint(sessionId);
+          if (cancelled) return;
+          if (result) {
+            setBlueprint(result);
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          if (cancelled) return;
+          setError(e instanceof Error ? e.message : "Failed to load blueprint");
+          setLoading(false);
+          return;
+        }
+
+        pollRef.current++;
+        if (pollRef.current >= MAX_POLL_RETRIES) {
+          if (!cancelled) {
+            setError("Blueprint generation timed out. Please try again.");
+            setLoading(false);
+          }
+          return;
+        }
+
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
       }
     };
-    load();
+
+    poll();
+
+    return () => {
+      cancelled = true;
+    };
   }, [sessionId]);
 
   const hasInsufficientPhases = blueprint?.phases.some(

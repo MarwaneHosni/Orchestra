@@ -1,6 +1,4 @@
-import { API_BASE_URL } from "./api-config.js";
-
-const BASE = API_BASE_URL;
+import { getApiBaseUrl } from "./api-config";
 
 export interface CreateProjectResult {
   projectId: string;
@@ -15,6 +13,7 @@ export interface QuestionPayload {
   type: "text" | "select" | "multi_select" | "boolean" | "scale";
   options: string[];
   required: boolean;
+  category?: string;
   validation: { minLength?: number; maxLength?: number } | null;
   helpText: string | null;
 }
@@ -51,7 +50,10 @@ export interface BlueprintResult {
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const url = `${getApiBaseUrl()}${path}`;
+  const method = options?.method ?? "GET";
+  console.log(`[DEBUG] API request ${method} ${url}`);
+  const res = await fetch(url, {
     headers: { "Content-Type": "application/json" },
     ...options,
   });
@@ -60,7 +62,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     console.log(`[DEBUG] API error ${res.status} on ${path}:`, JSON.stringify(body));
     throw new Error(body?.error?.message ?? `Request failed: ${res.status}`);
   }
-  return res.json() as Promise<T>;
+  const data = await res.json() as T;
+  console.log(`[DEBUG] API success ${method} ${url} -> 200`);
+  return data;
 }
 
 export interface ProjectRecord {
@@ -143,8 +147,22 @@ export async function transitionSession(
   });
 }
 
-export async function generateBlueprint(sessionId: string): Promise<BlueprintResult> {
-  return request(`/api/v1/interviews/${sessionId}/generate`, { method: "POST", body: "{}" });
+export async function generateBlueprint(sessionId: string, workflowId?: string): Promise<BlueprintResult> {
+  return request(`/api/v1/interviews/${sessionId}/generate`, {
+    method: "POST",
+    body: JSON.stringify({ workflowId }),
+  });
+}
+
+export async function getLatestBlueprint(sessionId: string): Promise<BlueprintResult | null> {
+  const res = await fetch(`${getApiBaseUrl()}/api/v1/interviews/${sessionId}/blueprint`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Failed to fetch blueprint: ${res.status}`);
+  return res.json() as Promise<BlueprintResult>;
+}
+
+export async function cancelGeneration(workflowId: string): Promise<void> {
+  await request(`/api/v1/progress/${workflowId}/cancel`, { method: "POST" });
 }
 
 // ── Versioning / Snapshots ────────────────────────────────────────────
@@ -356,7 +374,7 @@ export async function createCredential(input: {
 }
 
 export async function deleteCredential(id: string): Promise<void> {
-  await fetch(`http://localhost:3000/api/v1/provider-credentials/${id}`, { method: "DELETE" });
+  await fetch(`${getApiBaseUrl()}/api/v1/provider-credentials/${id}`, { method: "DELETE" });
 }
 
 export async function validateCredential(id: string): Promise<ProviderCredential> {

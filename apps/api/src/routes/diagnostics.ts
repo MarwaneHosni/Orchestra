@@ -16,20 +16,31 @@ export async function registerDiagnosticsRoutes(app: FastifyInstance) {
       // fallback
     }
 
-    // Graph store
+    // Store sizes
     try {
-      const { graphStore } = await import("../lib/shared-stores.js");
-      storeSizes["graph_store_byKey"] = () => (graphStore as any).byKey?.size ?? 0;
-      storeSizes["graph_store_byPlan"] = () => (graphStore as any).byPlan?.size ?? 0;
+      const { getStoreSizes } = await import("../lib/shared-stores.js");
+      const sizes = getStoreSizes();
+      storeSizes["graph_store_byKey"] = () => sizes.graph_byKey;
+      storeSizes["graph_store_byPlan"] = () => sizes.graph_byPlan;
+      storeSizes["prompt_store_byTask"] = () => sizes.prompt_byTask;
+      storeSizes["prompt_store_byPlan"] = () => sizes.prompt_byPlan;
     } catch {
       // fallback
     }
 
-    // Prompt store
+    // Usage store
     try {
-      const { promptStore } = await import("../lib/shared-stores.js");
-      storeSizes["prompt_store_byTask"] = () => (promptStore as any).byTask?.size ?? 0;
-      storeSizes["prompt_store_byPlan"] = () => (promptStore as any).byPlan?.size ?? 0;
+      const { getUsageStore } = await import("../lib/generation/orchestrator.js");
+      const { getUsageStoreSize } = await import("../lib/accounting/reporter.js");
+      storeSizes["usage_records"] = () => getUsageStoreSize(getUsageStore());
+    } catch {
+      // fallback
+    }
+
+    // AI cache
+    try {
+      const { globalCache } = await import("../lib/cache/cache-service.js");
+      storeSizes["ai_cache_entries"] = () => globalCache.getEntryCount() as unknown as number;
     } catch {
       // fallback
     }

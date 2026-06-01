@@ -20,7 +20,7 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/consistent-type-imports": "warn",
-      "no-console": "off",
+      "no-console": "warn",
     },
   },
   {
@@ -31,6 +31,18 @@ export default tseslint.config(
     rules: {
       "no-undef": "off",
       "@typescript-eslint/no-require-imports": "off",
+    },
+  },
+  {
+    files: ["apps/api/src/db/**/*.ts"],
+    rules: {
+      "no-console": "off",
+    },
+  },
+  {
+    files: ["scripts/**/*.mjs", "apps/api/src/db/**/*.ts"],
+    rules: {
+      "no-console": "off",
     },
   },
   {

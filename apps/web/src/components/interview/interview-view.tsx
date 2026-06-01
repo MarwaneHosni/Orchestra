@@ -17,6 +17,8 @@ import {
   resumeSession,
 } from "@/lib/api";
 import type { QuestionPayload, NextQuestionResult } from "@/lib/api";
+import { useProgress } from "@/lib/use-progress";
+import { GenerationProgress } from "./generation-progress";
 
 interface InterviewViewProps {
   sessionId: string;
@@ -27,34 +29,47 @@ interface HistoryEntry {
   value: string;
 }
 
-const INTERVIEW_PHASES = [
-  "ideation",
-  "requirements",
-  "architecture",
-  "security",
-  "database",
-  "backend",
-  "frontend",
-  "core-features",
-  "ai-systems",
-  "testing",
-  "deployment",
-  "monitoring",
+const PHASES = [
+  "ideation", "requirements", "architecture", "security",
+  "database", "backend", "frontend", "core-features",
+  "ai-systems", "testing", "deployment", "monitoring",
 ];
 
 const PHASE_LABELS: Record<string, string> = {
-  ideation: "Ideation",
-  requirements: "Requirements",
-  architecture: "Architecture",
-  security: "Security",
-  database: "Database",
-  backend: "Backend",
-  frontend: "Frontend",
+  ideation: "Ideation & Discovery",
+  requirements: "Requirements Engineering",
+  architecture: "System Architecture",
+  security: "Security Planning",
+  database: "Database Design",
+  backend: "Backend Design",
+  frontend: "Frontend Design",
   "core-features": "Core Features",
   "ai-systems": "AI Systems",
   testing: "Testing",
   deployment: "Deployment",
   monitoring: "Monitoring",
+};
+
+const PHASE_INTROS: Record<string, string> = {
+  ideation: "First, let&apos;s understand your project idea — what you&apos;re building, who it&apos;s for, and what success looks like.",
+  requirements: "Now let&apos;s define the core functionality and user needs that will drive the project plan.",
+  architecture: "Let&apos;s establish the technical foundation — your preferences on tech stack, data flow, and system characteristics.",
+  security: "A few quick questions about compliance and data handling to make sure the plan addresses security requirements.",
+  database: "Let&apos;s think about what data your application will manage and how it should be stored.",
+  backend: "Now let&apos;s define the backend services your application needs to function.",
+  frontend: "Let&apos;s determine the frontend capabilities and rendering approach that fits your project.",
+  "core-features": "A couple of focused questions about your most complex feature and architectural boundaries.",
+  "ai-systems": "Let&apos;s check if your project needs AI or machine learning capabilities.",
+  testing: "A quick look at your testing expectations and quality assurance approach.",
+  deployment: "Let&apos;s consider where and how your application will be deployed.",
+  monitoring: "Finally, let&apos;s think about how you&apos;ll keep the system running smoothly in production.",
+};
+
+const PHASE_GROUP: Record<string, string> = {
+  ideation: "Foundation", requirements: "Foundation", architecture: "Foundation", security: "Foundation",
+  database: "Core", backend: "Core", frontend: "Core", "core-features": "Core", "ai-systems": "Core",
+  testing: "Infrastructure", deployment: "Infrastructure",
+  monitoring: "Operations",
 };
 
 export function InterviewView({ sessionId }: InterviewViewProps) {
@@ -70,18 +85,30 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
   const [error, setError] = useState("");
   const [finished, setFinished] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [workflowId, setWorkflowId] = useState<string | null>(null);
+  const progress = useProgress(workflowId);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [dismissedPhaseNotices, setDismissedPhaseNotices] = useState<Set<string>>(new Set());
   const [announcement, setAnnouncement] = useState("");
+  const [showPhaseIntro, setShowPhaseIntro] = useState(true);
   const questionHeadingRef = useRef<HTMLHeadingElement>(null);
   const finishedHeadingRef = useRef<HTMLHeadingElement>(null);
-  const backButtonRef = useRef<HTMLButtonElement>(null);
+
+  const currentPhaseType = question?.phaseType ?? PHASES[phaseIndex] ?? "";
+  const phaseIntro = PHASE_INTROS[currentPhaseType] ?? "";
 
   const loadNext = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       const result: NextQuestionResult = await getNextQuestion(sessionId);
+      const newPhaseType = result.question?.phaseType ?? PHASES[result.phaseIndex] ?? "";
+
+      // Show phase intro when entering a new phase
+      if (result.question && newPhaseType !== currentPhaseType && history.length > 0) {
+        setShowPhaseIntro(true);
+      }
+
       setQuestion(result.question);
       setInitialValue("");
       setPhaseIndex(result.phaseIndex);
@@ -97,7 +124,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
     } finally {
       setLoading(false);
     }
-  }, [sessionId]);
+  }, [sessionId, currentPhaseType, history.length]);
 
   useEffect(() => {
     const init = async () => {
@@ -148,6 +175,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
         setHistory((prev) => prev.slice(0, -1));
         setHistory((prev) => [...prev, { question, value }]);
       }
+      setShowPhaseIntro(false);
       setAnnouncement("Answer saved");
       await loadNext();
     } catch (e) {
@@ -164,6 +192,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
     try {
       await submitAnswer(sessionId, question.id, "");
       setHistory((prev) => [...prev, { question, value: "" }]);
+      setShowPhaseIntro(false);
       setAnnouncement("Question skipped");
       await loadNext();
     } catch (e) {
@@ -181,73 +210,55 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
     setInitialValue(prev.value);
     setFinished(false);
     setPhaseIndex(Math.max(0, phaseIndex - 1));
+    setShowPhaseIntro(false);
     setAnnouncement(`Returned to previous question: ${prev.question.text}`);
-  };
-
-  const [quickFilling, setQuickFilling] = useState(false);
-
-  const quickFillDefault = (q: QuestionPayload): string => {
-    if (q.options?.includes("Not sure yet")) return "Not sure yet";
-    switch (q.type) {
-      case "select":
-      case "multi_select":
-        return q.options?.[0] ?? "";
-      case "boolean":
-        return "true";
-      case "scale":
-        return "3";
-      default:
-        return "I am not sure yet — do what you think is more optimal";
-    }
-  };
-
-  const handleQuickFill = async () => {
-    setQuickFilling(true);
-    setError("");
-    try {
-      let next = await getNextQuestion(sessionId);
-      while (next.question) {
-        const val = quickFillDefault(next.question);
-        await submitAnswer(sessionId, next.question.id, val);
-        next = await getNextQuestion(sessionId);
-      }
-      await generateBlueprint(sessionId);
-      router.push(`/projects/${sessionId}/summary`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to quick-fill");
-      setQuickFilling(false);
-    }
   };
 
   const handleGenerate = async () => {
     setGenerating(true);
     setError("");
+    const wfId = crypto.randomUUID();
+    setWorkflowId(wfId);
+    console.log("[DEBUG] handleGenerate: starting generation", { sessionId, wfId });
     try {
+      console.log("[DEBUG] handleGenerate: transitioning session to ready_for_generation", { sessionId });
       await transitionSession(sessionId, "ready_for_generation");
-      await generateBlueprint(sessionId);
-      router.push(`/projects/${sessionId}/summary`);
+      console.log("[DEBUG] handleGenerate: session transitioned, calling generateBlueprint", { sessionId, wfId });
+      const start = Date.now();
+      await generateBlueprint(sessionId, wfId);
+      const elapsed = Date.now() - start;
+      console.log("[DEBUG] handleGenerate: generateBlueprint completed", { sessionId, wfId, elapsedMs: elapsed });
+      router.push(`/projects/${sessionId}/summary?generated=1`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to generate plan");
+      const msg = e instanceof Error ? e.message : "Failed to generate plan";
+      console.error("[DEBUG] handleGenerate: generation failed", { sessionId, wfId, error: msg });
+      setError(msg);
       setGenerating(false);
+      setWorkflowId(null);
     }
   };
 
   const showInsufficientNotice = (): boolean => {
-    if (phaseIndex <= 0 || dismissedPhaseNotices.has(INTERVIEW_PHASES[phaseIndex - 1])) return false;
-    const prevPhase = INTERVIEW_PHASES[phaseIndex - 1];
+    if (phaseIndex <= 0 || dismissedPhaseNotices.has(PHASES[phaseIndex - 1])) return false;
+    const prevPhase = PHASES[phaseIndex - 1];
     const prevAnswers = history.filter((h) => h.question.phaseType === prevPhase);
     if (prevAnswers.length === 0) return true;
     const shortAnswers = prevAnswers.filter((h) => h.value.trim().length < 15);
     return shortAnswers.length >= prevAnswers.length / 2;
   };
 
-  const prevPhaseLabel = phaseIndex > 0 ? PHASE_LABELS[INTERVIEW_PHASES[phaseIndex - 1]] : "";
+  const prevPhaseLabel = phaseIndex > 0 ? PHASE_LABELS[PHASES[phaseIndex - 1]] : "";
+
+  const answeredCount = () => {
+    const ids = new Set(history.map((h) => h.question.id));
+    return ids.size;
+  };
 
   if (loading) {
     return (
       <div className="mx-auto max-w-2xl space-y-6" role="status" aria-label="Loading interview">
         <div className="h-5 w-48 animate-pulse rounded bg-gray-200" />
-        <div className="h-2 w-full animate-pulse rounded-full bg-gray-200" />
+        <div className="h-1.5 w-full animate-pulse rounded-full bg-gray-200" />
         <div className="h-6 w-64 animate-pulse rounded bg-gray-200" />
         <div className="h-40 w-full animate-pulse rounded-xl bg-gray-100" />
         <div className="h-10 w-32 animate-pulse rounded-lg bg-gray-200" />
@@ -271,42 +282,33 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
     );
   }
 
-  const currentPhaseType = question?.phaseType ?? INTERVIEW_PHASES[phaseIndex] ?? "";
-
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-5">
       <LiveAnnouncer message={announcement} />
 
       <Breadcrumb items={[{ label: "Projects", href: "/projects" }, { label: "Interview" }]} />
 
       <StepIndicator current="interview" compact />
 
-      <ProgressBar currentPhaseIndex={phaseIndex} total={total} answered={answered} />
+      <ProgressBar currentPhaseIndex={phaseIndex} total={total} answered={answeredCount()} />
 
-      <div className="flex justify-end">
-        <button
-          onClick={handleQuickFill}
-          disabled={quickFilling}
-          aria-busy={quickFilling}
-          className="rounded-lg border border-dashed border-orchestra-300 bg-orchestra-50 px-4 py-2 text-sm font-medium text-orchestra-700 hover:bg-orchestra-100 disabled:opacity-50"
-        >
-          {quickFilling ? "Filling & generating..." : "Quick fill & generate (skip all questions)"}
-        </button>
-      </div>
-
-      {currentPhaseType && (
-        <div className="flex items-center gap-2 border-b border-border pb-3">
-          <span className="rounded-full bg-orchestra-100 px-2.5 py-0.5 text-xs font-medium text-orchestra-700">
-            Phase {INTERVIEW_PHASES.indexOf(currentPhaseType) + 1} of {INTERVIEW_PHASES.length}
-          </span>
-          <span className="text-sm font-medium text-text-primary">
-            {PHASE_LABELS[currentPhaseType] ?? currentPhaseType}
-          </span>
-          {question && (
-            <span className="ml-auto text-xs text-text-secondary" aria-hidden="true">
-              Question {questionIndex + 1}
+      {showPhaseIntro && !finished && phaseIntro && (
+        <div className="rounded-lg border border-orchestra-200 bg-orchestra-50 p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="rounded-full bg-orchestra-100 px-2.5 py-0.5 text-xs font-medium text-orchestra-700">
+              {PHASE_GROUP[currentPhaseType] ?? ""}
             </span>
-          )}
+            <span className="text-sm font-medium text-orchestra-800">
+              {PHASE_LABELS[currentPhaseType] ?? currentPhaseType}
+            </span>
+          </div>
+          <p className="text-sm text-orchestra-700" dangerouslySetInnerHTML={{ __html: phaseIntro }} />
+          <button
+            onClick={() => setShowPhaseIntro(false)}
+            className="mt-2 text-xs font-medium text-orchestra-600 hover:text-orchestra-700 underline underline-offset-2"
+          >
+            Got it &rarr;
+          </button>
         </div>
       )}
 
@@ -320,19 +322,9 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
           ]}
           onProvideMore={handleBack}
           onContinue={() =>
-            setDismissedPhaseNotices((prev) => new Set(prev).add(INTERVIEW_PHASES[phaseIndex - 1]))
+            setDismissedPhaseNotices((prev) => new Set(prev).add(PHASES[phaseIndex - 1]))
           }
         />
-      )}
-
-      {history.length > 0 && !finished && (
-        <button
-          ref={backButtonRef}
-          onClick={handleBack}
-          className="text-sm text-orchestra-600 hover:text-orchestra-700"
-        >
-          &larr; Back to previous question
-        </button>
       )}
 
       {finished ? (
@@ -342,17 +334,17 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
           aria-label="Interview complete"
         >
           <h2 ref={finishedHeadingRef} className="text-xl font-semibold text-text-primary" tabIndex={-1}>
-            All questions answered
+            You&apos;re all set
           </h2>
           <p className="mt-2 text-sm text-text-secondary">
-            You&apos;ve answered all available questions. Review a summary below, then generate your project
-            plan.
+            You&apos;ve answered enough questions to generate a detailed project plan.
+            {answered < total ? " Some advanced questions were skipped — you can refine these after reviewing the plan." : ""}
           </p>
 
           <div className="mx-auto mt-6 max-w-sm space-y-3 text-left">
             <p className="text-xs font-medium uppercase tracking-wide text-text-secondary">Phase summary</p>
-            <ul className="space-y-3">
-              {INTERVIEW_PHASES.map((phase) => {
+            <ul className="space-y-2">
+              {PHASES.map((phase) => {
                 const phaseQ = history.filter((h) => h.question.phaseType === phase);
                 const isEmpty = phaseQ.length === 0;
                 return (
@@ -364,9 +356,12 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
                         : "border-green-200 bg-green-50 text-green-800"
                     }`}
                   >
-                    <span>{PHASE_LABELS[phase] ?? phase}</span>
+                    <span className="flex items-center gap-2">
+                      <span className={`h-1.5 w-1.5 rounded-full ${isEmpty ? "bg-gray-300" : "bg-green-500"}`} />
+                      {PHASE_LABELS[phase] ?? phase}
+                    </span>
                     <span className="text-xs">
-                      {isEmpty ? "No answers" : `${phaseQ.length} answer${phaseQ.length !== 1 ? "s" : ""}`}
+                      {isEmpty ? "Skipped" : `${phaseQ.length} answer${phaseQ.length !== 1 ? "s" : ""}`}
                     </span>
                   </li>
                 );
@@ -392,6 +387,15 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
               {generating ? "Generating..." : "Generate project plan"}
             </button>
           </div>
+          {generating && (
+            <GenerationProgress
+              workflowId={workflowId}
+              onCancel={() => {
+                setGenerating(false);
+                setWorkflowId(null);
+              }}
+            />
+          )}
           {error && (
             <p className="mt-2 text-sm text-red-600" role="alert">
               {error}
@@ -400,14 +404,6 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
         </div>
       ) : question ? (
         <div className="rounded-xl border border-border bg-surface p-6">
-          {history.length > 0 && (
-            <button
-              onClick={handleBack}
-              className="mb-4 text-sm font-medium text-orchestra-600 hover:text-orchestra-700"
-            >
-              &larr; Back to previous question
-            </button>
-          )}
           <QuestionRenderer
             question={question}
             initialValue={initialValue}

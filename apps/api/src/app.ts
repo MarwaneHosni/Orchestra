@@ -5,12 +5,17 @@ import { errorHandler } from "./lib/errors.js";
 import { initDb } from "./db/sqlite/index.js";
 import { createSqliteSessionStore } from "./lib/repositories/session-repository.js";
 import { createSqliteCredentialStore } from "./lib/repositories/credential-repository.js";
+import { createSqlitePromptStore } from "./lib/repositories/prompt-repository.js";
 import { replaceStore } from "./lib/orchestration/store.js";
 import { _replaceCredentialStore } from "./lib/credentials/store.js";
+import { replacePromptStore } from "./lib/shared-stores.js";
 import { registerHealthRoutes } from "./routes/health.js";
 import { registerVersionRoutes } from "./routes/version.js";
 import { registerObservabilityRoutes } from "./routes/observability.js";
 import { registerDiagnosticsRoutes } from "./routes/diagnostics.js";
+import { registerUsageRoutes } from "./routes/usage.js";
+import { registerCacheRoutes } from "./routes/cache.js";
+import { registerProgressRoutes } from "./routes/progress.js";
 import { registerDomainRoutes } from "./domains/index.js";
 
 export async function buildApp() {
@@ -20,6 +25,7 @@ export async function buildApp() {
   await initDb();
   replaceStore(createSqliteSessionStore());
   _replaceCredentialStore(createSqliteCredentialStore());
+  replacePromptStore(createSqlitePromptStore());
 
   const app = Fastify({
     logger: {
@@ -59,18 +65,16 @@ export async function buildApp() {
   await registerVersionRoutes(app);
   await registerObservabilityRoutes(app);
   await registerDiagnosticsRoutes(app);
+  await registerUsageRoutes(app);
+  await registerCacheRoutes(app);
+  await registerProgressRoutes(app);
   await registerDomainRoutes(app);
 
   // Start periodic memory monitoring (every 60s, unref'd so it doesn't keep process alive)
   try {
     const { startMemoryWatch } = await import("./lib/metrics/memory-watch.js");
-    const { graphStore, promptStore } = await import("./lib/shared-stores.js");
-    startMemoryWatch(() => ({
-      graph_byKey: () => (graphStore as any).byKey?.size ?? 0,
-      graph_byPlan: () => (graphStore as any).byPlan?.size ?? 0,
-      prompt_byTask: () => (promptStore as any).byTask?.size ?? 0,
-      prompt_byPlan: () => (promptStore as any).byPlan?.size ?? 0,
-    }));
+    const { getStoreSizes } = await import("./lib/shared-stores.js");
+    startMemoryWatch(() => getStoreSizes());
   } catch (err) {
     app.log.warn({ err }, "Memory watch not started");
   }

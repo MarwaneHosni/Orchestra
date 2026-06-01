@@ -4,6 +4,9 @@ import initSqlJs, { type Database } from "sql.js";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { loadConfig } from "../../lib/config.js";
+import { createModuleLogger } from "../../lib/logging/logger.js";
+
+const log = createModuleLogger("db");
 import * as schema from "./schema/index.js";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -40,10 +43,10 @@ export async function initDb(): Promise<ReturnType<typeof drizzle>> {
       const result = database.exec("PRAGMA integrity_check");
       const integrityResult = result[0]?.values?.[0]?.[0];
       if (integrityResult !== "ok") {
-        console.warn(`[DB] Integrity check warning: ${integrityResult}`);
+        log.warn({ integrityResult }, "integrity_check_warning");
       }
     } catch {
-      console.warn("[DB] Could not run integrity check");
+      log.warn({}, "integrity_check_failed");
     }
   } else {
     database = new SQL.Database();

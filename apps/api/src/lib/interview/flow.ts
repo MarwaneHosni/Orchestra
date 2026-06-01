@@ -1,4 +1,4 @@
-import type { InterviewStatus } from "./types.js";
+import type { InterviewStatus, InterviewMode } from "./types.js";
 import { canTransition, FLOW_TRANSITIONS } from "./types.js";
 
 export interface InterviewState {
@@ -8,11 +8,13 @@ export interface InterviewState {
   currentPhaseIndex: number;
   currentQuestionIndex: number;
   answeredQuestionIds: string[];
+  mode: InterviewMode;
+  refinementComplete: boolean;
   startedAt: Date | null;
   completedAt: Date | null;
 }
 
-export function createInitialState(sessionId: string, projectId: string): InterviewState {
+export function createInitialState(sessionId: string, projectId: string, mode: InterviewMode = "quick"): InterviewState {
   return {
     sessionId,
     projectId,
@@ -20,6 +22,8 @@ export function createInitialState(sessionId: string, projectId: string): Interv
     currentPhaseIndex: 0,
     currentQuestionIndex: 0,
     answeredQuestionIds: [],
+    mode,
+    refinementComplete: false,
     startedAt: null,
     completedAt: null,
   };

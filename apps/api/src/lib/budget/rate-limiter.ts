@@ -41,18 +41,23 @@ export class InMemoryRateLimiter {
       this.windows.set(key, entry);
     }
 
-    entry.count++;
+    if (entry.count >= this.config.maxRequests) {
+      return {
+        allowed: false,
+        remaining: 0,
+        resetAt: entry.resetAt,
+        reason: `Rate limit exceeded. Try again after ${new Date(entry.resetAt).toISOString()}`,
+      };
+    }
 
-    const remaining = Math.max(0, this.config.maxRequests - entry.count);
-    const allowed = entry.count <= this.config.maxRequests;
+    entry.count++;
+    const remaining = this.config.maxRequests - entry.count;
 
     return {
-      allowed,
+      allowed: true,
       remaining,
       resetAt: entry.resetAt,
-      reason: allowed
-        ? null
-        : `Rate limit exceeded. Try again after ${new Date(entry.resetAt).toISOString()}`,
+      reason: null,
     };
   }
 

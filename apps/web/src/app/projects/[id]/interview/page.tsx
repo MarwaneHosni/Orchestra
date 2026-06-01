@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { InterviewView } from "@/components/interview/interview-view";
-import { createOrResumeSession } from "@/lib/api";
+import { createOrResumeSession, resumeSession } from "@/lib/api";
 
 export default function InterviewPage() {
   const params = useParams();
@@ -16,12 +16,10 @@ export default function InterviewPage() {
     const resolve = async () => {
       try {
         // Try rawId as session ID first (new-project flow)
-        const resume = await fetch(`http://localhost:3000/api/v1/interviews/${rawId}/resume`);
-        if (resume.ok) {
-          setSessionId(rawId);
-          setResolving(false);
-          return;
-        }
+        await resumeSession(rawId);
+        setSessionId(rawId);
+        setResolving(false);
+        return;
       } catch {
         // rawId is not a session — treat as project ID
       }

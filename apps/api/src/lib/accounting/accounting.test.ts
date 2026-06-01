@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { estimateCost, calculateActualCost } from "./estimator.js";
 import { createUsageRecord, createInMemoryUsageStore, buildSummary } from "./recorder.js";
 import { getPricing, MODEL_PRICING } from "./pricing.js";
+import { createAccumulatedUsage, accumulateUsage, sumAttempts, sumSuccessfulAttempts, sumFailedAttempts, attemptKey } from "./streaming.js";
+import { queryUsageRecords, buildDiagnostics, getUsageStoreSize } from "./reporter.js";
+import type { UsageAttempt } from "./streaming.js";
 
 describe("MODEL_PRICING", () => {
   it("has entries for all known models", () => {
@@ -227,5 +230,147 @@ describe("buildSummary", () => {
     expect(s.byTaskType["summary"]).toBeDefined();
     expect(s.byProvider["openai"]).toBeDefined();
     expect(s.byProvider["openai"].generations).toBe(2);
+  });
+});
+
+describe("streaming accumulator", () => {
+  it("creates zeroed accumulator", () => {
+    const acc = createAccumulatedUsage();
+    expect(acc.promptTokens).toBe(0);
+    expect(acc.completionTokens).toBe(0);
+    expect(acc.totalTokens).toBe(0);
+  });
+
+  it("accumulates partial chunks", () => {
+    const acc = createAccumulatedUsage();
+    const r1 = accumulateUsage(acc, { promptTokens: 10, completionTokens: 5 });
+    expect(r1.promptTokens).toBe(10);
+    expect(r1.completionTokens).toBe(5);
+    expect(r1.totalTokens).toBe(15);
+
+    const r2 = accumulateUsage(r1, { promptTokens: 5, completionTokens: 3 });
+    expect(r2.promptTokens).toBe(15);
+    expect(r2.completionTokens).toBe(8);
+    expect(r2.totalTokens).toBe(23);
+  });
+
+  it("handles empty chunk", () => {
+    const acc = { promptTokens: 10, completionTokens: 5, totalTokens: 15 };
+    const r = accumulateUsage(acc, {});
+    expect(r.promptTokens).toBe(10);
+    expect(r.completionTokens).toBe(5);
+    expect(r.totalTokens).toBe(15);
+  });
+
+  it("accumulates with explicit totalTokens", () => {
+    const acc = createAccumulatedUsage();
+    const r = accumulateUsage(acc, { promptTokens: 10, completionTokens: 5, totalTokens: 20 });
+    expect(r.totalTokens).toBe(20);
+  });
+
+  it("sumAttempts aggregates all attempts", () => {
+    const a1: UsageAttempt = { provider: "openai", model: "gpt-4o", usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 }, durationMs: 100, success: true };
+    const a2: UsageAttempt = { provider: "openai", model: "gpt-4o-mini", usage: { promptTokens: 3, completionTokens: 2, totalTokens: 5 }, durationMs: 50, success: false };
+    const total = sumAttempts([a1, a2]);
+    expect(total.promptTokens).toBe(13);
+    expect(total.completionTokens).toBe(7);
+    expect(total.totalTokens).toBe(20);
+  });
+
+  it("sumSuccessfulAttempts excludes failed", () => {
+    const a1: UsageAttempt = { provider: "openai", model: "gpt-4o", usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 }, durationMs: 100, success: true };
+    const a2: UsageAttempt = { provider: "openai", model: "gpt-4o-mini", usage: { promptTokens: 3, completionTokens: 2, totalTokens: 5 }, durationMs: 50, success: false };
+    const total = sumSuccessfulAttempts([a1, a2]);
+    expect(total.promptTokens).toBe(10);
+    expect(total.completionTokens).toBe(5);
+    expect(total.totalTokens).toBe(15);
+  });
+
+  it("sumFailedAttempts excludes successful", () => {
+    const a1: UsageAttempt = { provider: "openai", model: "gpt-4o", usage: { promptTokens: 10, completionTokens: 5, totalTokens: 15 }, durationMs: 100, success: true };
+    const a2: UsageAttempt = { provider: "openai", model: "gpt-4o-mini", usage: { promptTokens: 3, completionTokens: 2, totalTokens: 5 }, durationMs: 50, success: false };
+    const total = sumFailedAttempts([a1, a2]);
+    expect(total.promptTokens).toBe(3);
+    expect(total.completionTokens).toBe(2);
+    expect(total.totalTokens).toBe(5);
+  });
+
+  it("attemptKey returns provider/model string", () => {
+    const a: UsageAttempt = { provider: "openai", model: "gpt-4o", usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 }, durationMs: 0, success: true };
+    expect(attemptKey(a)).toBe("openai/gpt-4o");
+  });
+});
+
+describe("reporter", () => {
+  it("queryUsageRecords returns empty report for empty store", () => {
+    const store = createInMemoryUsageStore();
+    const report = queryUsageRecords(store, {});
+    expect(report.records).toHaveLength(0);
+    expect(report.summary.totalGenerations).toBe(0);
+    expect(report.diagnostics.totalRecords).toBe(0);
+  });
+
+  it("queryUsageRecords filters by projectId", () => {
+    const store = createInMemoryUsageStore();
+    store.insertRecord(createUsageRecord({ projectId: "p1", userId: "u1", taskType: "blueprint", provider: "openai", model: "gpt-4o", estimatedPromptTokens: 100, estimatedCompletionTokens: 50, estimatedCost: 0.001, status: "completed", actualPromptTokens: 100, actualCompletionTokens: 50 }));
+    store.insertRecord(createUsageRecord({ projectId: "p2", userId: "u2", taskType: "blueprint", provider: "openai", model: "gpt-4o-mini", estimatedPromptTokens: 50, estimatedCompletionTokens: 25, estimatedCost: 0.001, status: "completed", actualPromptTokens: 50, actualCompletionTokens: 25 }));
+    const report = queryUsageRecords(store, { projectId: "p1" });
+    expect(report.records).toHaveLength(1);
+    expect(report.records[0]!.projectId).toBe("p1");
+  });
+
+  it("buildDiagnostics detects missing metadata", () => {
+    const store = createInMemoryUsageStore();
+    store.insertRecord(createUsageRecord({ projectId: "p1", userId: "u1", taskType: "blueprint", provider: "unknown", model: "unknown", estimatedPromptTokens: 0, estimatedCompletionTokens: 0, estimatedCost: 0, status: "failed" }));
+    store.insertRecord(createUsageRecord({ projectId: "p1", userId: "u1", taskType: "blueprint", provider: "openai", model: "gpt-4o", estimatedPromptTokens: 100, estimatedCompletionTokens: 50, estimatedCost: 0.001, status: "completed", actualPromptTokens: 100, actualCompletionTokens: 50 }));
+    const diag = buildDiagnostics(store.getAllRecords());
+    expect(diag.totalRecords).toBe(2);
+    expect(diag.recordsWithMissingModel).toBe(1);
+    expect(diag.recordsWithMissingProvider).toBe(1);
+    expect(diag.recordsWithMissingCost).toBe(1);
+    expect(diag.recordsWithMissingTokens).toBe(1);
+    expect(diag.failedAttempts).toBe(1);
+    expect(diag.providerList).toContain("openai");
+    expect(diag.providerList).toContain("unknown");
+  });
+
+  it("buildDiagnostics tracks retry/fallback overhead", () => {
+    const store = createInMemoryUsageStore();
+    store.insertRecord(createUsageRecord({ projectId: "p1", userId: "u1", taskType: "blueprint", provider: "openai", model: "gpt-4o", estimatedPromptTokens: 100, estimatedCompletionTokens: 50, estimatedCost: 0.01, status: "failed", retryAttempt: 1, actualPromptTokens: 100, actualCompletionTokens: 50 }));
+    store.insertRecord(createUsageRecord({ projectId: "p1", userId: "u1", taskType: "blueprint", provider: "openai", model: "gpt-4o", estimatedPromptTokens: 100, estimatedCompletionTokens: 50, estimatedCost: 0.01, status: "failed", fallbackAttempt: 1, actualPromptTokens: 100, actualCompletionTokens: 50 }));
+    store.insertRecord(createUsageRecord({ projectId: "p1", userId: "u1", taskType: "blueprint", provider: "openai", model: "gpt-4o", estimatedPromptTokens: 100, estimatedCompletionTokens: 50, estimatedCost: 0.01, status: "completed", actualPromptTokens: 100, actualCompletionTokens: 50 }));
+    const diag = buildDiagnostics(store.getAllRecords());
+    expect(diag.recordsWithRetries).toBe(1);
+    expect(diag.recordsWithFallbacks).toBe(1);
+    expect(diag.failedAttempts).toBe(2);
+  });
+
+  it("queryUsageRecords filters by status", () => {
+    const store = createInMemoryUsageStore();
+    store.insertRecord(createUsageRecord({ projectId: "p1", userId: "u1", taskType: "blueprint", provider: "openai", model: "gpt-4o", estimatedPromptTokens: 100, estimatedCompletionTokens: 50, estimatedCost: 0.01, status: "completed", actualPromptTokens: 100, actualCompletionTokens: 50 }));
+    store.insertRecord(createUsageRecord({ projectId: "p1", userId: "u1", taskType: "blueprint", provider: "openai", model: "gpt-4o", estimatedPromptTokens: 100, estimatedCompletionTokens: 50, estimatedCost: 0.01, status: "failed" }));
+    const completed = queryUsageRecords(store, { status: "completed" });
+    expect(completed.records).toHaveLength(1);
+    expect(completed.records[0]!.status).toBe("completed");
+    const failed = queryUsageRecords(store, { status: "failed" });
+    expect(failed.records).toHaveLength(1);
+    expect(failed.records[0]!.status).toBe("failed");
+  });
+
+  it("buildSummary aggregates correctly via reporter", () => {
+    const store = createInMemoryUsageStore();
+    store.insertRecord(createUsageRecord({ projectId: "p1", userId: "u1", taskType: "blueprint", provider: "openai", model: "gpt-4o", estimatedPromptTokens: 100, estimatedCompletionTokens: 50, estimatedCost: 0.01, status: "completed", actualPromptTokens: 100, actualCompletionTokens: 50 }));
+    store.insertRecord(createUsageRecord({ projectId: "p1", userId: "u1", taskType: "blueprint", provider: "openai", model: "gpt-4o-mini", estimatedPromptTokens: 50, estimatedCompletionTokens: 25, estimatedCost: 0.001, status: "completed", actualPromptTokens: 50, actualCompletionTokens: 25 }));
+    const report = queryUsageRecords(store, {});
+    expect(report.summary.totalGenerations).toBe(2);
+    expect(report.summary.totalTokens).toBe(225);
+    expect(report.summary.byModel["openai/gpt-4o"]).toBeDefined();
+  });
+
+  it("getUsageStoreSize returns record count", () => {
+    const store = createInMemoryUsageStore();
+    expect(getUsageStoreSize(store)).toBe(0);
+    store.insertRecord(createUsageRecord({ projectId: "p1", userId: "u1", taskType: "blueprint", provider: "openai", model: "gpt-4o", estimatedPromptTokens: 100, estimatedCompletionTokens: 50, estimatedCost: 0.001, status: "completed", actualPromptTokens: 100, actualCompletionTokens: 50 }));
+    expect(getUsageStoreSize(store)).toBe(1);
   });
 });

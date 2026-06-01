@@ -63,7 +63,7 @@ export type GenerationMetadata = z.infer<typeof GenerationMetadataSchema>;
 // ─────────────────────────────────────────────────────────────
 
 export const ArtifactBaseSchema = z.object({
-  planId: z.string().uuid(),
+  planId: z.string().min(1),
   planVersion: z.number().int().positive(),
   projectId: z.string().uuid(),
   sessionId: z.string().uuid(),

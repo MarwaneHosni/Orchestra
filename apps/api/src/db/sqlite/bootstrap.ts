@@ -1,4 +1,7 @@
 import { getDb } from "./index.js";
+import { createModuleLogger } from "../../lib/logging/logger.js";
+
+const log = createModuleLogger("db");
 
 const CREATE_TABLES_SQL = `
 CREATE TABLE IF NOT EXISTS projects (
@@ -140,8 +143,11 @@ CREATE TABLE IF NOT EXISTS task_dependencies (
 
 CREATE TABLE IF NOT EXISTS prompt_artifacts (
   id TEXT PRIMARY KEY,
-  task_id TEXT NOT NULL REFERENCES execution_tasks(id),
+  task_id TEXT NOT NULL,
+  plan_id TEXT NOT NULL DEFAULT '',
+  plan_version INTEGER NOT NULL DEFAULT 0,
   prompt_text TEXT NOT NULL,
+  sections_json TEXT,
   result_text TEXT,
   version INTEGER NOT NULL DEFAULT 1,
   status TEXT NOT NULL DEFAULT 'pending',
@@ -214,6 +220,40 @@ CREATE TABLE IF NOT EXISTS workflow_runs (
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS ai_cache_entries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  cache_key TEXT NOT NULL UNIQUE,
+  prompt_version INTEGER NOT NULL DEFAULT 0,
+  schema_version TEXT NOT NULL,
+  model TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  temperature REAL NOT NULL DEFAULT 0.7,
+  system_prompt_hash TEXT NOT NULL,
+  messages_hash TEXT NOT NULL,
+  response_content TEXT NOT NULL,
+  response_model TEXT NOT NULL,
+  finish_reason TEXT NOT NULL DEFAULT 'stop',
+  usage_prompt_tokens INTEGER NOT NULL DEFAULT 0,
+  usage_completion_tokens INTEGER NOT NULL DEFAULT 0,
+  usage_total_tokens INTEGER NOT NULL DEFAULT 0,
+  hit_count INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  last_accessed_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_cache_model ON ai_cache_entries(model);
+CREATE INDEX IF NOT EXISTS idx_ai_cache_provider ON ai_cache_entries(provider);
+CREATE INDEX IF NOT EXISTS idx_ai_cache_created ON ai_cache_entries(created_at);
+
+CREATE TABLE IF NOT EXISTS ai_cache_invalidation_markers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  marker_key TEXT NOT NULL UNIQUE,
+  prompt_version INTEGER NOT NULL,
+  schema_version TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
 `;
 
 export function createTables(): void {
@@ -227,7 +267,7 @@ export function createTables(): void {
     try {
       db.run(stmt);
     } catch (err) {
-      console.warn("[DB Bootstrap] Table creation warning:", (err as Error).message);
+      log.warn({ err: (err as Error).message }, "table_creation_warning");
     }
   }
 }

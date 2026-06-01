@@ -21,9 +21,10 @@ export interface IdeaRecord {
 export interface SessionRecord {
   id: string;
   projectId: string;
-  status: "draft" | "in_progress" | "waiting_for_answers" | "ready_for_generation" | "completed";
+  status: "draft" | "in_progress" | "waiting_for_answers" | "ready_for_generation" | "refining" | "completed";
   currentPhaseIndex: number;
   currentQuestionIndex: number;
+  mode: "quick" | "advanced";
   startedAt: string | null;
   completedAt: string | null;
   createdAt: string;

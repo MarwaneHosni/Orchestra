@@ -11,9 +11,11 @@ export {
 
 export type {
   InterviewStatus,
+  InterviewMode,
   QuestionDefinition,
   QuestionPhaseType,
   QuestionType,
+  QuestionCategory,
   DependencyRule,
   ValidationRule,
   CaptureAs,

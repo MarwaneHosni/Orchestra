@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { createModuleLogger } from "./logging/logger.js";
+
+const log = createModuleLogger("config");
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
@@ -17,10 +20,7 @@ export function loadConfig(): Env {
   if (_config) return _config;
   const result = envSchema.safeParse(process.env);
   if (!result.success) {
-    console.error("Invalid environment variables:");
-    for (const issue of result.error.issues) {
-      console.error(`  ${issue.path.join(".")}: ${issue.message}`);
-    }
+    log.error({ issues: result.error.issues }, "invalid_environment_config");
     process.exit(1);
   }
   _config = result.data;
