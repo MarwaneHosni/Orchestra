@@ -173,6 +173,14 @@ function repairPromptSections(
     }
   }
 
+  // Ensure agent tips always have content — the AI may write tips without
+  // ### sub-headings, leaving the parsed arrays empty after extraction
+  const tips = sections.agentTips;
+  if (tips.security.length === 0) tips.security = ["Validate all inputs and sanitize outputs", "Do not hardcode secrets or credentials"];
+  if (tips.edgeCases.length === 0) tips.edgeCases = ["Consider empty states", "Consider error states", "Consider boundary conditions"];
+  if (tips.dependencyWarnings.length === 0) tips.dependencyWarnings = ["Ensure all imported modules are declared", "Check type definitions match between interfaces"];
+  if (tips.commonBugs.length === 0) tips.commonBugs = ["Off-by-one errors in loops", "Race conditions in async operations"];
+
   return formatPrompt(sections);
 }
 
