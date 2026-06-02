@@ -47,7 +47,7 @@ export function StatusBadge({
 
 export function SectionDivider({ title, count }: { title: string; count?: number }) {
   return (
-    <div className="flex items-center gap-3 py-2" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>
+    <div className="flex items-center gap-3 py-3" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>
       <span
         style={{
           color: "var(--color-text-muted)",

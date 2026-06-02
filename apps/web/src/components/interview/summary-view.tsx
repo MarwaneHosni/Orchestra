@@ -237,7 +237,7 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
                   display: "flex",
                   alignItems: "center",
                   gap: 8,
-                  padding: "8px 0",
+                  padding: "12px 0",
                   borderBottom: "1px solid #1a1a1a",
                   fontSize: 13,
                   cursor: "default",

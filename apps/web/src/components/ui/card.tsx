@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 export function Card({ className, children, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div style={{ borderRadius: 3, padding: "14px 16px" }} className={cn("border border-border-subtle bg-bg-elevated", className)} {...props}>
+    <div style={{ borderRadius: 3, padding: "18px 20px" }} className={cn("border border-border-subtle bg-bg-elevated", className)} {...props}>
       {children}
     </div>
   );

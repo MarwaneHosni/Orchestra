@@ -57,7 +57,7 @@ export function GenerationProgress({ workflowId, onCancel }: GenerationProgressP
   };
 
   return (
-    <div style={{ borderRadius: 3, padding: "14px 16px" }} className="space-y-4 border border-border-subtle bg-bg-elevated">
+    <div style={{ borderRadius: 3, padding: "18px 20px" }} className="space-y-4 border border-border-subtle bg-bg-elevated">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <StatusIndicator status={status} />

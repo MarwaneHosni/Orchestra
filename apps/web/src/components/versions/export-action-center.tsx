@@ -88,7 +88,7 @@ export function ExportActionCenter({ snapshot }: ExportActionCenterProps) {
         </p>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         <span className="text-xs text-text-secondary">Format:</span>
         <button
           onClick={() => setFormat("markdown")}
@@ -120,8 +120,8 @@ export function ExportActionCenter({ snapshot }: ExportActionCenterProps) {
           const existing = exports.find((e) => e.type === type && e.format === format);
 
           return (
-            <div key={type} className="rounded border border-border-default bg-bg-elevated p-3">
-              <div className="flex items-start justify-between gap-3">
+            <div key={type} className="rounded border border-border-default bg-bg-elevated p-4">
+              <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-text-primary">{EXPORT_TYPE_LABELS[type]}</p>
                   <p className="mt-0.5 text-xs text-text-secondary">{EXPORT_TYPE_DESC[type]}</p>
@@ -141,7 +141,7 @@ export function ExportActionCenter({ snapshot }: ExportActionCenterProps) {
               </div>
 
               {existing && (
-                <div className="mt-2 flex items-center gap-3 border-t border-border-subtle pt-2 text-xs">
+                <div className="mt-2 flex items-center gap-4 border-t border-border-subtle pt-2 text-xs">
                   <span className="text-text-secondary">
                     Exported {new Date(existing.createdAt).toLocaleDateString()}
                   </span>
@@ -165,13 +165,13 @@ export function ExportActionCenter({ snapshot }: ExportActionCenterProps) {
       </div>
 
       {successMessage && (
-        <div className="rounded border border-accent-green-dim bg-accent-green-dim/30 p-3 text-xs text-accent-green" role="status">
+        <div className="rounded border border-accent-green-dim bg-accent-green-dim/30 p-4 text-xs text-accent-green" role="status">
           {successMessage}
         </div>
       )}
 
       {error && (
-        <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-3 text-xs text-accent-red" role="alert">
+        <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-4 text-xs text-accent-red" role="alert">
           {error}
         </div>
       )}
@@ -194,7 +194,7 @@ export function ExportActionCenter({ snapshot }: ExportActionCenterProps) {
                     {new Date(record.createdAt).toLocaleDateString()}
                   </span>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex gap-4">
                   <button
                     onClick={() => handleRedownload(record)}
                     className="text-accent-purple hover:underline"

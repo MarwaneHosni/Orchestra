@@ -78,7 +78,7 @@ export function TaskNodeView({ task, index, total, isSelected, onSelect }: TaskN
           borderRadius: 3,
           border: `1px solid ${isSelected ? "var(--color-accent-purple)" : "var(--color-border-subtle)"}`,
           background: isSelected ? "var(--color-accent-purple-dim)" : "var(--color-bg-surface)",
-          padding: "10px 14px",
+          padding: "12px 18px",
           textAlign: "left",
           fontFamily: "'JetBrains Mono', monospace",
           marginBottom: index < total - 1 ? 0 : 0,

@@ -70,7 +70,7 @@ function MetricCard({
   variant?: "default" | "warning";
 }) {
   return (
-    <div className="rounded border border-border-default bg-bg-elevated p-3">
+    <div className="rounded border border-border-default bg-bg-elevated p-4">
       <p className="text-xs text-text-secondary">{label}</p>
       <p
         className={`mt-1 text-lg font-semibold ${variant === "warning" && value > 0 ? "text-accent-red" : "text-text-primary"}`}

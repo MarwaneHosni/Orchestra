@@ -131,7 +131,7 @@ export default function SettingsPage() {
       </div>
 
       {error && (
-        <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-3 text-xs text-accent-red">{error}</div>
+        <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-4 text-xs text-accent-red">{error}</div>
       )}
 
       {showAdd && (

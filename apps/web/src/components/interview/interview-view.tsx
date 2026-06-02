@@ -399,7 +399,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
           )}
         </div>
       ) : question ? (
-        <div className="rounded border border-border-default bg-bg-elevated p-[18px]">
+        <div className="rounded border border-border-default bg-bg-elevated p-6">
           <QuestionRenderer
             question={question}
             initialValue={initialValue}
