@@ -18,7 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to main content
         </a>
         <Navbar />
-        <main id="main-content" style={{ maxWidth: 800, margin: "0 auto", padding: "56px 16px 40px" }} className="" role="main">
+        <main id="main-content" style={{ maxWidth: 960, margin: "0 auto", padding: "56px 16px 40px" }} className="" role="main">
           {children}
         </main>
       </body>
