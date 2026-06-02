@@ -5,6 +5,7 @@ export interface GraphStore {
   saveGraph(graph: TaskGraph): void;
   getGraph(planId: string, version: number): TaskGraph | undefined;
   getGraphsByPlan(planId: string): TaskGraph[];
+  updateTaskStatus(planId: string, planVersion: number, taskId: string, newStatus: string): TaskNode | undefined;
 }
 
 export function createInMemoryGraphStore(): GraphStore {
@@ -36,6 +37,15 @@ export function createInMemoryGraphStore(): GraphStore {
     },
     getGraphsByPlan(planId) {
       return [...getPlanList(planId)];
+    },
+    updateTaskStatus(planId, planVersion, taskId, newStatus) {
+      const key = planKey(planId, planVersion);
+      const graph = byKey.get(key);
+      if (!graph) return undefined;
+      const task = graph.tasks.find((t) => t.id === taskId);
+      if (!task) return undefined;
+      task.status = newStatus as TaskNode["status"];
+      return { ...task };
     },
   };
 }

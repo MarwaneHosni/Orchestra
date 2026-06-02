@@ -9,6 +9,7 @@ interface TaskDetailProps {
   allTasks: TaskData[];
   onClose: () => void;
   onShowPrompt: (taskId: string) => void;
+  onStatusChange: (taskId: string, newStatus: string) => void;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -20,7 +21,7 @@ const STATUS_LABELS: Record<string, string> = {
   complete: "Complete",
 };
 
-export function TaskDetail({ task, allTasks, onClose, onShowPrompt }: TaskDetailProps) {
+export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChange }: TaskDetailProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const depNames = task.dependencies.map((d) => allTasks.find((t) => t.id === d.taskId)).filter(Boolean);
 
@@ -70,6 +71,19 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt }: TaskDetail
             <p className="mt-1 text-xs">{task.failureReason}</p>
           </div>
         )}
+
+        <div className="mt-4 flex items-center gap-3 rounded-lg border border-border p-3">
+          <input
+            type="checkbox"
+            id="task-done"
+            checked={task.status === "complete"}
+            onChange={() => onStatusChange(task.id, task.status === "complete" ? "pending" : "complete")}
+            className="h-5 w-5 rounded border-gray-300 text-orchestra-600 focus:ring-orchestra-500"
+          />
+          <label htmlFor="task-done" className="text-sm font-medium text-text-primary">
+            {task.status === "complete" ? "Completed" : "Mark as complete"}
+          </label>
+        </div>
 
         <div className="mt-6">
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">

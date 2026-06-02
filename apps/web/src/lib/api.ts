@@ -161,6 +161,17 @@ export async function getLatestBlueprint(sessionId: string): Promise<BlueprintRe
   return res.json() as Promise<BlueprintResult>;
 }
 
+export async function updateTaskStatus(
+  planId: string,
+  taskId: string,
+  status: string,
+): Promise<{ id: string; status: string }> {
+  return request(`/api/v1/plans/${planId}/tasks/${taskId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
 export async function cancelGeneration(workflowId: string): Promise<void> {
   await request(`/api/v1/progress/${workflowId}/cancel`, { method: "POST" });
 }

@@ -192,6 +192,20 @@ export async function registerExecutionTaskRoutes(app: FastifyInstance) {
     return prompt;
   });
 
+  app.patch("/api/v1/plans/:planId/tasks/:taskId/status", async (request, reply) => {
+    const { planId, taskId } = request.params as { planId: string; taskId: string };
+    const body = request.body as { status?: string };
+    if (!body.status) throw new Error("status is required");
+    const validStatuses = ["pending", "blocked", "ready", "in_progress", "complete", "needs_review"];
+    if (!validStatuses.includes(body.status)) {
+      throw new Error(`Invalid status "${body.status}". Valid: ${validStatuses.join(", ")}`);
+    }
+
+    const graph = getGraphStore().updateTaskStatus(planId, 1, taskId, body.status);
+    if (!graph) throw new NotFoundError("Task", taskId);
+    return graph;
+  });
+
   app.get("/api/v1/plans/:planId/prompts/export", async (request) => {
     const tracer = getTracer();
     const span = tracer.startSpan("export.bundle");

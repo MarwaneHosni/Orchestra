@@ -6,6 +6,7 @@ import { TaskNodeView } from "./task-node";
 import { TaskDetail } from "./task-detail";
 import { PromptPreview } from "./prompt-preview";
 import { getApiBaseUrl } from "@/lib/api-config";
+import { updateTaskStatus } from "@/lib/api";
 import { StepIndicator } from "@/components/ui/step-indicator";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import type { TaskData } from "./task-node";
@@ -70,6 +71,22 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
     };
     load();
   }, [sessionId]);
+
+  const handleStatusChange = async (taskId: string, newStatus: string) => {
+    try {
+      await updateTaskStatus(`plan-${sessionId}`, taskId, newStatus);
+      setGraph((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          tasks: prev.tasks.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)),
+        };
+      });
+      setSelectedTask((prev) => (prev?.id === taskId ? { ...prev, status: newStatus } : prev));
+    } catch (e) {
+      console.error("Failed to update task status", e);
+    }
+  };
 
   if (loading) {
     return (
@@ -224,6 +241,7 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
             setPromptTaskId(id);
             setSelectedTask(null);
           }}
+          onStatusChange={handleStatusChange}
         />
       )}
 
