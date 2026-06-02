@@ -121,7 +121,7 @@ export default function SettingsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold text-text-primary">Settings</h1>
-          <p className="mt-40 text-xs text-text-secondary">
+          <p className="mt-2 text-xs text-text-secondary">
             Manage your AI provider connections. Keys are encrypted and never exposed.
           </p>
         </div>

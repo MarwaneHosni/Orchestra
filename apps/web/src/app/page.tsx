@@ -28,11 +28,11 @@ const steps = [
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-8" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+    <div className="space-y-6" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
       <div className="flex items-center justify-between">
         <div>
-          <h1 style={{ fontSize: 16, fontWeight: 600, color: "var(--color-text-primary)" }}>Dashboard</h1>
-          <p style={{ marginTop: 4, fontSize: 12, color: "var(--color-text-secondary)" }}>
+          <h1 style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-primary)" }}>Dashboard</h1>
+          <p style={{ marginTop: 2, fontSize: 11, color: "var(--color-text-secondary)" }}>
             Welcome to Orchestra. Start by creating your first project.
           </p>
         </div>
@@ -44,10 +44,10 @@ export default function DashboardPage() {
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
         <thead>
           <tr style={{ borderBottom: "1px solid var(--color-border-default)" }}>
-            <th style={{ padding: "14px 0", textAlign: "left", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-muted)", fontWeight: 400 }}>
+            <th style={{ padding: "8px 0", textAlign: "left", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-muted)", fontWeight: 400 }}>
               Metric
             </th>
-            <th style={{ padding: "14px 0", textAlign: "right", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-muted)", fontWeight: 400 }}>
+            <th style={{ padding: "8px 0", textAlign: "right", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-muted)", fontWeight: 400 }}>
               Value
             </th>
           </tr>
@@ -55,11 +55,11 @@ export default function DashboardPage() {
         <tbody>
           {statRows.map((row) => (
             <tr key={row.label} style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
-              <td style={{ padding: "14px 0", color: "var(--color-text-secondary)" }}>
+              <td style={{ padding: "10px 0", color: "var(--color-text-secondary)" }}>
                 {row.label}
               </td>
-              <td style={{ padding: "14px 0", textAlign: "right", fontWeight: 600, color: "var(--color-text-primary)" }}>
-                <span style={{ fontSize: 18 }}>{row.value}</span>
+              <td style={{ padding: "10px 0", textAlign: "right", fontWeight: 600, color: "var(--color-text-primary)" }}>
+                <span style={{ fontSize: 16 }}>{row.value}</span>
               </td>
             </tr>
           ))}
@@ -71,13 +71,13 @@ export default function DashboardPage() {
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
         <thead>
           <tr style={{ borderBottom: "1px solid var(--color-border-default)" }}>
-            <th style={{ padding: "14px 0", width: 32, textAlign: "left", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-muted)", fontWeight: 400 }}>
+            <th style={{ padding: "8px 0", width: 32, textAlign: "left", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-muted)", fontWeight: 400 }}>
               #
             </th>
-            <th style={{ padding: "14px 0", textAlign: "left", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-muted)", fontWeight: 400 }}>
+            <th style={{ padding: "8px 0", textAlign: "left", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-muted)", fontWeight: 400 }}>
               Step
             </th>
-            <th style={{ padding: "14px 0", textAlign: "left", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-muted)", fontWeight: 400 }}>
+            <th style={{ padding: "8px 0", textAlign: "left", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-muted)", fontWeight: 400 }}>
               Description
             </th>
           </tr>
@@ -85,13 +85,13 @@ export default function DashboardPage() {
         <tbody>
           {steps.map((s) => (
             <tr key={s.step} style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
-              <td style={{ padding: "14px 0", color: "var(--color-accent-purple)", fontWeight: 600 }}>
+              <td style={{ padding: "10px 0", color: "var(--color-accent-purple)", fontWeight: 600 }}>
                 {s.step}
               </td>
-              <td style={{ padding: "14px 0", color: "var(--color-text-primary)", fontWeight: 500 }}>
+              <td style={{ padding: "10px 0", color: "var(--color-text-primary)", fontWeight: 500 }}>
                 {s.title}
               </td>
-              <td style={{ padding: "14px 0", color: "var(--color-text-secondary)" }}>
+              <td style={{ padding: "10px 0", color: "var(--color-text-secondary)" }}>
                 {s.desc}
               </td>
             </tr>
