@@ -17,11 +17,7 @@ export default function InterviewPage() {
     const resolve = async () => {
       try {
         // Try rawId as session ID first (new-project flow)
-        const resumeResult = await resumeSession(rawId);
-        if (resumeResult.session.status === "completed") {
-          router.push(`/projects/${rawId}/summary`);
-          return;
-        }
+        await resumeSession(rawId);
         setSessionId(rawId);
         setResolving(false);
         return;
@@ -33,7 +29,7 @@ export default function InterviewPage() {
       try {
         const result = await createOrResumeSession(rawId);
         if (result.status === "completed") {
-          router.push(`/projects/${result.sessionId}/summary`);
+          router.push(`/projects/${rawId}/summary`);
           return;
         }
         setSessionId(result.sessionId);
