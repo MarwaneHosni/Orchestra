@@ -19,13 +19,14 @@ export function ErrorState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center rounded-xl border border-red-200 bg-red-50 px-6 py-16 text-center",
+        "flex flex-col items-center justify-center rounded border border-accent-red-dim bg-accent-red-dim/30 px-6 py-16 text-center",
         className,
       )}
       role="alert"
     >
-      <h3 className="mb-2 text-lg font-semibold text-red-800">{title}</h3>
-      <p className="mb-6 max-w-sm text-sm text-red-600">{message}</p>
+      <span className="mb-3 text-accent-red text-lg" aria-hidden="true">✗</span>
+      <h3 className="mb-2 text-sm font-semibold text-text-primary">{title}</h3>
+      <p className="mb-6 max-w-sm text-xs text-text-secondary">{message}</p>
       {onRetry && (
         <Button variant="secondary" onClick={onRetry}>
           Try again

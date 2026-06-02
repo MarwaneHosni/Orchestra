@@ -28,10 +28,10 @@ const WHY_MATTERS: Record<string, string> = {
 };
 
 const CATEGORY_LABELS: Record<string, { label: string; color: string }> = {
-  critical: { label: "Required", color: "bg-orchestra-100 text-orchestra-700" },
-  "high-value": { label: "Important", color: "bg-blue-100 text-blue-700" },
-  optional: { label: "Optional", color: "bg-gray-100 text-gray-600" },
-  contextual: { label: "Context dependent", color: "bg-amber-100 text-amber-700" },
+  critical: { label: "Required", color: "bg-accent-purple-dim text-accent-purple" },
+  "high-value": { label: "Important", color: "bg-bg-hover text-text-secondary" },
+  optional: { label: "Optional", color: "bg-bg-hover text-text-muted" },
+  contextual: { label: "Context dependent", color: "bg-accent-amber-dim/30 text-accent-amber" },
 };
 
 const NOT_SURE_TEXT = "I am not sure yet — do what you think is more optimal";
@@ -89,29 +89,29 @@ export function QuestionRenderer({
       <div>
         <div className="flex items-center gap-2 mb-2">
           {!question.required && (
-            <span className="rounded border border-dashed border-gray-300 px-2 py-0.5 text-xs text-gray-500">
+            <span className="rounded border border-dashed border-border-default px-2 py-0.5 text-xs text-text-muted">
               Optional
             </span>
           )}
-          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${catInfo.color}`}>
+          <span className={`rounded px-2 py-0.5 text-xs font-medium ${catInfo.color}`}>
             {catInfo.label}
           </span>
         </div>
 
-        <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-text-primary">
+        <h2 ref={headingRef} tabIndex={-1} className="text-sm font-semibold text-text-primary">
           {question.text}
         </h2>
 
-        {question.helpText && <p className="mt-1 text-sm text-text-secondary">{question.helpText}</p>}
+        {question.helpText && <p className="mt-1 text-xs text-text-secondary">{question.helpText}</p>}
 
         {whyMatters && (
-          <p className="mt-2 text-xs text-gray-500 italic">
+          <p className="mt-2 text-xs text-text-muted italic">
             Why this matters: {whyMatters}
           </p>
         )}
 
         {question.validation?.maxLength && (
-          <p className="mt-1 text-xs text-text-secondary">
+          <p className="mt-1 text-xs text-text-muted">
             Max {question.validation.maxLength} characters
             {value.length > 0 && ` · ${value.length}/${question.validation.maxLength}`}
           </p>
@@ -128,7 +128,7 @@ export function QuestionRenderer({
       )}
 
       {error && (
-        <p id={errorId} className="text-sm text-red-600" role="alert">
+        <p id={errorId} className="text-xs text-accent-red" role="alert">
           {error}
         </p>
       )}
@@ -136,14 +136,14 @@ export function QuestionRenderer({
       <div className="flex flex-wrap gap-3">
         <button
           onClick={handleSubmit}
-          className="rounded-lg bg-orchestra-600 px-6 py-2 text-sm font-medium text-white hover:bg-orchestra-700 focus:outline-none focus:ring-2 focus:ring-orchestra-500 focus:ring-offset-2"
+          className="rounded bg-accent-purple px-6 py-2 text-sm font-medium text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-accent-purple focus:ring-offset-1 focus:ring-offset-bg-base"
         >
           {question.required ? "Submit answer" : "Save"}
         </button>
         {!question.required && (
           <button
             onClick={onSkip}
-            className="rounded-lg border border-border bg-white px-6 py-2 text-sm font-medium text-text-secondary hover:bg-gray-50"
+            className="rounded border border-border-default bg-bg-surface px-6 py-2 text-sm font-medium text-text-secondary hover:bg-bg-hover"
           >
             Skip
           </button>
@@ -152,7 +152,7 @@ export function QuestionRenderer({
           <button
             type="button"
             onClick={handleSelectDefault}
-            className="rounded-lg border border-dashed border-gray-300 bg-white px-4 py-2 text-sm text-gray-500 hover:bg-gray-50"
+            className="rounded border border-dashed border-border-default bg-bg-surface px-4 py-2 text-sm text-text-muted hover:bg-bg-hover"
           >
             I&apos;m not sure
           </button>
@@ -174,9 +174,9 @@ function QuestionInput({
   error: string;
 }) {
   const baseInput = cn(
-    "block w-full rounded-lg border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary",
-    "focus:outline-none focus:ring-2 focus:ring-orchestra-500 focus:border-orchestra-500",
-    error ? "border-red-500" : "border-border",
+    "block w-full rounded border bg-bg-surface px-3 py-2 text-sm font-mono text-text-primary placeholder:text-text-muted",
+    "focus:outline-none focus:ring-2 focus:ring-accent-purple focus:border-accent-purple",
+    error ? "border-accent-red" : "border-border-default",
   );
 
   switch (question.type) {
@@ -192,6 +192,7 @@ function QuestionInput({
             className={baseInput}
             aria-invalid={!!error}
             aria-required={question.required}
+            style={{ fontFamily: "'JetBrains Mono', monospace" }}
           />
         </div>
       );
@@ -203,10 +204,10 @@ function QuestionInput({
             <label
               key={opt}
               className={cn(
-                "flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-colors",
+                "flex cursor-pointer items-center gap-3 rounded border px-4 py-3 text-sm transition-colors",
                 value === opt
-                  ? "border-orchestra-500 bg-orchestra-50 text-orchestra-700"
-                  : "border-border hover:bg-gray-50",
+                  ? "border-accent-purple bg-accent-purple-dim text-accent-purple"
+                  : "border-border-default hover:bg-bg-hover",
               )}
             >
               <input
@@ -215,7 +216,7 @@ function QuestionInput({
                 value={opt}
                 checked={value === opt}
                 onChange={(e) => onChange(e.target.value)}
-                className="h-4 w-4 accent-orchestra-600"
+                className="h-3.5 w-3.5 accent-accent-purple"
               />
               {opt}
             </label>
@@ -235,17 +236,17 @@ function QuestionInput({
             <label
               key={opt}
               className={cn(
-                "flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-colors",
+                "flex cursor-pointer items-center gap-3 rounded border px-4 py-3 text-sm transition-colors",
                 selected.includes(opt)
-                  ? "border-orchestra-500 bg-orchestra-50 text-orchestra-700"
-                  : "border-border hover:bg-gray-50",
+                  ? "border-accent-purple bg-accent-purple-dim text-accent-purple"
+                  : "border-border-default hover:bg-bg-hover",
               )}
             >
               <input
                 type="checkbox"
                 checked={selected.includes(opt)}
                 onChange={() => toggle(opt)}
-                className="h-4 w-4 accent-orchestra-600 rounded"
+                className="h-3.5 w-3.5 accent-accent-purple rounded"
               />
               {opt}
             </label>
@@ -273,10 +274,10 @@ function QuestionInput({
                 <label
                   htmlFor={`${question.id}-${opt}`}
                   className={cn(
-                    "block cursor-pointer rounded-lg border px-6 py-3 text-center text-sm font-medium transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-orchestra-500",
+                    "block cursor-pointer rounded border px-6 py-3 text-center text-sm font-medium transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent-purple",
                     isSelected
-                      ? "border-orchestra-500 bg-orchestra-50 text-orchestra-700"
-                      : "border-border text-text-secondary hover:bg-gray-50",
+                      ? "border-accent-purple bg-accent-purple-dim text-accent-purple"
+                      : "border-border-default text-text-secondary hover:bg-bg-hover",
                   )}
                 >
                   {opt === "true" ? "Yes" : "No"}
@@ -307,10 +308,10 @@ function QuestionInput({
                 <label
                   htmlFor={`${question.id}-scale-${n}`}
                   className={cn(
-                    "flex h-12 w-12 cursor-pointer items-center justify-center rounded-lg border text-sm font-medium transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-orchestra-500",
+                    "flex h-12 w-12 cursor-pointer items-center justify-center rounded border text-sm font-medium transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent-purple",
                     isSelected
-                      ? "border-orchestra-500 bg-orchestra-50 text-orchestra-700"
-                      : "border-border text-text-secondary hover:bg-gray-50",
+                      ? "border-accent-purple bg-accent-purple-dim text-accent-purple"
+                      : "border-border-default text-text-secondary hover:bg-bg-hover",
                   )}
                 >
                   {n}

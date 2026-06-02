@@ -52,8 +52,8 @@ export default function InterviewPage() {
   if (error) {
     return (
       <div className="mx-auto max-w-2xl py-16">
-        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center" role="alert">
-          <p className="text-red-800">{error}</p>
+        <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-6 text-center" role="alert">
+          <p className="text-accent-red">{error}</p>
         </div>
       </div>
     );

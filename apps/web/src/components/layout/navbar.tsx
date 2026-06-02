@@ -31,10 +31,10 @@ export function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/80">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6">
-        <Link href="/" className="flex items-center gap-2 font-semibold text-text-primary">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orchestra-600 text-xs font-bold text-white">
+    <header className="sticky top-0 z-50 border-b border-border-subtle bg-bg-base/95 backdrop-blur supports-[backdrop-filter]:bg-bg-base/80">
+      <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 24px" }} className="flex h-12 items-center justify-between">
+        <Link href="/" className="flex items-center gap-2 font-semibold text-text-primary text-sm">
+          <span className="flex h-6 w-6 items-center justify-center rounded bg-accent-purple text-[10px] font-bold text-white">
             O
           </span>
           <span className="hidden sm:inline">Orchestra</span>
@@ -48,10 +48,10 @@ export function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                  "rounded px-3 py-1.5 text-xs font-medium transition-colors",
                   isActive
-                    ? "bg-orchestra-50 text-orchestra-700"
-                    : "text-text-secondary hover:bg-gray-100 hover:text-text-primary",
+                    ? "bg-accent-purple-dim text-accent-purple"
+                    : "text-text-secondary hover:bg-bg-hover hover:text-text-primary",
                 )}
                 aria-current={isActive ? "page" : undefined}
               >
@@ -63,23 +63,19 @@ export function Navbar() {
 
         <button
           ref={toggleRef}
-          className="inline-flex md:hidden items-center justify-center rounded-lg p-2 text-text-secondary hover:bg-gray-100"
+          className="inline-flex md:hidden items-center justify-center rounded p-2 text-text-secondary hover:bg-bg-hover text-sm"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-expanded={mobileOpen}
           aria-controls="mobile-nav"
           aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
         >
-          {mobileOpen ? "✕" : "☰"}
+          {mobileOpen ? "✗" : "☰"}
         </button>
       </div>
 
       {mobileOpen && (
-        <nav
-          id="mobile-nav"
-          className="border-t border-border bg-surface md:hidden"
-          aria-label="Mobile navigation"
-        >
-          <div className="space-y-1 px-4 py-3">
+        <nav id="mobile-nav" className="border-t border-border-subtle bg-bg-elevated md:hidden" aria-label="Mobile navigation">
+          <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 24px" }} className="space-y-1 py-3">
             {navLinks.map((link, i) => {
               const isActive =
                 pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
@@ -90,10 +86,10 @@ export function Navbar() {
                   href={link.href}
                   onClick={handleLinkClick}
                   className={cn(
-                    "block rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    "block rounded px-3 py-2 text-xs font-medium transition-colors",
                     isActive
-                      ? "bg-orchestra-50 text-orchestra-700"
-                      : "text-text-secondary hover:bg-gray-100 hover:text-text-primary",
+                      ? "bg-accent-purple-dim text-accent-purple"
+                      : "text-text-secondary hover:bg-bg-hover hover:text-text-primary",
                   )}
                   aria-current={isActive ? "page" : undefined}
                 >

@@ -69,27 +69,27 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-3xl space-y-6" role="status" aria-label="Loading blueprint">
-        <div className="h-5 w-48 animate-pulse rounded bg-gray-200" />
-        <div className="h-8 w-64 animate-pulse rounded bg-gray-200" />
+      <div className="space-y-6" role="status" aria-label="Loading blueprint">
+        <div className="h-4 w-36 animate-pulse rounded bg-border-subtle" />
+        <div className="h-6 w-48 animate-pulse rounded bg-border-subtle" />
         <div className="grid grid-cols-3 gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-24 animate-pulse rounded-xl bg-gray-100" />
+            <div key={i} className="h-20 animate-pulse rounded bg-bg-hover" />
           ))}
         </div>
-        <div className="h-64 w-full animate-pulse rounded-lg bg-gray-100" />
+        <div className="h-64 w-full animate-pulse rounded bg-bg-hover" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="mx-auto max-w-3xl py-16">
-        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
-          <p className="text-red-800">{error}</p>
+      <div className="py-16">
+        <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-6 text-center">
+          <p className="text-accent-red">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-4 rounded-lg bg-orchestra-600 px-4 py-2 text-sm text-white hover:bg-orchestra-700"
+            className="mt-4 rounded bg-accent-purple px-4 py-2 text-sm text-white hover:opacity-90"
           >
             Retry
           </button>
@@ -100,37 +100,37 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
 
   if (!blueprint) {
     return (
-      <div className="mx-auto max-w-3xl py-16 text-center">
+      <div className="py-16 text-center">
         <p className="text-text-secondary">No blueprint found for this project.</p>
       </div>
     );
   }
 
   const confidenceColor =
-    blueprint.overallConfidence >= 0.7
-      ? "text-green-600"
+    blueprint.overallConfidence >= 0.6
+      ? "text-accent-green"
       : blueprint.overallConfidence >= 0.4
-        ? "text-amber-600"
-        : "text-red-600";
+        ? "text-accent-amber"
+        : "text-accent-red";
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
+    <div className="space-y-8">
       <Breadcrumb items={[{ label: "Projects", href: "/projects" }, { label: blueprint.projectName }]} />
 
       <StepIndicator current="review" complete={["interview"]} />
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">{blueprint.projectName}</h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            Plan v{blueprint.planVersion} &middot; Generated{" "}
+          <h1 className="text-lg font-semibold text-text-primary">{blueprint.projectName}</h1>
+          <p className="mt-1 text-xs text-text-secondary">
+            Plan v{blueprint.planVersion} · Generated{" "}
             {new Date(blueprint.generatedAt).toLocaleDateString()}
           </p>
         </div>
       </div>
 
       {hasInsufficientPhases && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+        <div className="rounded border border-accent-amber-dim bg-accent-amber-dim/30 p-4 text-xs text-accent-amber">
           Some phases have insufficient detail. The task graph will include <strong>needs_review</strong>{" "}
           markers for these areas. You can revisit the interview to add more detail.
         </div>
@@ -151,16 +151,16 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
       </div>
 
       <section>
-        <h2 className="mb-4 text-lg font-semibold text-text-primary">Phase Progress</h2>
+        <h2 className="mb-4 text-sm font-semibold text-text-primary">Phase Progress</h2>
         <div className="space-y-2">
           {(blueprint.phases ?? []).map((phase) => (
             <div
               key={phase.phaseType}
               className={cn(
-                "flex items-center justify-between rounded-lg border px-4 py-3",
-                phase.status === "sufficient" && "border-green-200 bg-green-50",
-                phase.status === "insufficient" && "border-amber-200 bg-amber-50",
-                phase.status === "missing" && "border-gray-200 bg-gray-50",
+                "flex items-center justify-between rounded border px-4 py-3",
+                phase.status === "sufficient" && "border-accent-green-dim bg-accent-green-dim/30",
+                phase.status === "insufficient" && "border-accent-amber-dim bg-accent-amber-dim/30",
+                phase.status === "missing" && "border-border-subtle bg-bg-surface",
               )}
             >
               <div className="flex items-center gap-3">
@@ -178,15 +178,15 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
                   <span
                     className={cn(
                       "text-xs font-medium",
-                      phase.status === "insufficient" && "text-amber-700",
-                      phase.status === "missing" && "text-gray-400",
+                      phase.status === "insufficient" && "text-accent-amber",
+                      phase.status === "missing" && "text-text-muted",
                     )}
                   >
                     {phase.status}
                   </span>
                 )}
                 {phase.status === "sufficient" && (
-                  <span className="text-xs font-medium text-green-700">Ready</span>
+                  <span className="text-xs font-medium text-accent-green">Ready</span>
                 )}
               </div>
             </div>
@@ -196,12 +196,12 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
 
       {blueprint.assumptions?.length > 0 && (
         <section>
-          <h2 className="mb-3 text-lg font-semibold text-text-primary">
+          <h2 className="mb-3 text-sm font-semibold text-text-primary">
             Assumptions ({blueprint.assumptions.length})
           </h2>
           <div className="space-y-2">
             {blueprint.assumptions.map((a, i) => (
-              <div key={i} className="rounded-lg border border-border bg-surface p-4">
+              <div key={i} className="rounded border border-border-default bg-bg-elevated p-4">
                 <p className="text-sm text-text-primary">{a.description}</p>
                 <p className="mt-1 text-xs text-text-secondary">Source: {a.source}</p>
               </div>
@@ -212,12 +212,12 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
 
       {blueprint.constraints?.length > 0 && (
         <section>
-          <h2 className="mb-3 text-lg font-semibold text-text-primary">
+          <h2 className="mb-3 text-sm font-semibold text-text-primary">
             Constraints ({blueprint.constraints.length})
           </h2>
           <div className="space-y-2">
             {blueprint.constraints.map((c, i) => (
-              <div key={i} className="rounded-lg border border-border bg-surface p-4">
+              <div key={i} className="rounded border border-border-default bg-bg-elevated p-4">
                 <p className="text-sm text-text-primary">{c.description}</p>
                 <p className="mt-1 text-xs text-text-secondary">Source: {c.source}</p>
               </div>
@@ -228,10 +228,10 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
 
       {blueprint.risks?.length > 0 && (
         <section>
-          <h2 className="mb-3 text-lg font-semibold text-text-primary">Risks ({blueprint.risks.length})</h2>
+          <h2 className="mb-3 text-sm font-semibold text-text-primary">Risks ({blueprint.risks.length})</h2>
           <div className="space-y-2">
             {blueprint.risks.map((r, i) => (
-              <div key={i} className="rounded-lg border border-border bg-surface p-4">
+              <div key={i} className="rounded border border-border-default bg-bg-elevated p-4">
                 <p className="text-sm text-text-primary">{r.description}</p>
                 <p className="mt-1 text-xs text-text-secondary">Source: {r.source}</p>
               </div>
@@ -242,7 +242,7 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
 
       {(blueprint.ambiguityFlags ?? []).length > 0 && (
         <section>
-          <h2 className="mb-3 text-lg font-semibold text-text-primary">
+          <h2 className="mb-3 text-sm font-semibold text-text-primary">
             Flags ({blueprint.ambiguityFlags.length})
           </h2>
           <div className="space-y-2">
@@ -250,14 +250,14 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
               <div
                 key={i}
                 className={cn(
-                  "rounded-lg border p-4",
-                  f.severity === "high" && "border-red-200 bg-red-50",
-                  f.severity === "medium" && "border-amber-200 bg-amber-50",
-                  f.severity === "low" && "border-gray-200 bg-gray-50",
+                  "rounded border p-4",
+                  f.severity === "high" && "border-accent-red-dim bg-accent-red-dim/30",
+                  f.severity === "medium" && "border-accent-amber-dim bg-accent-amber-dim/30",
+                  f.severity === "low" && "border-border-subtle bg-bg-surface",
                 )}
               >
                 <div className="flex items-start gap-2">
-                  <span className="text-sm">{f.type}</span>
+                  <span className="text-xs">{f.type}</span>
                   <p className="text-sm text-text-primary">{f.message}</p>
                 </div>
               </div>
@@ -266,22 +266,22 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
         </section>
       )}
 
-      <div className="flex flex-wrap gap-3 border-t border-border pt-6">
+      <div className="flex flex-wrap gap-3 border-t border-border-subtle pt-6">
         <button
           onClick={() => router.push(`/projects/${sessionId}/tasks`)}
-          className="rounded-lg bg-orchestra-600 px-6 py-2 text-sm font-medium text-white hover:bg-orchestra-700"
+          className="rounded bg-accent-purple px-6 py-2 text-sm font-medium text-white hover:opacity-90"
         >
           View task graph
         </button>
         <button
           onClick={() => router.push(`/projects/${sessionId}/versions`)}
-          className="rounded-lg border border-border bg-white px-6 py-2 text-sm font-medium text-text-secondary hover:bg-gray-50"
+          className="rounded border border-border-default bg-bg-surface px-6 py-2 text-sm font-medium text-text-secondary hover:bg-bg-hover"
         >
           Exports &amp; versions
         </button>
         <button
           onClick={() => router.push(`/projects/${sessionId}/interview`)}
-          className="rounded-lg border border-border bg-white px-6 py-2 text-sm font-medium text-text-secondary hover:bg-gray-50"
+          className="rounded border border-border-default bg-bg-surface px-6 py-2 text-sm font-medium text-text-secondary hover:bg-bg-hover"
         >
           Return to interview
         </button>
@@ -302,16 +302,16 @@ function MetricCard({
   className?: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-surface p-4">
+    <div className="rounded border border-border-default bg-bg-elevated p-4">
       <p className="text-xs text-text-secondary">{label}</p>
-      <p className={cn("mt-1 text-2xl font-semibold", className ?? "text-text-primary")}>{value}</p>
+      <p className={cn("mt-1 text-lg font-semibold", className ?? "text-text-primary")}>{value}</p>
       {sub && <p className="text-xs text-text-secondary">{sub}</p>}
     </div>
   );
 }
 
 function PhaseIcon({ status }: { status: string }) {
-  if (status === "sufficient") return <span className="text-green-600">✓</span>;
-  if (status === "insufficient") return <span className="text-amber-600">~</span>;
-  return <span className="text-gray-300">○</span>;
+  if (status === "sufficient") return <span className="text-accent-green">✓</span>;
+  if (status === "insufficient") return <span className="text-accent-amber">~</span>;
+  return <span className="text-text-muted">○</span>;
 }

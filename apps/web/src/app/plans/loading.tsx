@@ -4,10 +4,10 @@ export default function PlansLoading() {
   return (
     <div className="space-y-6">
       <div>
-        <Skeleton className="h-8 w-28" />
-        <Skeleton className="mt-1 h-4 w-64" />
+        <Skeleton className="h-6 w-20" />
+        <Skeleton className="mt-1 h-3 w-48" />
       </div>
-      <Skeleton className="h-48 w-full rounded-xl" />
+      <Skeleton className="h-48 w-full rounded" />
     </div>
   );
 }

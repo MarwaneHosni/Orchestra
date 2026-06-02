@@ -31,22 +31,26 @@ export function StepIndicator({ current, complete = [], compact }: StepIndicator
         const isComplete = i < currentIdx || completeSet.has(step.id);
         const isCurrent = step.id === current;
         const isLocked = i > currentIdx && !completeSet.has(step.id);
-
         const isActive = isCurrent || isComplete;
 
         return (
           <div key={step.id} className="flex items-center">
             {i > 0 && (
-              <div className={cn("mx-1 h-0.5 w-6 sm:w-10", isActive ? "bg-orchestra-600" : "bg-gray-200")} />
+              <div
+                className={cn(
+                  "mx-1 h-px w-6 sm:w-10",
+                  isActive ? "bg-accent-purple" : "bg-border-subtle",
+                )}
+              />
             )}
             <div className={cn(isLocked && "opacity-50")} aria-current={isCurrent ? "step" : undefined}>
               <span className="flex items-center gap-1.5">
                 <span
                   className={cn(
-                    "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold",
-                    isCurrent && "bg-orchestra-600 text-white",
-                    isComplete && !isCurrent && "bg-green-500 text-white",
-                    isLocked && "bg-gray-200 text-gray-400",
+                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                    isCurrent && "bg-accent-purple text-white",
+                    isComplete && !isCurrent && "bg-accent-green text-white",
+                    isLocked && "bg-border-subtle text-text-muted",
                   )}
                 >
                   {isComplete && !isCurrent ? "✓" : i + 1}
@@ -55,9 +59,9 @@ export function StepIndicator({ current, complete = [], compact }: StepIndicator
                   <span
                     className={cn(
                       "text-xs",
-                      isCurrent && "font-semibold text-orchestra-700",
-                      isComplete && !isCurrent && "text-green-700",
-                      isLocked && "text-gray-400",
+                      isCurrent && "font-semibold text-accent-purple",
+                      isComplete && !isCurrent && "text-accent-green",
+                      isLocked && "text-text-muted",
                     )}
                   >
                     {step.label}

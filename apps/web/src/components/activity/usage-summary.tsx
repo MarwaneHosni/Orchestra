@@ -33,7 +33,7 @@ export function UsageSummary({ projectId }: UsageSummaryProps) {
     return (
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-20 animate-pulse rounded-xl bg-gray-100" />
+          <div key={i} className="h-16 animate-pulse rounded bg-bg-hover" />
         ))}
       </div>
     );
@@ -71,10 +71,10 @@ function MetricCard({
   variant?: "default" | "warning";
 }) {
   return (
-    <div className="rounded-xl border border-border bg-surface p-3">
+    <div className="rounded border border-border-default bg-bg-elevated p-3">
       <p className="text-xs text-text-secondary">{label}</p>
       <p
-        className={`mt-1 text-2xl font-semibold ${variant === "warning" && value > 0 ? "text-red-600" : "text-text-primary"}`}
+        className={`mt-1 text-lg font-semibold ${variant === "warning" && value > 0 ? "text-accent-red" : "text-text-primary"}`}
       >
         {value}
       </p>

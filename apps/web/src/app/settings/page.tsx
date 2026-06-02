@@ -37,13 +37,15 @@ const MODEL_OPTIONS = [
 ];
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  valid: { label: "Connected", className: "border-green-200 bg-green-50 text-green-700" },
-  unverified: { label: "Unverified", className: "border-amber-200 bg-amber-50 text-amber-700" },
-  invalid: { label: "Invalid", className: "border-red-200 bg-red-50 text-red-700" },
-  expired: { label: "Expired", className: "border-gray-200 bg-gray-100 text-gray-500" },
-  rate_limited: { label: "Rate Limited", className: "border-orange-200 bg-orange-50 text-orange-700" },
-  failed: { label: "Failed", className: "border-red-300 bg-red-100 text-red-800" },
+  valid: { label: "Connected", className: "border-accent-green-dim bg-accent-green-dim/30 text-accent-green" },
+  unverified: { label: "Unverified", className: "border-accent-amber-dim bg-accent-amber-dim/30 text-accent-amber" },
+  invalid: { label: "Invalid", className: "border-accent-red-dim bg-accent-red-dim/30 text-accent-red" },
+  expired: { label: "Expired", className: "border-border-subtle bg-bg-surface text-text-muted" },
+  rate_limited: { label: "Rate Limited", className: "border-accent-amber-dim bg-accent-amber-dim/30 text-accent-amber" },
+  failed: { label: "Failed", className: "border-accent-red-dim bg-accent-red-dim/40 text-accent-red" },
 };
+
+const selectClasses = "mt-1 block w-full rounded border border-border-default bg-bg-surface px-3 py-2 text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-purple";
 
 export default function SettingsPage() {
   const [credentials, setCredentials] = useState<ProviderCredential[]>([]);
@@ -114,11 +116,11 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">Settings</h1>
-          <p className="mt-1 text-sm text-text-secondary">
+          <h1 className="text-lg font-semibold text-text-primary">Settings</h1>
+          <p className="mt-1 text-xs text-text-secondary">
             Manage your AI provider connections. Keys are encrypted and never exposed.
           </p>
         </div>
@@ -128,7 +130,7 @@ export default function SettingsPage() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>
+        <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-3 text-xs text-accent-red">{error}</div>
       )}
 
       {showAdd && (
@@ -139,11 +141,11 @@ export default function SettingsPage() {
           </CardHeader>
           <div className="space-y-4 px-6 pb-6">
             <div>
-              <label className="block text-sm font-medium text-text-primary">Provider</label>
+              <label className="block text-xs font-medium text-text-primary">Provider</label>
               <select
                 value={newProvider}
                 onChange={(e) => setNewProvider(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                className={selectClasses}
               >
                 {PROVIDER_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -153,7 +155,7 @@ export default function SettingsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary">API Key</label>
+              <label className="block text-xs font-medium text-text-primary">API Key</label>
               <Input
                 type="password"
                 placeholder={
@@ -164,11 +166,11 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary">Default model (optional)</label>
+              <label className="block text-xs font-medium text-text-primary">Default model (optional)</label>
               <select
                 value={newDefaultModel}
                 onChange={(e) => setNewDefaultModel(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                className={selectClasses}
               >
                 <option value="">Auto-select</option>
                 {MODEL_OPTIONS.find((m) => m.provider === newProvider)?.models.map((m) => (
@@ -199,26 +201,26 @@ export default function SettingsPage() {
       {loading ? (
         <div className="space-y-3">
           {[1, 2].map((i) => (
-            <div key={i} className="h-24 animate-pulse rounded-xl bg-gray-100" />
+            <div key={i} className="h-20 animate-pulse rounded bg-bg-hover" />
           ))}
         </div>
       ) : credentials.length === 0 ? (
-        <div className="rounded-xl border-2 border-dashed border-border bg-surface-secondary p-12 text-center">
-          <p className="text-lg font-medium text-text-primary">No providers connected</p>
-          <p className="mt-1 text-sm text-text-secondary">Add an API key to enable AI-powered features.</p>
+        <div className="rounded border-2 border-dashed border-border-default bg-bg-surface p-12 text-center">
+          <p className="text-sm font-medium text-text-primary">No providers connected</p>
+          <p className="mt-1 text-xs text-text-secondary">Add an API key to enable AI-powered features.</p>
         </div>
       ) : (
         <div className="space-y-3">
           {credentials.map((cred) => {
             const statusCfg = STATUS_CONFIG[cred.status] ?? STATUS_CONFIG.unverified;
             return (
-              <div key={cred.id} className="rounded-xl border border-border bg-surface p-4">
+              <div key={cred.id} className="rounded border border-border-default bg-bg-elevated p-4">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-text-primary">{cred.displayName}</span>
+                      <span className="font-medium text-text-primary text-sm">{cred.displayName}</span>
                       <span
-                        className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", statusCfg.className)}
+                        className={cn("rounded px-2 py-0.5 text-xs font-medium", statusCfg.className)}
                       >
                         {statusCfg.label}
                       </span>
@@ -229,20 +231,20 @@ export default function SettingsPage() {
                       {cred.lastVerifiedAt &&
                         ` · Verified ${new Date(cred.lastVerifiedAt).toLocaleDateString()}`}
                     </p>
-                    {cred.errorMessage && <p className="text-xs text-red-600">{cred.errorMessage}</p>}
+                    {cred.errorMessage && <p className="text-xs text-accent-red">{cred.errorMessage}</p>}
                   </div>
                   <div className="flex gap-2">
                     {cred.status !== "valid" && (
                       <button
                         onClick={() => handleValidate(cred.id)}
-                        className="text-xs text-orchestra-600 hover:text-orchestra-700"
+                        className="text-xs text-accent-purple hover:underline"
                       >
                         Verify
                       </button>
                     )}
                     <button
                       onClick={() => handleDelete(cred.id)}
-                      className="text-xs text-red-600 hover:text-red-700"
+                      className="text-xs text-accent-red hover:underline"
                     >
                       Remove
                     </button>
@@ -283,15 +285,15 @@ function CostRow({
   cost: number;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm">
+    <div className="flex items-center justify-between rounded border border-border-default px-3 py-2 text-xs">
       <div className="flex items-center gap-2">
         <span className="text-text-primary">{label}</span>
         <span
           className={cn(
             "rounded px-1.5 py-0.5 text-xs font-medium",
-            tier === "cheap" && "bg-green-100 text-green-700",
-            tier === "balanced" && "bg-blue-100 text-blue-700",
-            tier === "strong" && "bg-purple-100 text-purple-700",
+            tier === "cheap" && "bg-accent-green-dim text-accent-green",
+            tier === "balanced" && "bg-accent-purple-dim text-accent-purple",
+            tier === "strong" && "bg-accent-amber-dim text-accent-amber",
           )}
         >
           {tier}
@@ -299,7 +301,7 @@ function CostRow({
       </div>
       <div className="text-right">
         <span className="font-medium text-text-primary">${cost.toFixed(4)}</span>
-        <span className="ml-2 text-xs text-text-secondary">~{tokens} tokens</span>
+        <span className="ml-2 text-text-muted">~{tokens} tokens</span>
       </div>
     </div>
   );

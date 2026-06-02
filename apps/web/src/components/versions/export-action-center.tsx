@@ -88,16 +88,15 @@ export function ExportActionCenter({ snapshot }: ExportActionCenterProps) {
         </p>
       </div>
 
-      {/* Format toggle */}
       <div className="flex items-center gap-2">
         <span className="text-xs text-text-secondary">Format:</span>
         <button
           onClick={() => setFormat("markdown")}
           className={cn(
-            "rounded-md px-3 py-1 text-xs font-medium transition-colors",
+            "rounded px-3 py-1 text-xs font-medium transition-colors",
             format === "markdown"
-              ? "bg-orchestra-600 text-white"
-              : "border border-border bg-surface text-text-secondary hover:bg-gray-50",
+              ? "bg-accent-purple text-white"
+              : "border border-border-default bg-bg-surface text-text-secondary hover:bg-bg-hover",
           )}
         >
           Markdown
@@ -105,24 +104,23 @@ export function ExportActionCenter({ snapshot }: ExportActionCenterProps) {
         <button
           onClick={() => setFormat("json")}
           className={cn(
-            "rounded-md px-3 py-1 text-xs font-medium transition-colors",
+            "rounded px-3 py-1 text-xs font-medium transition-colors",
             format === "json"
-              ? "bg-orchestra-600 text-white"
-              : "border border-border bg-surface text-text-secondary hover:bg-gray-50",
+              ? "bg-accent-purple text-white"
+              : "border border-border-default bg-bg-surface text-text-secondary hover:bg-bg-hover",
           )}
         >
           JSON
         </button>
       </div>
 
-      {/* Export type buttons */}
       <div className="space-y-2">
         {exportTypes.map((type) => {
           const isExporting = exporting === type;
           const existing = exports.find((e) => e.type === type && e.format === format);
 
           return (
-            <div key={type} className="rounded-lg border border-border bg-surface p-3">
+            <div key={type} className="rounded border border-border-default bg-bg-elevated p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-text-primary">{EXPORT_TYPE_LABELS[type]}</p>
@@ -132,29 +130,30 @@ export function ExportActionCenter({ snapshot }: ExportActionCenterProps) {
                   onClick={() => handleExport(type)}
                   disabled={isExporting}
                   className={cn(
-                    "shrink-0 rounded-md px-3 py-1 text-xs font-medium transition-colors",
+                    "shrink-0 rounded px-3 py-1 text-xs font-medium transition-colors",
                     isExporting
-                      ? "bg-gray-200 text-gray-400"
-                      : "bg-orchestra-600 text-white hover:bg-orchestra-700",
+                      ? "bg-border-subtle text-text-muted"
+                      : "bg-accent-purple text-white hover:opacity-90",
                   )}
                 >
                   {isExporting ? "Exporting..." : "Export"}
                 </button>
               </div>
 
-              {/* Existing exports for this type */}
               {existing && (
-                <div className="mt-2 flex items-center gap-2 border-t border-border pt-2 text-xs text-text-secondary">
-                  <span>Exported {new Date(existing.createdAt).toLocaleDateString()}</span>
+                <div className="mt-2 flex items-center gap-2 border-t border-border-subtle pt-2 text-xs">
+                  <span className="text-text-secondary">
+                    Exported {new Date(existing.createdAt).toLocaleDateString()}
+                  </span>
                   <button
                     onClick={() => handleRedownload(existing)}
-                    className="text-orchestra-600 hover:text-orchestra-700"
+                    className="text-accent-purple hover:underline"
                   >
                     Download
                   </button>
                   <button
                     onClick={() => handleCopy(existing)}
-                    className="text-orchestra-600 hover:text-orchestra-700"
+                    className="text-accent-purple hover:underline"
                   >
                     Copy
                   </button>
@@ -166,28 +165,25 @@ export function ExportActionCenter({ snapshot }: ExportActionCenterProps) {
       </div>
 
       {successMessage && (
-        <div
-          className="rounded-lg border border-green-200 bg-green-50 p-3 text-xs text-green-700"
-          role="status"
-        >
+        <div className="rounded border border-accent-green-dim bg-accent-green-dim/30 p-3 text-xs text-accent-green" role="status">
           {successMessage}
         </div>
       )}
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700" role="alert">
+        <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-3 text-xs text-accent-red" role="alert">
           {error}
         </div>
       )}
 
       {!loading && exports.length > 0 && (
-        <div className="border-t border-border pt-3">
+        <div className="border-t border-border-subtle pt-3">
           <p className="mb-2 text-xs font-medium text-text-secondary">All exports for this snapshot</p>
           <div className="space-y-1">
             {exports.map((record) => (
               <div
                 key={record.id}
-                className="flex items-center justify-between rounded-md bg-gray-50 px-3 py-2 text-xs"
+                className="flex items-center justify-between rounded bg-bg-surface px-3 py-2 text-xs"
               >
                 <div>
                   <span className="font-medium text-text-primary">{EXPORT_TYPE_LABELS[record.type]}</span>
@@ -201,13 +197,13 @@ export function ExportActionCenter({ snapshot }: ExportActionCenterProps) {
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleRedownload(record)}
-                    className="text-orchestra-600 hover:text-orchestra-700"
+                    className="text-accent-purple hover:underline"
                   >
                     Download
                   </button>
                   <button
                     onClick={() => handleCopy(record)}
-                    className="text-orchestra-600 hover:text-orchestra-700"
+                    className="text-accent-purple hover:underline"
                   >
                     Copy
                   </button>

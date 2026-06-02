@@ -37,35 +37,33 @@ export function VersionNode({
 
   return (
     <div className="relative flex gap-4">
-      {/* Timeline connector */}
       <div className="flex flex-col items-center">
-        {!isFirst && <div className="h-2 w-0.5 bg-gray-300" />}
+        {!isFirst && <div className="h-2 w-0.5 bg-border-default" />}
         <span
           className={cn(
-            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold",
-            isFailed && "bg-red-500 text-white",
-            isPartial && "bg-amber-500 text-white",
-            !isFailed && !isPartial && "bg-orchestra-600 text-white",
+            "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+            isFailed && "bg-accent-red text-white",
+            isPartial && "bg-accent-amber text-white",
+            !isFailed && !isPartial && "bg-accent-purple text-white",
           )}
         >
           {snapshot.version}
         </span>
-        {!isLast && <div className="flex-1 w-0.5 min-h-[8px] bg-gray-300" />}
+        {!isLast && <div className="flex-1 w-0.5 min-h-[8px] bg-border-default" />}
       </div>
 
-      {/* Card */}
       <div className="min-w-0 flex-1 pb-4">
         <button
           onClick={() => onSelect(snapshot.id)}
           className={cn(
-            "w-full rounded-lg border-2 px-4 py-3 text-left transition-all hover:shadow-sm",
-            isSelected && "ring-2 ring-orchestra-500 ring-offset-1",
-            isCompareTarget && "ring-2 ring-blue-500 ring-offset-1",
+            "w-full rounded border-2 px-4 py-3 text-left transition-colors",
+            isSelected && "ring-2 ring-accent-purple ring-offset-1 ring-offset-bg-base",
+            isCompareTarget && "ring-2 ring-accent-purple ring-offset-1 ring-offset-bg-base",
             isFailed
-              ? "border-red-200 bg-red-50"
+              ? "border-accent-red-dim bg-accent-red-dim/30"
               : isPartial
-                ? "border-amber-200 bg-amber-50"
-                : "border-border bg-surface",
+                ? "border-accent-amber-dim bg-accent-amber-dim/30"
+                : "border-border-default bg-bg-elevated",
           )}
           aria-label={`Version ${snapshot.version}: ${reasonLabel}`}
         >
@@ -78,17 +76,17 @@ export function VersionNode({
             </div>
             <div className="flex shrink-0 gap-1.5">
               {parentVersion === null && snapshot.version === 1 && (
-                <span className="rounded-full bg-orchestra-100 px-2 py-0.5 text-xs font-medium text-orchestra-700">
+                <span className="rounded bg-accent-purple-dim px-2 py-0.5 text-xs font-medium text-accent-purple">
                   Initial
                 </span>
               )}
               {isPartial && (
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                <span className="rounded bg-accent-amber-dim px-2 py-0.5 text-xs font-medium text-accent-amber">
                   Partial
                 </span>
               )}
               {isFailed && (
-                <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                <span className="rounded bg-accent-red-dim px-2 py-0.5 text-xs font-medium text-accent-red">
                   Failed
                 </span>
               )}
@@ -100,9 +98,9 @@ export function VersionNode({
             {snapshot.answerCount > 0 && <span>{snapshot.answerCount} answers</span>}
           </div>
           {snapshot.changeSummary && (
-            <p className="mt-1 text-xs text-text-secondary line-clamp-1">{snapshot.changeSummary}</p>
+            <p className="mt-1 text-xs text-text-secondary truncate">{snapshot.changeSummary}</p>
           )}
-          {snapshot.failureReason && <p className="mt-1 text-xs text-red-600">{snapshot.failureReason}</p>}
+          {snapshot.failureReason && <p className="mt-1 text-xs text-accent-red">{snapshot.failureReason}</p>}
         </button>
       </div>
     </div>

@@ -6,20 +6,31 @@ import { Button } from "@/components/ui/button";
 import { listProjects } from "@/lib/api";
 import type { ProjectRecord } from "@/lib/api";
 
-const STATUS_BADGES: Record<string, { label: string; className: string }> = {
-  draft: { label: "Draft", className: "bg-gray-100 text-gray-600" },
-  active: { label: "Active", className: "bg-blue-100 text-blue-700" },
-  in_progress: { label: "In Progress", className: "bg-blue-100 text-blue-700" },
-  blueprint_ready: { label: "Blueprint Ready", className: "bg-green-100 text-green-700" },
-  complete: { label: "Complete", className: "bg-orchestra-100 text-orchestra-700" },
-};
+function BtnLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex items-center justify-center gap-2 rounded bg-accent-purple px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-colors"
+    >
+      {children}
+    </Link>
+  );
+}
 
 const STATUS_DOTS: Record<string, string> = {
-  draft: "bg-gray-400",
-  active: "bg-blue-500",
-  in_progress: "bg-blue-500",
-  blueprint_ready: "bg-green-500",
-  complete: "bg-orchestra-600",
+  draft: "bg-text-muted",
+  active: "bg-accent-purple",
+  in_progress: "bg-accent-purple",
+  blueprint_ready: "bg-accent-green",
+  complete: "bg-accent-green",
+};
+
+const STATUS_LABELS: Record<string, { label: string; color: string }> = {
+  draft: { label: "Draft", color: "bg-bg-hover text-text-secondary" },
+  active: { label: "Active", color: "bg-accent-purple-dim text-accent-purple" },
+  in_progress: { label: "In Progress", color: "bg-accent-purple-dim text-accent-purple" },
+  blueprint_ready: { label: "Blueprint Ready", color: "bg-accent-green-dim text-accent-green" },
+  complete: { label: "Complete", color: "bg-accent-green-dim text-accent-green" },
 };
 
 function formatDate(iso: string): string {
@@ -44,8 +55,8 @@ export default function ProjectsPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-text-primary">Projects</h1>
-            <p className="mt-1 text-sm text-text-secondary">Loading projects...</p>
+            <h1 className="text-lg font-semibold text-text-primary">Projects</h1>
+            <p className="mt-1 text-xs text-text-secondary">Loading projects...</p>
           </div>
         </div>
       </div>
@@ -57,17 +68,17 @@ export default function ProjectsPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-text-primary">Projects</h1>
-            <p className="mt-1 text-sm text-text-secondary">
+            <h1 className="text-lg font-semibold text-text-primary">Projects</h1>
+            <p className="mt-1 text-xs text-text-secondary">
               All your software ideas, organised as projects.
             </p>
           </div>
-          <Button asChild>
-            <Link href="/projects/new">New project</Link>
-          </Button>
+          <Link href="/projects/new">
+            <Button>New project</Button>
+          </Link>
         </div>
-        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center" role="alert">
-          <p className="text-red-800">{error}</p>
+        <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-6 text-center" role="alert">
+          <p className="text-accent-red">{error}</p>
           <Button onClick={() => window.location.reload()} className="mt-4">
             Retry
           </Button>
@@ -81,23 +92,23 @@ export default function ProjectsPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-text-primary">Projects</h1>
-            <p className="mt-1 text-sm text-text-secondary">
+            <h1 className="text-lg font-semibold text-text-primary">Projects</h1>
+            <p className="mt-1 text-xs text-text-secondary">
               All your software ideas, organised as projects.
             </p>
           </div>
-          <Button asChild>
-            <Link href="/projects/new">New project</Link>
-          </Button>
+          <Link href="/projects/new">
+            <Button>New project</Button>
+          </Link>
         </div>
-        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-surface-secondary px-6 py-16 text-center">
-          <h3 className="mb-2 text-lg font-semibold text-text-primary">No projects yet</h3>
-          <p className="mb-6 max-w-sm text-sm text-text-secondary">
+        <div className="flex flex-col items-center justify-center rounded border-2 border-dashed border-border-default bg-bg-surface px-6 py-16 text-center">
+          <h3 className="mb-2 text-sm font-semibold text-text-primary">No projects yet</h3>
+          <p className="mb-6 max-w-sm text-xs text-text-secondary">
             Create your first project to start transforming an idea into a structured development plan.
           </p>
-          <Button asChild>
-            <Link href="/projects/new">Create project</Link>
-          </Button>
+          <Link href="/projects/new">
+            <Button>Create project</Button>
+          </Link>
         </div>
       </div>
     );
@@ -107,24 +118,24 @@ export default function ProjectsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">Projects</h1>
-          <p className="mt-1 text-sm text-text-secondary">All your software ideas, organised as projects.</p>
+          <h1 className="text-lg font-semibold text-text-primary">Projects</h1>
+          <p className="mt-1 text-xs text-text-secondary">All your software ideas, organised as projects.</p>
         </div>
-        <Button asChild>
-          <Link href="/projects/new">New project</Link>
-        </Button>
+        <Link href="/projects/new">
+          <Button>New project</Button>
+        </Link>
       </div>
 
       <ul className="space-y-2">
         {projects.map((project) => {
-          const badge = STATUS_BADGES[project.status] ?? STATUS_BADGES.draft;
-          const dotColor = STATUS_DOTS[project.status] ?? "bg-gray-400";
-          const statusLabel = STATUS_BADGES[project.status]?.label ?? "Draft";
+          const dotColor = STATUS_DOTS[project.status] ?? "bg-text-muted";
+          const badge = STATUS_LABELS[project.status] ?? STATUS_LABELS.draft;
+          const statusLabel = STATUS_LABELS[project.status]?.label ?? "Draft";
           return (
             <li key={project.id}>
               <Link
                 href={`/projects/${project.id}/interview`}
-                className="flex items-center gap-4 rounded-xl border border-border bg-surface px-5 py-4 transition-colors hover:bg-gray-50"
+                className="flex items-center gap-4 rounded border border-border-default bg-bg-elevated px-5 py-4 transition-colors hover:bg-bg-hover"
                 aria-label={`${project.name}, ${statusLabel}`}
               >
                 <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotColor}`} aria-hidden="true" />
@@ -133,12 +144,12 @@ export default function ProjectsPage() {
                   <p className="text-sm font-medium text-text-primary">{project.name}</p>
                   <p className="text-xs text-text-secondary">{formatDate(project.createdAt)}</p>
                 </div>
-                <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.className}`}>
+                <span className={`rounded px-2.5 py-0.5 text-xs font-medium ${badge.color}`}>
                   {badge.label}
                 </span>
-                <span className="text-sm text-orchestra-600" aria-hidden="true">
+                <span className="text-sm text-accent-purple" aria-hidden="true">
                   {project.status === "draft" ? "Start interview" : "Continue"}
-                  &nbsp;&rarr;
+                  &nbsp;→
                 </span>
               </Link>
             </li>

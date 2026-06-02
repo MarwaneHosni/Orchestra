@@ -92,11 +92,11 @@ export function VersionHistory({ sessionId }: VersionHistoryProps) {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="h-5 w-48 animate-pulse rounded bg-gray-200" />
-        <div className="h-6 w-36 animate-pulse rounded bg-gray-200" />
+        <div className="h-4 w-36 animate-pulse rounded bg-border-subtle" />
+        <div className="h-6 w-36 animate-pulse rounded bg-border-subtle" />
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-20 animate-pulse rounded-xl bg-gray-100" />
+            <div key={i} className="h-16 animate-pulse rounded bg-bg-hover" />
           ))}
         </div>
       </div>
@@ -105,11 +105,11 @@ export function VersionHistory({ sessionId }: VersionHistoryProps) {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
-        <p className="text-red-800">{error}</p>
+      <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-6 text-center">
+        <p className="text-accent-red">{error}</p>
         <button
           onClick={() => window.location.reload()}
-          className="mt-4 rounded-lg bg-orchestra-600 px-4 py-2 text-sm text-white hover:bg-orchestra-700"
+          className="mt-4 rounded bg-accent-purple px-4 py-2 text-sm text-white hover:opacity-90"
         >
           Retry
         </button>
@@ -127,8 +127,8 @@ export function VersionHistory({ sessionId }: VersionHistoryProps) {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">Version History</h1>
-          <p className="mt-1 text-sm text-text-secondary">
+          <h1 className="text-lg font-semibold text-text-primary">Version History</h1>
+          <p className="mt-1 text-xs text-text-secondary">
             {sorted.length} snapshot{sorted.length !== 1 ? "s" : ""} — Click a snapshot to export, or select
             two to compare
           </p>
@@ -136,15 +136,15 @@ export function VersionHistory({ sessionId }: VersionHistoryProps) {
       </div>
 
       {selectedId && !compareId && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+        <div className="rounded border border-accent-purple-dim bg-accent-purple-dim/30 p-3 text-xs text-accent-purple">
           Select a second version to compare. The later version will be compared against this one.
         </div>
       )}
 
       {sorted.length === 0 ? (
-        <div className="rounded-xl border-2 border-dashed border-border bg-surface-secondary p-12 text-center">
-          <p className="text-lg font-medium text-text-primary">No versions yet</p>
-          <p className="mt-1 text-sm text-text-secondary">
+        <div className="rounded border-2 border-dashed border-border-default bg-bg-surface p-12 text-center">
+          <p className="text-sm font-medium text-text-primary">No versions yet</p>
+          <p className="mt-1 text-xs text-text-secondary">
             Complete the interview and generate a plan to create the first snapshot.
           </p>
         </div>
@@ -173,23 +173,23 @@ export function VersionHistory({ sessionId }: VersionHistoryProps) {
           <div className="lg:col-span-3">
             {diffLoading && (
               <div className="space-y-3">
-                <div className="h-6 w-48 animate-pulse rounded bg-gray-200" />
-                <div className="h-32 w-full animate-pulse rounded-lg bg-gray-100" />
+                <div className="h-6 w-48 animate-pulse rounded bg-border-subtle" />
+                <div className="h-32 w-full animate-pulse rounded bg-bg-hover" />
               </div>
             )}
             {diffError && (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-4 text-sm text-accent-red">
                 {diffError}
               </div>
             )}
             {diff && !diffLoading && <VersionCompare diff={diff} />}
             {!diff && !diffLoading && !diffError && selectedId && compareId && (
-              <div className="flex h-full items-center justify-center rounded-xl border-2 border-dashed border-border p-12 text-center">
+              <div className="flex h-full items-center justify-center rounded border-2 border-dashed border-border-default p-12 text-center">
                 <p className="text-sm text-text-secondary">Select a second version to see what changed.</p>
               </div>
             )}
             {!diff && !diffLoading && !diffError && selectedId && !compareId && snapshots.length > 0 && (
-              <div className="rounded-xl border border-border bg-surface p-5">
+              <div className="rounded border border-border-default bg-bg-elevated p-5">
                 <ExportActionCenter snapshot={snapshots.find((s) => s.id === selectedId)!} />
               </div>
             )}
@@ -198,10 +198,10 @@ export function VersionHistory({ sessionId }: VersionHistoryProps) {
       )}
 
       {sorted.length > 0 && (
-        <div className="space-y-6 border-t border-border pt-6">
+        <div className="space-y-6 border-t border-border-subtle pt-6">
           <details className="group">
-            <summary className="cursor-pointer text-sm font-semibold text-text-primary hover:text-orchestra-600">
-              Activity timeline
+            <summary className="cursor-pointer text-sm font-semibold text-text-primary hover:text-accent-purple">
+              ▸ Activity timeline
             </summary>
             <div className="mt-3">
               <ActivityTimeline projectId={sessionId} compact />
@@ -209,8 +209,8 @@ export function VersionHistory({ sessionId }: VersionHistoryProps) {
           </details>
 
           <details className="group">
-            <summary className="cursor-pointer text-sm font-semibold text-text-primary hover:text-orchestra-600">
-              Usage summary
+            <summary className="cursor-pointer text-sm font-semibold text-text-primary hover:text-accent-purple">
+              ▸ Usage summary
             </summary>
             <div className="mt-3">
               <UsageSummary projectId={sessionId} />

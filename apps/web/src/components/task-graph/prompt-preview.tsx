@@ -78,7 +78,6 @@ function parsePrompt(markdown: string | null | undefined): ParsedSection[] {
   }
   flushSection();
 
-  // Sort sections by canonical order, appending any unknown sections at the end
   const orderMap = new Map(SECTION_ORDER.map((h, i) => [h, i]));
   sections.sort((a, b) => {
     const ai = orderMap.get(a.heading) ?? 99;
@@ -90,7 +89,7 @@ function parsePrompt(markdown: string | null | undefined): ParsedSection[] {
 }
 
 function renderContent(text: string): React.ReactNode {
-  if (!text) return <span className="text-gray-400 italic">(empty)</span>;
+  if (!text) return <span className="text-text-muted italic">(empty)</span>;
 
   const lines = text.split("\n");
   const elements: React.ReactNode[] = [];
@@ -103,7 +102,7 @@ function renderContent(text: string): React.ReactNode {
     if (line.startsWith("```")) {
       if (inCodeBlock) {
         elements.push(
-          <pre key={`code-${i}`} className="mb-2 overflow-x-auto rounded bg-gray-100 p-3 text-xs">
+          <pre key={`code-${i}`} className="mb-2 overflow-x-auto rounded bg-bg-hover p-3 text-xs">
             {codeLines.join("\n")}
           </pre>,
         );
@@ -146,7 +145,7 @@ function renderContent(text: string): React.ReactNode {
 
   if (inCodeBlock && codeLines.length > 0) {
     elements.push(
-      <pre key="code-end" className="mb-2 overflow-x-auto rounded bg-gray-100 p-3 text-xs">
+      <pre key="code-end" className="mb-2 overflow-x-auto rounded bg-bg-hover p-3 text-xs">
         {codeLines.join("\n")}
       </pre>,
     );
@@ -231,19 +230,18 @@ export function PromptPreview({ taskId, sessionId, onClose }: PromptPreviewProps
       role="dialog"
       aria-modal="true"
       aria-label="Execution prompt"
-      className="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border bg-surface shadow-xl sm:w-[42rem]"
+      className="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border-default bg-bg-elevated sm:w-[42rem]"
     >
       <LiveAnnouncer message={announcement} />
 
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+      <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
         <h2 className="text-sm font-semibold text-text-primary">Execution Prompt</h2>
         <div className="flex items-center gap-2">
           {prompt && (
             <button
               onClick={handleCopy}
               aria-label="Copy prompt to clipboard"
-              className="rounded-lg border border-border px-3 py-1 text-xs font-medium text-text-secondary hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orchestra-500"
+              className="rounded border border-border-default px-3 py-1 text-xs font-medium text-text-secondary hover:bg-bg-hover focus:outline-none focus:ring-2 focus:ring-accent-purple"
             >
               {copied ? "Copied!" : "Copy raw"}
             </button>
@@ -251,27 +249,26 @@ export function PromptPreview({ taskId, sessionId, onClose }: PromptPreviewProps
           <button
             onClick={onClose}
             aria-label="Close prompt preview"
-            className="rounded-lg p-1 text-text-secondary hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-orchestra-500"
+            className="rounded p-1 text-text-secondary hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-purple"
           >
-            <span aria-hidden="true">&times;</span>
+            <span aria-hidden="true">✗</span>
           </button>
         </div>
       </div>
 
-      {/* Section navigation tabs */}
       {parsed.length > 0 && (
         <nav
           aria-label="Section navigation"
-          className="flex shrink-0 gap-1 overflow-x-auto border-b border-border px-3 py-2"
+          className="flex shrink-0 gap-1 overflow-x-auto border-b border-border-subtle px-3 py-2"
         >
           {parsed.map((section) => (
             <button
               key={section.id}
               onClick={() => scrollToSection(section.id)}
-              className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-orchestra-500 ${
+              className={`shrink-0 rounded px-2.5 py-1 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-accent-purple ${
                 activeSection === section.id
-                  ? "bg-orchestra-600 text-white"
-                  : "bg-gray-100 text-text-secondary hover:bg-gray-200"
+                  ? "bg-accent-purple text-white"
+                  : "bg-bg-hover text-text-secondary hover:bg-bg-selected"
               }`}
             >
               {section.heading}
@@ -280,20 +277,19 @@ export function PromptPreview({ taskId, sessionId, onClose }: PromptPreviewProps
         </nav>
       )}
 
-      {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto p-4">
         {loading && (
           <div className="space-y-3" role="status" aria-label="Loading prompt">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-lg border border-border p-4">
-                <div className="mb-3 h-4 w-32 animate-pulse rounded bg-gray-200" />
-                <div className="h-16 w-full animate-pulse rounded bg-gray-100" />
+              <div key={i} className="rounded border border-border-default p-4">
+                <div className="mb-3 h-4 w-32 animate-pulse rounded bg-border-subtle" />
+                <div className="h-16 w-full animate-pulse rounded bg-bg-hover" />
               </div>
             ))}
           </div>
         )}
         {!loading && error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">
+          <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-4 text-sm text-accent-red" role="alert">
             {error}
           </div>
         )}
@@ -311,12 +307,12 @@ export function PromptPreview({ taskId, sessionId, onClose }: PromptPreviewProps
                   if (el) sectionsRef.current.set(section.id, el);
                   else sectionsRef.current.delete(section.id);
                 }}
-                className="rounded-lg border border-border"
+                className="rounded border border-border-default"
               >
                 <button
                   onClick={() => toggleSection(section.id)}
                   aria-expanded={expanded.has(section.id)}
-                  className="flex w-full items-center justify-between rounded-t-lg px-4 py-3 text-left hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-orchestra-500"
+                  className="flex w-full items-center justify-between rounded-t px-4 py-3 text-left hover:bg-bg-hover focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-purple"
                 >
                   <span className="text-sm font-semibold text-text-primary">{section.heading}</span>
                   <span
@@ -327,7 +323,7 @@ export function PromptPreview({ taskId, sessionId, onClose }: PromptPreviewProps
                   </span>
                 </button>
                 {expanded.has(section.id) && (
-                  <div className="border-t border-border px-4 py-3">
+                  <div className="border-t border-border-subtle px-4 py-3">
                     {section.subSections.length > 0 ? (
                       <div className="space-y-3">
                         {section.subSections.map((sub) => (

@@ -16,23 +16,23 @@ export function FormField({ label, description, required, error, children }: For
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-1">
-        <label htmlFor={id} className="text-sm font-medium text-text-primary">
+        <label htmlFor={id} className="text-xs font-medium text-text-primary">
           {label}
         </label>
         {required && (
-          <span className="text-red-500" aria-hidden="true">
+          <span className="text-accent-red" aria-hidden="true">
             *
           </span>
         )}
       </div>
       {description && (
-        <p id={descriptionId} className="text-sm text-text-secondary">
+        <p id={descriptionId} className="text-xs text-text-secondary">
           {description}
         </p>
       )}
       {children(id, errorId, descriptionId)}
       {error && (
-        <p id={errorId} className="text-sm text-red-600" role="alert">
+        <p id={errorId} className="text-xs text-accent-red" role="alert">
           {error}
         </p>
       )}

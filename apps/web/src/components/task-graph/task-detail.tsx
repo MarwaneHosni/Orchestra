@@ -35,50 +35,50 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChan
       role="dialog"
       aria-modal="true"
       aria-label={`Task details: ${task.title}`}
-      className="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border bg-surface shadow-xl sm:w-96"
+      className="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border-default bg-bg-elevated sm:w-96"
     >
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+      <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
         <h2 className="text-sm font-semibold text-text-primary">Task Details</h2>
         <button
           onClick={onClose}
           aria-label="Close task details"
-          className="rounded-lg p-1 text-text-secondary hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-orchestra-500"
+          className="rounded p-1 text-text-secondary hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-purple"
         >
-          <span aria-hidden="true">&times;</span>
+          <span aria-hidden="true">✗</span>
         </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
-        <h3 className="text-base font-semibold text-text-primary">{task.title}</h3>
+        <h3 className="text-sm font-semibold text-text-primary">{task.title}</h3>
 
         <div className="mt-3 flex flex-wrap gap-2">
-          <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium">{task.phaseType}</span>
-          <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium">{task.type}</span>
-          <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium">
+          <span className="rounded bg-bg-hover px-2 py-0.5 text-xs font-medium">{task.phaseType}</span>
+          <span className="rounded bg-bg-hover px-2 py-0.5 text-xs font-medium">{task.type}</span>
+          <span className="rounded bg-bg-hover px-2 py-0.5 text-xs font-medium">
             Priority: {task.priority}
           </span>
-          <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium">
+          <span className="rounded bg-bg-hover px-2 py-0.5 text-xs font-medium">
             {STATUS_LABELS[task.status] ?? task.status}
           </span>
         </div>
 
         {"failureReason" in task && task.failureReason && (
           <div
-            className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
+            className="mt-4 rounded border border-accent-amber-dim bg-accent-amber-dim/30 p-3 text-sm"
             role="alert"
           >
-            <p className="font-medium">Needs Review</p>
-            <p className="mt-1 text-xs">{task.failureReason}</p>
+            <p className="font-medium text-accent-amber">Needs Review</p>
+            <p className="mt-1 text-xs text-text-secondary">{task.failureReason}</p>
           </div>
         )}
 
-        <div className="mt-4 flex items-center gap-3 rounded-lg border border-border p-3">
+        <div className="mt-4 flex items-center gap-3 rounded border border-border-default p-3">
           <input
             type="checkbox"
             id="task-done"
             checked={task.status === "complete"}
             onChange={() => onStatusChange(task.id, task.status === "complete" ? "pending" : "complete")}
-            className="h-5 w-5 rounded border-gray-300 text-orchestra-600 focus:ring-orchestra-500"
+            className="h-4 w-4 rounded border-border-default accent-accent-purple focus:ring-accent-purple"
           />
           <label htmlFor="task-done" className="text-sm font-medium text-text-primary">
             {task.status === "complete" ? "Completed" : "Mark as complete"}
@@ -94,7 +94,7 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChan
           ) : (
             <ul className="space-y-1.5">
               {depNames.map((t) => (
-                <li key={t!.id} className="rounded-lg border border-border bg-gray-50 px-3 py-2 text-sm">
+                <li key={t!.id} className="rounded border border-border-subtle bg-bg-surface px-3 py-2 text-sm">
                   {t!.title}
                 </li>
               ))}
@@ -126,10 +126,10 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChan
                 return (
                   <li
                     key={d.taskId}
-                    className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm"
+                    className="flex items-center gap-2 rounded border border-accent-red-dim bg-accent-red-dim/30 px-3 py-2 text-sm"
                   >
-                    <span className="h-2 w-2 rounded-full bg-red-500" aria-hidden="true" />
-                    <span className="text-red-700">{depTask?.title ?? d.taskId}</span>
+                    <span className="h-2 w-2 rounded-full bg-accent-red" aria-hidden="true" />
+                    <span className="text-accent-red">{depTask?.title ?? d.taskId}</span>
                   </li>
                 );
               })}
@@ -149,10 +149,10 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChan
         </div>
       </div>
 
-      <div className="border-t border-border p-4">
+      <div className="border-t border-border-subtle p-4">
         <button
           onClick={() => onShowPrompt(task.id)}
-          className="w-full rounded-lg bg-orchestra-600 px-4 py-2 text-sm font-medium text-white hover:bg-orchestra-700 focus:outline-none focus:ring-2 focus:ring-orchestra-500 focus:ring-offset-2"
+          className="w-full rounded bg-accent-purple px-4 py-2 text-sm font-medium text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-accent-purple focus:ring-offset-1 focus:ring-offset-bg-elevated"
         >
           View Prompt
         </button>

@@ -3,14 +3,14 @@ export default function ProjectsLoading() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <div className="h-8 w-36 animate-pulse rounded bg-gray-200" />
-          <div className="mt-1 h-4 w-56 animate-pulse rounded bg-gray-200" />
+          <div className="h-6 w-28 animate-pulse rounded bg-border-subtle" />
+          <div className="mt-1 h-3 w-44 animate-pulse rounded bg-border-subtle" />
         </div>
-        <div className="h-10 w-32 animate-pulse rounded-lg bg-gray-200" />
+        <div className="h-8 w-28 animate-pulse rounded bg-border-subtle" />
       </div>
       <div className="space-y-2">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-16 animate-pulse rounded-xl bg-gray-100" />
+          <div key={i} className="h-14 animate-pulse rounded bg-bg-hover" />
         ))}
       </div>
     </div>

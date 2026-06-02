@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "@orchestra/shared": "workspace:*",
-    "@radix-ui/react-slot": "^1.2.4",
     "clsx": "^2.1.1",
     "next": "^15.3.1",
     "react": "^19.1.0",

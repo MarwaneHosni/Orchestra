@@ -104,7 +104,6 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
       const result: NextQuestionResult = await getNextQuestion(sessionId);
       const newPhaseType = result.question?.phaseType ?? PHASES[result.phaseIndex] ?? "";
 
-      // Show phase intro when entering a new phase
       if (result.question && newPhaseType !== currentPhaseType && history.length > 0) {
         setShowPhaseIntro(true);
       }
@@ -256,24 +255,24 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-2xl space-y-6" role="status" aria-label="Loading interview">
-        <div className="h-5 w-48 animate-pulse rounded bg-gray-200" />
-        <div className="h-1.5 w-full animate-pulse rounded-full bg-gray-200" />
-        <div className="h-6 w-64 animate-pulse rounded bg-gray-200" />
-        <div className="h-40 w-full animate-pulse rounded-xl bg-gray-100" />
-        <div className="h-10 w-32 animate-pulse rounded-lg bg-gray-200" />
+      <div className="space-y-6" role="status" aria-label="Loading interview">
+        <div className="h-4 w-36 animate-pulse rounded bg-border-subtle" />
+        <div className="h-1.5 w-full animate-pulse rounded-full bg-border-subtle" />
+        <div className="h-5 w-48 animate-pulse rounded bg-border-subtle" />
+        <div className="h-40 w-full animate-pulse rounded bg-bg-hover" />
+        <div className="h-8 w-28 animate-pulse rounded bg-border-subtle" />
       </div>
     );
   }
 
   if (error && !question) {
     return (
-      <div className="mx-auto max-w-2xl py-16">
-        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center" role="alert">
-          <p className="text-red-800">{error}</p>
+      <div className="py-16">
+        <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-6 text-center" role="alert">
+          <p className="text-accent-red">{error}</p>
           <button
             onClick={loadNext}
-            className="mt-4 rounded-lg bg-orchestra-600 px-4 py-2 text-sm text-white hover:bg-orchestra-700"
+            className="mt-4 rounded bg-accent-purple px-4 py-2 text-sm text-white hover:opacity-90"
           >
             Retry
           </button>
@@ -283,7 +282,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-5">
+    <div className="space-y-5">
       <LiveAnnouncer message={announcement} />
 
       <Breadcrumb items={[{ label: "Projects", href: "/projects" }, { label: "Interview" }]} />
@@ -293,21 +292,21 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
       <ProgressBar currentPhaseIndex={phaseIndex} total={total} answered={answeredCount()} />
 
       {showPhaseIntro && !finished && phaseIntro && (
-        <div className="rounded-lg border border-orchestra-200 bg-orchestra-50 p-4">
+        <div className="rounded border border-accent-purple-dim bg-accent-purple-dim/30 p-4">
           <div className="flex items-center gap-2 mb-1">
-            <span className="rounded-full bg-orchestra-100 px-2.5 py-0.5 text-xs font-medium text-orchestra-700">
+            <span className="rounded bg-accent-purple-dim px-2.5 py-0.5 text-xs font-medium text-accent-purple">
               {PHASE_GROUP[currentPhaseType] ?? ""}
             </span>
-            <span className="text-sm font-medium text-orchestra-800">
+            <span className="text-sm font-medium text-text-primary">
               {PHASE_LABELS[currentPhaseType] ?? currentPhaseType}
             </span>
           </div>
-          <p className="text-sm text-orchestra-700" dangerouslySetInnerHTML={{ __html: phaseIntro }} />
+          <p className="text-sm text-text-secondary" dangerouslySetInnerHTML={{ __html: phaseIntro }} />
           <button
             onClick={() => setShowPhaseIntro(false)}
-            className="mt-2 text-xs font-medium text-orchestra-600 hover:text-orchestra-700 underline underline-offset-2"
+            className="mt-2 text-xs font-medium text-accent-purple hover:underline underline-offset-2"
           >
-            Got it &rarr;
+            Got it →
           </button>
         </div>
       )}
@@ -329,14 +328,14 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
 
       {finished ? (
         <div
-          className="rounded-xl border-2 border-orchestra-200 bg-orchestra-50 p-8 text-center"
+          className="rounded border-2 border-accent-purple-dim bg-accent-purple-dim/30 p-8 text-center"
           role="region"
           aria-label="Interview complete"
         >
-          <h2 ref={finishedHeadingRef} className="text-xl font-semibold text-text-primary" tabIndex={-1}>
+          <h2 ref={finishedHeadingRef} className="text-base font-semibold text-text-primary" tabIndex={-1}>
             You&apos;re all set
           </h2>
-          <p className="mt-2 text-sm text-text-secondary">
+          <p className="mt-2 text-xs text-text-secondary">
             You&apos;ve answered enough questions to generate a detailed project plan.
             {answered < total ? " Some advanced questions were skipped — you can refine these after reviewing the plan." : ""}
           </p>
@@ -350,14 +349,14 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
                 return (
                   <li
                     key={phase}
-                    className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm ${
+                    className={`flex items-center justify-between rounded border px-3 py-2 text-sm ${
                       isEmpty
-                        ? "border-gray-200 bg-gray-50 text-gray-400"
-                        : "border-green-200 bg-green-50 text-green-800"
+                        ? "border-border-subtle bg-bg-surface text-text-muted"
+                        : "border-accent-green-dim bg-accent-green-dim/30 text-accent-green"
                     }`}
                   >
                     <span className="flex items-center gap-2">
-                      <span className={`h-1.5 w-1.5 rounded-full ${isEmpty ? "bg-gray-300" : "bg-green-500"}`} />
+                      <span className={`h-1.5 w-1.5 rounded-full ${isEmpty ? "bg-border-default" : "bg-accent-green"}`} />
                       {PHASE_LABELS[phase] ?? phase}
                     </span>
                     <span className="text-xs">
@@ -373,7 +372,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
             {history.length > 0 && (
               <button
                 onClick={handleBack}
-                className="rounded-lg border border-border bg-white px-4 py-2 text-sm text-text-secondary hover:bg-gray-50"
+                className="rounded border border-border-default bg-bg-surface px-4 py-2 text-sm text-text-secondary hover:bg-bg-hover"
               >
                 Review answers
               </button>
@@ -382,7 +381,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
               onClick={handleGenerate}
               disabled={generating}
               aria-busy={generating}
-              className="rounded-lg bg-orchestra-600 px-6 py-2 text-sm font-medium text-white hover:bg-orchestra-700 disabled:opacity-50"
+              className="rounded bg-accent-purple px-6 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
             >
               {generating ? "Generating..." : "Generate project plan"}
             </button>
@@ -397,13 +396,13 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
             />
           )}
           {error && (
-            <p className="mt-2 text-sm text-red-600" role="alert">
+            <p className="mt-2 text-xs text-accent-red" role="alert">
               {error}
             </p>
           )}
         </div>
       ) : question ? (
-        <div className="rounded-xl border border-border bg-surface p-6">
+        <div className="rounded border border-border-default bg-bg-elevated p-6">
           <QuestionRenderer
             question={question}
             initialValue={initialValue}
@@ -412,12 +411,12 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
             headingRef={questionHeadingRef}
           />
           {submitting && (
-            <p className="mt-3 text-sm text-text-secondary" role="status" aria-label="Saving answer">
+            <p className="mt-3 text-xs text-text-muted" role="status" aria-label="Saving answer">
               Saving...
             </p>
           )}
           {error && (
-            <p className="mt-3 text-sm text-red-600" role="alert">
+            <p className="mt-3 text-xs text-accent-red" role="alert">
               {error}
             </p>
           )}

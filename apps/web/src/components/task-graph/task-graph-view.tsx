@@ -91,11 +91,11 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="h-5 w-48 animate-pulse rounded bg-gray-200" />
-        <div className="h-8 w-64 animate-pulse rounded bg-gray-200" />
+        <div className="h-4 w-36 animate-pulse rounded bg-border-subtle" />
+        <div className="h-6 w-48 animate-pulse rounded bg-border-subtle" />
         <div className="grid grid-cols-3 gap-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-20 animate-pulse rounded-xl bg-gray-100" />
+            <div key={i} className="h-16 animate-pulse rounded bg-bg-hover" />
           ))}
         </div>
       </div>
@@ -104,11 +104,11 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
-        <p className="text-red-800">{error}</p>
+      <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-6 text-center">
+        <p className="text-accent-red">{error}</p>
         <button
           onClick={() => window.location.reload()}
-          className="mt-4 rounded-lg bg-orchestra-600 px-4 py-2 text-sm text-white hover:bg-orchestra-700"
+          className="mt-4 rounded bg-accent-purple px-4 py-2 text-sm text-white hover:opacity-90"
         >
           Retry
         </button>
@@ -121,9 +121,9 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
       <div className="space-y-6">
         <Breadcrumb items={[{ label: "Projects", href: "/projects" }, { label: "Task Graph" }]} />
         <StepIndicator current="tasks" complete={["interview", "review"]} />
-        <div className="rounded-xl border-2 border-dashed border-border bg-surface-secondary p-12 text-center">
-          <p className="text-lg font-medium text-text-primary">No tasks generated yet</p>
-          <p className="mt-1 text-sm text-text-secondary">
+        <div className="rounded border-2 border-dashed border-border-default bg-bg-surface p-12 text-center">
+          <p className="text-sm font-medium text-text-primary">No tasks generated yet</p>
+          <p className="mt-1 text-xs text-text-secondary">
             Complete the interview and generate a plan to see the task graph.
           </p>
         </div>
@@ -162,24 +162,24 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">Task Graph</h1>
-          <p className="mt-1 text-sm text-text-secondary">
-            {graph.tasks.length} task{graph.tasks.length !== 1 ? "s" : ""} &middot;{" "}
-            {graph.dependencies.length} dependenc{graph.dependencies.length !== 1 ? "ies" : "y"} &middot; v{1}
+          <h1 className="text-lg font-semibold text-text-primary">Task Graph</h1>
+          <p className="mt-1 text-xs text-text-secondary">
+            {graph.tasks.length} task{graph.tasks.length !== 1 ? "s" : ""} ·{" "}
+            {graph.dependencies.length} dependenc{graph.dependencies.length !== 1 ? "ies" : "y"} · v{1}
             {needsReviewCount > 0 && ` · ${needsReviewCount} needs review`}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => router.push(`/projects/${sessionId}/versions`)}
-            className="rounded-lg border border-border bg-white px-4 py-2 text-sm font-medium text-text-secondary hover:bg-gray-50"
+            className="rounded border border-border-default bg-bg-surface px-4 py-2 text-xs font-medium text-text-secondary hover:bg-bg-hover"
           >
             Version history
           </button>
           <button
             onClick={handleExport}
             disabled={exporting}
-            className="rounded-lg bg-orchestra-600 px-4 py-2 text-sm font-medium text-white hover:bg-orchestra-700 disabled:opacity-50"
+            className="rounded bg-accent-purple px-4 py-2 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
           >
             {exporting ? "Exporting..." : "Export bundle"}
           </button>
@@ -187,13 +187,13 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
       </div>
 
       {exportError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-3 text-sm text-accent-red">
           {exportError}
         </div>
       )}
 
       {needsReviewCount > 0 && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+        <div className="rounded border border-accent-amber-dim bg-accent-amber-dim/30 p-3 text-xs text-accent-amber">
           {needsReviewCount} task{needsReviewCount !== 1 ? "s" : ""} need{needsReviewCount === 1 ? "s" : ""}{" "}
           review due to insufficient phase detail. These are marked with an amber border.
         </div>
@@ -207,7 +207,7 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
 
           return (
             <div key={phase}>
-              <h3 className="mb-3 text-sm font-semibold text-text-primary">
+              <h3 className="mb-3 text-xs font-semibold text-text-primary">
                 {PHASE_LABELS[phase] ?? phase}
                 <span className="ml-2 font-normal text-text-secondary">
                   {phaseTasks.length} task{phaseTasks.length !== 1 ? "s" : ""}

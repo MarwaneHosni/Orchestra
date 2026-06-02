@@ -19,49 +19,26 @@ export function PhaseNotice({
   onContinue,
   className,
 }: PhaseNoticeProps) {
+  const colors =
+    type === "insufficient"
+      ? { border: "border-accent-amber-dim", bg: "bg-accent-amber-dim/30", text: "text-accent-amber", textStrong: "text-accent-amber" }
+      : { border: "border-accent-red-dim", bg: "bg-accent-red-dim/30", text: "text-accent-red", textStrong: "text-accent-red" };
+
   return (
-    <div
-      className={cn(
-        "rounded-lg border p-4",
-        type === "insufficient" && "border-amber-200 bg-amber-50",
-        type === "missing" && "border-red-200 bg-red-50",
-        className,
-      )}
-      role="alert"
-    >
+    <div className={cn("rounded border p-4", colors.border, colors.bg, className)} role="alert">
       <div className="flex items-start gap-3">
-        <span
-          className={cn(
-            "mt-0.5 text-sm",
-            type === "insufficient" && "text-amber-600",
-            type === "missing" && "text-red-600",
-          )}
-          aria-hidden="true"
-        >
-          {type === "insufficient" ? "⚠" : "✕"}
+        <span className={`mt-0.5 text-sm ${colors.text}`} aria-hidden="true">
+          {type === "insufficient" ? "~" : "✗"}
         </span>
         <div className="min-w-0 flex-1">
-          <p
-            className={cn(
-              "text-sm font-medium",
-              type === "insufficient" && "text-amber-800",
-              type === "missing" && "text-red-800",
-            )}
-          >
+          <p className={`text-sm font-medium ${colors.textStrong}`}>
             Phase &ldquo;{phaseName}&rdquo;{" "}
             {type === "insufficient" ? "could use more detail" : "needs input"}
           </p>
           {details.length > 0 && (
             <ul className="mt-1 space-y-0.5">
               {details.map((d, i) => (
-                <li
-                  key={i}
-                  className={cn(
-                    "text-xs",
-                    type === "insufficient" && "text-amber-700",
-                    type === "missing" && "text-red-700",
-                  )}
-                >
+                <li key={i} className={`text-xs ${colors.text}`}>
                   {d}
                 </li>
               ))}
@@ -73,9 +50,9 @@ export function PhaseNotice({
                 <button
                   onClick={onProvideMore}
                   className={cn(
-                    "rounded-md px-3 py-1 text-xs font-medium transition-colors",
-                    type === "insufficient" && "bg-amber-600 text-white hover:bg-amber-700",
-                    type === "missing" && "bg-red-600 text-white hover:bg-red-700",
+                    "rounded px-3 py-1 text-xs font-medium transition-colors",
+                    type === "insufficient" && "bg-accent-amber text-gray-900 hover:opacity-90",
+                    type === "missing" && "bg-accent-red text-white hover:opacity-90",
                   )}
                 >
                   {type === "insufficient" ? "Provide more detail" : "Answer questions"}
@@ -84,7 +61,7 @@ export function PhaseNotice({
               {onContinue && (
                 <button
                   onClick={onContinue}
-                  className="rounded-md border border-border bg-white px-3 py-1 text-xs font-medium text-text-secondary hover:bg-gray-50"
+                  className="rounded border border-border-default bg-bg-surface px-3 py-1 text-xs font-medium text-text-secondary hover:bg-bg-hover"
                 >
                   Continue as-is
                 </button>

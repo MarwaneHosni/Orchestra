@@ -42,8 +42,12 @@ export function ProgressBar({ currentPhaseIndex, total, answered }: ProgressBarP
 
   const groupProgress = useMemo(() => {
     const phases = Object.entries(PHASE_GROUP_LABELS);
-    const groups: { name: string; total: number; count: number }[] = GROUP_ORDER.map((name) => ({ name, total: 0, count: 0 }));
-    for (const [phase, info] of phases) {
+    const groups: { name: string; total: number; count: number }[] = GROUP_ORDER.map((name) => ({
+      name,
+      total: 0,
+      count: 0,
+    }));
+    for (const [, info] of phases) {
       const g = groups.find((g) => g.name === info.group);
       if (g) g.total++;
     }
@@ -52,12 +56,12 @@ export function ProgressBar({ currentPhaseIndex, total, answered }: ProgressBarP
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between text-sm">
+      <div className="flex items-center justify-between text-xs">
         <span className="font-medium text-text-primary">
           {currentGroup ? `${currentGroup}` : "Getting started"}
         </span>
-        <span className="text-xs text-text-secondary">
-          {answered}/{total} &middot; {estimateMinutesRemaining(total, answered)}
+        <span className="text-text-secondary">
+          {answered}/{total} · {estimateMinutesRemaining(total, answered)}
         </span>
       </div>
 
@@ -67,10 +71,10 @@ export function ProgressBar({ currentPhaseIndex, total, answered }: ProgressBarP
         aria-valuemin={0}
         aria-valuemax={total}
         aria-valuetext={`${pct} percent complete`}
-        className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200"
+        className="h-1.5 w-full overflow-hidden rounded-full bg-border-subtle"
       >
         <div
-          className="h-full rounded-full bg-orchestra-500 transition-all duration-500"
+          className="h-full rounded-full bg-accent-purple transition-all duration-500"
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -81,12 +85,12 @@ export function ProgressBar({ currentPhaseIndex, total, answered }: ProgressBarP
           return (
             <span
               key={g.name}
-              className={`whitespace-nowrap text-xs font-medium ${
-                isActive ? "text-orchestra-700" : "text-gray-400"
+              className={`whitespace-nowrap text-[10px] font-medium ${
+                isActive ? "text-accent-purple" : "text-text-muted"
               }`}
             >
               {g.name}
-              <span className="ml-1 font-normal text-gray-400">({g.total})</span>
+              <span className="ml-1 font-normal text-text-muted">({g.total})</span>
             </span>
           );
         })}

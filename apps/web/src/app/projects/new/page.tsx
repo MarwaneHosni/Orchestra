@@ -30,10 +30,10 @@ export default function NewProjectPage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-text-primary">New project</h1>
-        <p className="mt-1 text-sm text-text-secondary">
+        <h1 className="text-lg font-semibold text-text-primary">New project</h1>
+        <p className="mt-1 text-xs text-text-secondary">
           Describe your software idea. Orchestra will guide you through structured questions to build a plan.
         </p>
       </div>
@@ -71,13 +71,14 @@ export default function NewProjectPage() {
                 placeholder="e.g. A task management tool for remote teams that integrates with Slack and GitHub..."
                 value={ideaText}
                 onChange={(e) => setIdeaText(e.target.value)}
-                className="block w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-orchestra-500 focus:border-orchestra-500"
+                className="block w-full rounded border border-border-default bg-bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent-purple focus:border-accent-purple"
+                style={{ fontFamily: "'JetBrains Mono', monospace" }}
               />
             )}
           </FormField>
 
           {error && (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-xs text-accent-red" role="alert">
               {error}
             </p>
           )}

@@ -32,7 +32,7 @@ export function ActivityTimeline({ projectId, compact }: ActivityTimelineProps) 
     return (
       <div className="space-y-3" role="status" aria-label="Loading activity">
         {Array.from({ length: compact ? 3 : 5 }).map((_, i) => (
-          <div key={i} className="h-12 animate-pulse rounded-lg bg-gray-100" />
+          <div key={i} className="h-10 animate-pulse rounded bg-bg-hover" />
         ))}
       </div>
     );
@@ -40,7 +40,7 @@ export function ActivityTimeline({ projectId, compact }: ActivityTimelineProps) 
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">
+      <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-3 text-sm text-accent-red" role="alert">
         {error}
       </div>
     );
@@ -48,7 +48,7 @@ export function ActivityTimeline({ projectId, compact }: ActivityTimelineProps) 
 
   if (events.length === 0) {
     return (
-      <div className="rounded-lg border-2 border-dashed border-border bg-surface-secondary p-8 text-center text-sm text-text-secondary">
+      <div className="rounded border-2 border-dashed border-border-default bg-bg-surface p-8 text-center text-xs text-text-secondary">
         No activity recorded yet
       </div>
     );
@@ -61,8 +61,8 @@ export function ActivityTimeline({ projectId, compact }: ActivityTimelineProps) 
       {displayEvents.map((event, i) => (
         <div key={event.id} className="flex gap-3">
           <div className="flex flex-col items-center">
-            <div className="h-2 w-2 rounded-full bg-orchestra-500" />
-            {i < displayEvents.length - 1 && <div className="flex-1 w-0.5 bg-gray-200" />}
+            <div className="h-2 w-2 rounded-full bg-accent-purple" />
+            {i < displayEvents.length - 1 && <div className="flex-1 w-0.5 bg-border-subtle" />}
           </div>
           <div className="min-w-0 flex-1 pb-4">
             <p className="text-sm text-text-primary">{getEventLabel(event.eventType)}</p>
