@@ -16,7 +16,6 @@ export default function InterviewPage() {
   useEffect(() => {
     const resolve = async () => {
       try {
-        // Try rawId as session ID first (new-project flow)
         await resumeSession(rawId);
         setSessionId(rawId);
         setResolving(false);
@@ -25,7 +24,6 @@ export default function InterviewPage() {
         // rawId is not a session — treat as project ID
       }
 
-      // rawId is a project ID — get or create a session for it
       try {
         const result = await createOrResumeSession(rawId);
         if (result.status === "completed") {
@@ -43,17 +41,17 @@ export default function InterviewPage() {
 
   if (resolving) {
     return (
-      <div className="mx-auto max-w-2xl py-16 text-center" role="status">
-        <p className="text-text-secondary">Loading interview...</p>
+      <div className="pt-12 text-center" role="status">
+        <p style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>resolving session...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="mx-auto max-w-2xl py-16">
-        <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-6 text-center" role="alert">
-          <p className="text-accent-red">{error}</p>
+      <div className="pt-12">
+        <div style={{ borderRadius: 3, border: "1px solid var(--color-accent-red-dim)", background: "var(--color-accent-red-dim)", padding: "20px", textAlign: "center" }} role="alert">
+          <p style={{ fontSize: 14, color: "var(--color-accent-red)" }}>{error}</p>
         </div>
       </div>
     );
@@ -61,14 +59,14 @@ export default function InterviewPage() {
 
   if (!sessionId) {
     return (
-      <div className="mx-auto max-w-2xl py-16 text-center" role="alert">
-        <p className="text-text-secondary">No active session found for this project.</p>
+      <div className="pt-12 text-center" role="alert">
+        <p style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>No active session found for this project.</p>
       </div>
     );
   }
 
   return (
-    <div className="py-4">
+    <div>
       <InterviewView sessionId={sessionId} />
     </div>
   );

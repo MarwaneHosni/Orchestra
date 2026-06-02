@@ -8,8 +8,6 @@ export default function SummaryPage() {
   const sessionId = params.id as string;
 
   return (
-    <div className="py-4">
-      <SummaryView sessionId={sessionId} />
-    </div>
+    <SummaryView sessionId={sessionId} />
   );
 }

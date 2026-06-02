@@ -8,8 +8,6 @@ export default function VersionsPage() {
   const sessionId = params.id as string;
 
   return (
-    <div className="py-4">
-      <VersionHistory sessionId={sessionId} />
-    </div>
+    <VersionHistory sessionId={sessionId} />
   );
 }

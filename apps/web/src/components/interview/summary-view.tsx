@@ -95,7 +95,7 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 gap-3" role="status" aria-label="Loading blueprint">
+      <div className="flex flex-col items-center justify-center pt-12 gap-3" role="status" aria-label="Loading blueprint">
         <ThinkingLoader />
       </div>
     );
@@ -437,12 +437,12 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
             padding: "8px 20px",
             fontSize: 13,
             fontFamily: "inherit",
-            border: "1px solid #7c3aed",
-            color: "#7c3aed",
+            border: "1px solid var(--color-accent-purple)",
+            color: "var(--color-accent-purple)",
             background: "transparent",
             cursor: "pointer",
           }}
-          className="hover:bg-[rgba(124,58,237,0.1)] transition-colors duration-150"
+          className="hover:bg-accent-purple-dim transition-colors duration-150"
         >
           [ view task graph ]
         </button>

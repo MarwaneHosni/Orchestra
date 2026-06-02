@@ -16,8 +16,8 @@
   --color-text-muted: #555555;
   --color-text-inverse: #0d0d0d;
 
-  --color-accent-purple: #7c3aed;
-  --color-accent-purple-dim: color-mix(in srgb, #7c3aed 12%, transparent);
+  --color-accent-purple: #D77757;
+  --color-accent-purple-dim: color-mix(in srgb, #D77757 15%, transparent);
   --color-accent-green: #22c55e;
   --color-accent-green-dim: color-mix(in srgb, #22c55e 10%, transparent);
   --color-accent-amber: #f59e0b;

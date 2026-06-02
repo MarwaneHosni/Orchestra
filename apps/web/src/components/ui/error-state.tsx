@@ -1,6 +1,5 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 interface ErrorStateProps {
@@ -18,20 +17,22 @@ export function ErrorState({
 }: ErrorStateProps) {
   return (
     <div
-      className={cn(
-        "flex flex-col items-center justify-center px-6 py-16 text-center",
-        className,
-      )}
       style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "40px 24px",
         borderRadius: 3,
         border: "1px solid var(--color-accent-red-dim)",
         background: "var(--color-accent-red-dim)",
       }}
+      className={className}
       role="alert"
     >
-      <span className="mb-3 text-accent-red text-lg" aria-hidden="true">✗</span>
-      <h3 className="mb-2" style={{ fontSize: 14, fontWeight: 600 }}>{title}</h3>
-      <p className="mb-6 max-w-sm" style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{message}</p>
+      <span style={{ marginBottom: 8, color: "var(--color-accent-red)", fontSize: 18 }} aria-hidden="true">✗</span>
+      <h3 style={{ marginBottom: 4, fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>{title}</h3>
+      <p style={{ marginBottom: 20, maxWidth: 320, fontSize: 12, color: "var(--color-text-secondary)", textAlign: "center" }}>{message}</p>
       {onRetry && (
         <Button variant="ghost" onClick={onRetry}>
           Try again

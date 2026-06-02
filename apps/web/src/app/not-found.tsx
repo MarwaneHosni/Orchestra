@@ -1,19 +1,29 @@
-import Link from "next/link";
-
 export default function NotFound() {
   return (
-    <div className="flex flex-col items-center justify-center py-24 text-center">
-      <p className="text-4xl font-bold text-text-muted">404</p>
-      <h1 className="mt-4 text-base font-semibold text-text-primary">Page not found</h1>
-      <p className="mt-2 text-xs text-text-secondary">
+    <div className="flex flex-col items-center justify-center pt-16 text-center">
+      <p style={{ fontSize: 36, fontWeight: 700, color: "var(--color-text-muted)" }}>404</p>
+      <h1 style={{ marginTop: 12, fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>Page not found</h1>
+      <p style={{ marginTop: 6, fontSize: 12, color: "var(--color-text-secondary)" }}>
         The page you are looking for does not exist or has been moved.
       </p>
-      <Link
+      <a
         href="/"
-        className="mt-6 inline-flex items-center justify-center gap-2 rounded bg-accent-purple px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-colors"
+        style={{
+          marginTop: 20,
+          borderRadius: 3,
+          padding: "8px 18px",
+          fontSize: 13,
+          fontFamily: "inherit",
+          border: "1px solid var(--color-accent-purple)",
+          color: "var(--color-accent-purple)",
+          background: "transparent",
+          cursor: "pointer",
+          textDecoration: "none",
+        }}
+        className="hover:bg-accent-purple-dim transition-colors duration-150"
       >
-        Go to dashboard
-      </Link>
+        ← go to dashboard
+      </a>
     </div>
   );
 }
