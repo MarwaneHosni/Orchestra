@@ -1,14 +1,12 @@
 "use client";
 
+"use client";
+
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getLatestBlueprint } from "@/lib/api";
 import type { BlueprintResult } from "@/lib/api";
-import { cn } from "@/lib/utils";
-import { StepIndicator } from "@/components/ui/step-indicator";
-import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { ThinkingLoader } from "@/components/ui/skeleton";
-import { StatusBadge } from "@/components/ui/badge";
 
 interface SummaryViewProps {
   sessionId: string;
@@ -16,6 +14,36 @@ interface SummaryViewProps {
 
 const MAX_POLL_RETRIES = 60;
 const POLL_INTERVAL_MS = 2000;
+
+function confidenceColor(n: number): string {
+  const pct = n * 100;
+  if (pct >= 60) return "var(--color-accent-green)";
+  if (pct >= 40) return "var(--color-accent-amber)";
+  return "var(--color-accent-red)";
+}
+
+function statusColor(s: string): string {
+  if (s === "sufficient") return "var(--color-accent-green)";
+  if (s === "insufficient") return "var(--color-accent-amber)";
+  return "var(--color-text-muted)";
+}
+
+function statusIcon(s: string): string {
+  if (s === "sufficient") return "✓";
+  if (s === "insufficient") return "~";
+  return "○";
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export function SummaryView({ sessionId }: SummaryViewProps) {
   const router = useRouter();
@@ -65,10 +93,6 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
     };
   }, [sessionId]);
 
-  const hasInsufficientPhases = blueprint?.phases.some(
-    (p) => p.status === "insufficient" || p.status === "missing",
-  );
-
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3" role="status" aria-label="Loading blueprint">
@@ -79,226 +103,382 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
 
   if (error) {
     return (
-      <div className="py-16">
-        <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-6 text-center">
-          <p className="text-accent-red">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 rounded bg-accent-purple px-4 py-2 text-sm text-white hover:opacity-90"
-          >
-            Retry
-          </button>
-        </div>
+      <div style={{ borderRadius: 3, border: "1px solid var(--color-accent-red-dim)", background: "var(--color-accent-red-dim)", padding: "20px", textAlign: "center" }}>
+        <p style={{ color: "var(--color-accent-red)", fontSize: 14 }}>{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          style={{ marginTop: 14, borderRadius: 3, padding: "8px 18px", fontSize: 13, fontFamily: "inherit" }}
+          className="bg-accent-purple text-white border border-accent-purple font-medium hover:opacity-88 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform] duration-150"
+        >
+          Retry
+        </button>
       </div>
     );
   }
 
   if (!blueprint) {
     return (
-      <div className="py-16 text-center">
-        <p className="text-text-secondary">No blueprint found for this project.</p>
+      <div style={{ padding: "48px 0", textAlign: "center" }}>
+        <p style={{ fontSize: 14, color: "var(--color-text-secondary)" }}>No blueprint found for this project.</p>
       </div>
     );
   }
 
-  const confidenceColor =
-    blueprint.overallConfidence >= 0.6
-      ? "text-accent-green"
-      : blueprint.overallConfidence >= 0.4
-        ? "text-accent-amber"
-        : "text-accent-red";
+  const hasInsufficientPhases = blueprint.phases.some(
+    (p) => p.status === "insufficient" || p.status === "missing",
+  );
+
+  const C = confidenceColor(blueprint.overallConfidence);
 
   return (
-    <div className="space-y-8">
-      <Breadcrumb items={[{ label: "Projects", href: "/projects" }, { label: blueprint.projectName }]} />
-
-      <StepIndicator current="review" complete={["interview"]} />
-
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold text-text-primary">{blueprint.projectName}</h1>
-          <p className="mt-1 text-xs text-text-secondary">
-            Plan v{blueprint.planVersion} · Generated{" "}
-            {new Date(blueprint.generatedAt).toLocaleDateString()}
-          </p>
-        </div>
+    <div style={{ fontFamily: "'JetBrains Mono', monospace", lineHeight: 1.6 }}>
+      {/* ── Header: terminal prompt line ── */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          paddingBottom: 10,
+          borderBottom: "1px solid #222",
+          fontSize: 13,
+          color: "var(--color-text-secondary)",
+        }}
+      >
+        <span>
+          <span style={{ color: "var(--color-accent-purple)" }}>orchestra</span>
+          <span style={{ color: "#555" }}> / </span>
+          <span>projects</span>
+          <span style={{ color: "#555" }}> / </span>
+          <span style={{ color: "var(--color-text-primary)" }}>plan v{blueprint.planVersion}</span>
+        </span>
+        <span style={{ fontSize: 12, color: "#666" }}>
+          generated: {formatDate(blueprint.generatedAt)}
+        </span>
       </div>
 
+      {/* ── Status banner ── */}
       {hasInsufficientPhases && (
-        <div className="rounded border border-accent-amber-dim bg-accent-amber-dim/30 p-4 text-xs text-accent-amber">
-          Some phases have insufficient detail. The task graph will include <strong>needs_review</strong>{" "}
-          markers for these areas. You can revisit the interview to add more detail.
+        <div
+          style={{
+            borderLeft: "3px solid var(--color-accent-amber)",
+            background: "color-mix(in srgb, var(--color-accent-amber) 5%, transparent)",
+            padding: "10px 14px",
+            marginTop: 16,
+            fontSize: 13,
+            color: "var(--color-text-secondary)",
+          }}
+        >
+          some phases have insufficient detail.{" "}
+          <code
+            style={{
+              background: "transparent",
+              border: "1px solid var(--color-accent-amber)",
+              borderRadius: 2,
+              padding: "1px 5px",
+              fontFamily: "inherit",
+              fontSize: 12,
+              color: "var(--color-accent-amber)",
+            }}
+          >
+            needs_review
+          </code>{" "}
+          markers will appear in the task graph for these areas. you can revisit the interview to add more detail.
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <MetricCard
-          label="Overall Confidence"
-          value={`${Math.round(blueprint.overallConfidence * 100)}%`}
-          className={confidenceColor}
-        />
-        <MetricCard label="Phases" value={`${blueprint.phases.length}`} />
-        <MetricCard
-          label="Flags"
-          value={`${(blueprint.ambiguityFlags ?? []).length}`}
-          sub="ambiguity items"
-        />
+      {/* ── Metrics bar ── */}
+      <div
+        style={{
+          borderTop: "1px solid #222",
+          borderBottom: "1px solid #222",
+          padding: "12px 0",
+          marginTop: 16,
+          fontSize: 13,
+        }}
+        className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-0"
+      >
+        <span className="flex items-center gap-1">
+          <span style={{ color: "#666" }}>confidence:</span>
+          <span style={{ color: C, fontWeight: 600 }}>
+            {Math.round(blueprint.overallConfidence * 100)}%
+          </span>
+          <span style={{ color: "#444" }} className="hidden sm:inline mx-[10px]">|</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span style={{ color: "#666" }}>
+            phases: <span style={{ color: "var(--color-text-primary)", fontWeight: 600 }}>{blueprint.phases.length}</span>
+          </span>
+          <span style={{ color: "#444" }} className="hidden sm:inline mx-[10px]">|</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span style={{ color: "#666" }}>
+            flags:{" "}
+            <span style={{ color: "var(--color-text-primary)", fontWeight: 600 }}>
+              {(blueprint.ambiguityFlags ?? []).length}
+            </span>{" "}
+            ambiguity items
+          </span>
+        </span>
       </div>
 
-      <section>
-        <h2 className="mb-4 text-sm font-semibold text-text-primary">Phase Progress</h2>
-        <div className="space-y-2">
-          {(blueprint.phases ?? []).map((phase) => (
-            <div
-              key={phase.phaseType}
-              className={cn(
-                "flex items-center justify-between rounded border px-4 py-3",
-                phase.status === "sufficient" && "border-accent-green-dim bg-accent-green-dim/30",
-                phase.status === "insufficient" && "border-accent-amber-dim bg-accent-amber-dim/30",
-                phase.status === "missing" && "border-border-subtle bg-bg-surface",
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <PhaseIcon status={phase.status} />
-                <div>
-                  <p className="text-sm font-medium text-text-primary">{phase.phaseName}</p>
-                  <p className="text-xs text-text-secondary">
-                    Confidence: {Math.round(phase.confidence * 100)}%
-                    {phase.ambiguityFlags?.length > 0 && ` · ${phase.ambiguityFlags.length} flag(s)`}
-                  </p>
-                </div>
+      {/* ── Phase Progress ── */}
+      <section style={{ marginTop: 32 }}>
+        <div className="flex items-center gap-3" style={{ fontSize: 13, color: "#666", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          <span>── phase progress</span>
+          <span style={{ flex: 1, borderTop: "1px solid #222", display: "inline-block" }} />
+        </div>
+
+        <div style={{ marginTop: 10 }}>
+          {(blueprint.phases ?? []).map((phase) => {
+            const col = statusColor(phase.status);
+            return (
+              <div
+                key={phase.phaseType}
+                className="summary-phase-row"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 0",
+                  borderBottom: "1px solid #1a1a1a",
+                  fontSize: 13,
+                  cursor: "default",
+                }}
+              >
+                <span style={{ width: 18, flexShrink: 0, textAlign: "center", color: col }}>
+                  {statusIcon(phase.status)}
+                </span>
+                <span
+                  style={{
+                    color: "var(--color-text-primary)",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    flexShrink: 0,
+                  }}
+                >
+                  {phase.phaseName}
+                </span>
+                {/* dot leader */}
+                <span
+                  style={{
+                    flex: 1,
+                    minWidth: 8,
+                    overflow: "hidden",
+                    color: "#333",
+                    fontSize: 12,
+                    textAlign: "left",
+                    padding: "0 4px",
+                  }}
+                  className="hidden sm:block"
+                >
+                  {"·".repeat(80)}
+                </span>
+                <span style={{ flexShrink: 0, fontSize: 12, color: col, marginRight: 12 }}>
+                  [{phase.status}]
+                </span>
+                <span
+                  style={{
+                    flexShrink: 0,
+                    width: 48,
+                    textAlign: "right",
+                    color: confidenceColor(phase.confidence),
+                    fontWeight: 600,
+                    fontSize: 12,
+                  }}
+                >
+                  {Math.round(phase.confidence * 100)}%
+                </span>
               </div>
-              <div className="flex items-center gap-2">
-                {(phase.status === "insufficient" || phase.status === "missing") && (
-                  <StatusBadge status={phase.status} />
-                )}
-                {phase.status === "sufficient" && (
-                  <StatusBadge status="sufficient" />
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
+      {/* ── Assumptions ── */}
       {blueprint.assumptions?.length > 0 && (
-        <section>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">
-            Assumptions ({blueprint.assumptions.length})
-          </h2>
-          <div className="space-y-2">
+        <section style={{ marginTop: 32 }}>
+          <div className="flex items-center gap-3" style={{ fontSize: 13, color: "#666", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            <span>── assumptions ({blueprint.assumptions.length})</span>
+            <span style={{ flex: 1, borderTop: "1px solid #222", display: "inline-block" }} />
+          </div>
+          <div style={{ marginTop: 10 }}>
             {blueprint.assumptions.map((a, i) => (
-              <div key={i} className="rounded border border-border-default bg-bg-elevated p-4">
-                <p className="text-sm text-text-primary">{a.description}</p>
-                <p className="mt-1 text-xs text-text-secondary">Source: {a.source}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {blueprint.constraints?.length > 0 && (
-        <section>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">
-            Constraints ({blueprint.constraints.length})
-          </h2>
-          <div className="space-y-2">
-            {blueprint.constraints.map((c, i) => (
-              <div key={i} className="rounded border border-border-default bg-bg-elevated p-4">
-                <p className="text-sm text-text-primary">{c.description}</p>
-                <p className="mt-1 text-xs text-text-secondary">Source: {c.source}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {blueprint.risks?.length > 0 && (
-        <section>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">Risks ({blueprint.risks.length})</h2>
-          <div className="space-y-2">
-            {blueprint.risks.map((r, i) => (
-              <div key={i} className="rounded border border-border-default bg-bg-elevated p-4">
-                <p className="text-sm text-text-primary">{r.description}</p>
-                <p className="mt-1 text-xs text-text-secondary">Source: {r.source}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {(blueprint.ambiguityFlags ?? []).length > 0 && (
-        <section>
-          <h2 className="mb-3 text-sm font-semibold text-text-primary">
-            Flags ({blueprint.ambiguityFlags.length})
-          </h2>
-          <div className="space-y-2">
-            {blueprint.ambiguityFlags.map((f, i) => (
               <div
                 key={i}
-                className={cn(
-                  "rounded border p-4",
-                  f.severity === "high" && "border-accent-red-dim bg-accent-red-dim/30",
-                  f.severity === "medium" && "border-accent-amber-dim bg-accent-amber-dim/30",
-                  f.severity === "low" && "border-border-subtle bg-bg-surface",
-                )}
+                style={{
+                  borderLeft: "2px solid #2a2a2a",
+                  padding: "8px 0 8px 14px",
+                  fontSize: 13,
+                  color: "var(--color-text-primary)",
+                  lineHeight: 1.6,
+                }}
               >
-                <div className="flex items-start gap-2">
-                  <span className="text-xs">{f.type}</span>
-                  <p className="text-sm text-text-primary">{f.message}</p>
-                </div>
+                <p>{a.description}</p>
+                <p style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                  source: {a.source}
+                </p>
               </div>
             ))}
           </div>
         </section>
       )}
 
-      <div className="flex flex-wrap gap-3 border-t border-border-subtle pt-6">
+      {/* ── Constraints ── */}
+      {blueprint.constraints?.length > 0 && (
+        <section style={{ marginTop: 32 }}>
+          <div className="flex items-center gap-3" style={{ fontSize: 13, color: "#666", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            <span>── constraints ({blueprint.constraints.length})</span>
+            <span style={{ flex: 1, borderTop: "1px solid #222", display: "inline-block" }} />
+          </div>
+          <div style={{ marginTop: 10 }}>
+            {blueprint.constraints.map((c, i) => (
+              <div
+                key={i}
+                style={{
+                  borderLeft: "2px solid #2a2a2a",
+                  padding: "8px 0 8px 14px",
+                  fontSize: 13,
+                  color: "var(--color-text-primary)",
+                  lineHeight: 1.6,
+                }}
+              >
+                <p>{c.description}</p>
+                <p style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                  source: {c.source}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Risks ── */}
+      {blueprint.risks?.length > 0 && (
+        <section style={{ marginTop: 32 }}>
+          <div className="flex items-center gap-3" style={{ fontSize: 13, color: "#666", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            <span>── risks ({blueprint.risks.length})</span>
+            <span style={{ flex: 1, borderTop: "1px solid #222", display: "inline-block" }} />
+          </div>
+          <div style={{ marginTop: 10 }}>
+            {blueprint.risks.map((r, i) => (
+              <div
+                key={i}
+                style={{
+                  borderLeft: "2px solid #c0392b",
+                  padding: "8px 0 8px 14px",
+                  fontSize: 13,
+                  color: "var(--color-text-primary)",
+                  lineHeight: 1.6,
+                }}
+              >
+                <p>{r.description}</p>
+                <p style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                  source: {r.source}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Ambiguity Flags ── */}
+      {(blueprint.ambiguityFlags ?? []).length > 0 && (
+        <section style={{ marginTop: 32 }}>
+          <div className="flex items-center gap-3" style={{ fontSize: 13, color: "#666", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            <span>── flags ({blueprint.ambiguityFlags.length})</span>
+            <span style={{ flex: 1, borderTop: "1px solid #222", display: "inline-block" }} />
+          </div>
+          <div style={{ marginTop: 10 }}>
+            {blueprint.ambiguityFlags.map((f, i) => {
+              const flagBorder =
+                f.severity === "high" ? "#c0392b" :
+                f.severity === "medium" ? "var(--color-accent-amber)" :
+                "#555";
+              return (
+                <div
+                  key={i}
+                  style={{
+                    borderLeft: `2px solid ${flagBorder}`,
+                    padding: "8px 0 8px 14px",
+                    fontSize: 13,
+                    color: "var(--color-text-primary)",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  <p>
+                    <code style={{ fontSize: 12, color: flagBorder, fontFamily: "inherit" }}>{f.type}:</code>{" "}
+                    {f.message}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* ── Bottom action bar ── */}
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          flexWrap: "wrap",
+          borderTop: "1px solid #222",
+          paddingTop: 16,
+          marginTop: 32,
+          paddingBottom: 8,
+        }}
+        className="flex-col sm:flex-row"
+      >
         <button
           onClick={() => router.push(`/projects/${sessionId}/tasks`)}
-          className="rounded bg-accent-purple px-6 py-2 text-sm font-medium text-white hover:opacity-90"
+          style={{
+            borderRadius: 3,
+            padding: "8px 20px",
+            fontSize: 13,
+            fontFamily: "inherit",
+            border: "1px solid #7c3aed",
+            color: "#7c3aed",
+            background: "transparent",
+            cursor: "pointer",
+          }}
+          className="hover:bg-[rgba(124,58,237,0.1)] transition-colors duration-150"
         >
-          View task graph
+          [ view task graph ]
         </button>
         <button
           onClick={() => router.push(`/projects/${sessionId}/versions`)}
-          className="rounded border border-border-default bg-bg-surface px-6 py-2 text-sm font-medium text-text-secondary hover:bg-bg-hover"
+          style={{
+            borderRadius: 3,
+            padding: "8px 20px",
+            fontSize: 13,
+            fontFamily: "inherit",
+            border: "1px solid #333",
+            color: "var(--color-text-secondary)",
+            background: "transparent",
+            cursor: "pointer",
+          }}
+          className="hover:border-[#555] hover:text-text-primary transition-colors duration-150"
         >
-          Exports &amp; versions
+          [ exports & versions ]
         </button>
         <button
           onClick={() => router.push(`/projects/${sessionId}/interview`)}
-          className="rounded border border-border-default bg-bg-surface px-6 py-2 text-sm font-medium text-text-secondary hover:bg-bg-hover"
+          style={{
+            borderRadius: 3,
+            padding: "8px 20px",
+            fontSize: 13,
+            fontFamily: "inherit",
+            border: "1px solid #333",
+            color: "var(--color-text-secondary)",
+            background: "transparent",
+            cursor: "pointer",
+          }}
+          className="hover:border-[#555] hover:text-text-primary transition-colors duration-150"
         >
-          Return to interview
+          [ ← return to interview ]
         </button>
       </div>
     </div>
   );
-}
-
-function MetricCard({
-  label,
-  value,
-  sub,
-  className,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  className?: string;
-}) {
-  return (
-    <div className="rounded border border-border-subtle bg-bg-elevated" style={{ padding: "14px 16px" }}>
-      <p className="text-xs text-text-secondary">{label}</p>
-      <p className={cn("mt-1 text-lg font-semibold", className ?? "text-text-primary")}>{value}</p>
-      {sub && <p className="text-xs text-text-secondary">{sub}</p>}
-    </div>
-  );
-}
-
-function PhaseIcon({ status }: { status: string }) {
-  if (status === "sufficient") return <span className="text-accent-green">✓</span>;
-  if (status === "insufficient") return <span className="text-accent-amber">~</span>;
-  return <span className="text-text-muted">○</span>;
 }
