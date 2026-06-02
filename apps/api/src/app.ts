@@ -38,7 +38,7 @@ export async function buildApp() {
 
   app.setErrorHandler(errorHandler);
 
-  await app.register(cors, { origin: true });
+  await app.register(cors, { origin: true, methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"] });
 
   // Detect and repair any interrupted workflow runs from prior session
   try {
