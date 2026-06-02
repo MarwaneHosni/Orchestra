@@ -29,7 +29,7 @@ export default function InterviewPage() {
       try {
         const result = await createOrResumeSession(rawId);
         if (result.status === "completed") {
-          router.push(`/projects/${rawId}/summary`);
+          router.push(`/projects/${result.sessionId}/summary`);
           return;
         }
         setSessionId(result.sessionId);
