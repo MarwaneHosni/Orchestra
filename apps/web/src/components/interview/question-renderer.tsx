@@ -85,33 +85,39 @@ export function QuestionRenderer({
     question.type === "scale";
 
   return (
-    <div className="space-y-5">
+    <div style={{ fontFamily: "'JetBrains Mono', monospace" }} className="space-y-5">
       <div>
-        <div className="flex items-center gap-2 mb-2">
-          {!question.required && (
-            <span style={{ color: "var(--color-text-muted)", fontSize: 12, fontFamily: "'JetBrains Mono', monospace" }}>
-              [optional]
-            </span>
-          )}
-          <span style={{ color: catInfo.color, fontSize: 12, fontFamily: "'JetBrains Mono', monospace" }}>
-            [{catInfo.label}]
+        <div className="flex items-center gap-2 mb-2" style={{ fontSize: 12 }}>
+          <span style={{ color: "var(--color-text-muted)" }}>
+            [{question.phaseType}]
           </span>
+          {!question.required && (
+            <span style={{ color: "var(--color-text-muted)" }}>[optional]</span>
+          )}
+          <span style={{ color: catInfo.color }}>[{catInfo.label}]</span>
         </div>
 
-        <h2 ref={headingRef} tabIndex={-1} className="text-sm font-semibold text-text-primary">
+        <p
+          ref={headingRef as React.Ref<HTMLParagraphElement>}
+          tabIndex={-1}
+          style={{ fontSize: 14, lineHeight: 1.7, color: "var(--color-text-primary)" }}
+        >
+          <span style={{ color: "var(--color-accent-purple)", fontWeight: 700, marginRight: 8 }}>&gt;</span>
           {question.text}
-        </h2>
+        </p>
 
-        {question.helpText && <p className="mt-1 text-xs text-text-secondary">{question.helpText}</p>}
+        {question.helpText && (
+          <p style={{ marginTop: 6, fontSize: 12, color: "var(--color-text-secondary)" }}>{question.helpText}</p>
+        )}
 
         {whyMatters && (
-          <p className="mt-2 text-xs text-text-muted italic">
+          <p style={{ marginTop: 10, fontSize: 12, color: "var(--color-text-muted)", fontStyle: "italic" }}>
             Why this matters: {whyMatters}
           </p>
         )}
 
         {question.validation?.maxLength && (
-          <p className="mt-1 text-xs text-text-muted">
+          <p style={{ marginTop: 6, fontSize: 12, color: "var(--color-text-muted)" }}>
             Max {question.validation.maxLength} characters
             {value.length > 0 && ` · ${value.length}/${question.validation.maxLength}`}
           </p>
@@ -128,22 +134,24 @@ export function QuestionRenderer({
       )}
 
       {error && (
-        <p id={errorId} className="text-xs text-accent-red" role="alert">
-          {error}
+        <p id={errorId} style={{ fontSize: 12, color: "var(--color-accent-red)" }} role="alert">
+          ✗ {error}
         </p>
       )}
 
       <div className="flex flex-wrap gap-3">
         <button
           onClick={handleSubmit}
-          className="rounded bg-accent-purple px-6 py-2 text-sm font-medium text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-accent-purple focus:ring-offset-1 focus:ring-offset-bg-base"
+          style={{ borderRadius: 3, padding: "8px 18px", fontSize: 13, fontFamily: "inherit" }}
+          className="bg-accent-purple text-white border border-accent-purple font-medium hover:opacity-88 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-purple focus-visible:ring-offset-1 focus-visible:ring-offset-bg-base"
         >
           {question.required ? "Submit answer" : "Save"}
         </button>
         {!question.required && (
           <button
             onClick={onSkip}
-            className="rounded border border-border-default bg-bg-surface px-6 py-2 text-sm font-medium text-text-secondary hover:bg-bg-hover"
+            style={{ borderRadius: 3, padding: "8px 18px", fontSize: 13, fontFamily: "inherit" }}
+            className="border border-border-default bg-transparent text-text-primary font-medium hover:border-border-strong hover:bg-bg-hover transition-[color,background-color,border-color,opacity,transform] duration-150"
           >
             Skip
           </button>
@@ -152,7 +160,8 @@ export function QuestionRenderer({
           <button
             type="button"
             onClick={handleSelectDefault}
-            className="rounded border border-dashed border-border-default bg-bg-surface px-4 py-2 text-sm text-text-muted hover:bg-bg-hover"
+            style={{ borderRadius: 3, padding: "8px 16px", fontSize: 13, fontFamily: "inherit" }}
+            className="border border-dashed border-border-default bg-transparent text-text-muted font-medium hover:bg-bg-hover transition-colors duration-150"
           >
             I&apos;m not sure
           </button>
@@ -173,26 +182,34 @@ function QuestionInput({
   onChange: (v: string) => void;
   error: string;
 }) {
-  const baseInput = cn(
-    "block w-full rounded border bg-bg-surface px-3 py-2 text-sm font-mono text-text-primary placeholder:text-text-muted",
-    "focus:outline-none focus:ring-2 focus:ring-accent-purple focus:border-accent-purple",
-    error ? "border-accent-red" : "border-border-default",
-  );
+  const baseStyle: React.CSSProperties = {
+    display: "block",
+    width: "100%",
+    borderRadius: 3,
+    border: `1px solid ${error ? "var(--color-accent-red)" : "var(--color-border-default)"}`,
+    background: "var(--color-bg-elevated)",
+    padding: "8px 12px",
+    fontSize: 14,
+    fontFamily: "'JetBrains Mono', monospace",
+    color: "var(--color-text-primary)",
+  };
+
+  const focusClasses = "focus:outline-none focus:shadow-[0_0_0_2px_var(--color-accent-purple-dim)] focus:border-accent-purple";
 
   switch (question.type) {
     case "text":
       return (
-        <div className="space-y-3">
+        <div style={{ position: "relative" }}>
           <textarea
             value={value}
             onChange={(e) => onChange(e.target.value)}
             rows={4}
             maxLength={question.validation?.maxLength ?? undefined}
-            placeholder="Type your answer..."
-            className={baseInput}
+            placeholder="> type your answer..."
+            className={`block w-full ${error ? "border-accent-red" : ""} placeholder:text-text-muted ${focusClasses}`}
+            style={baseStyle}
             aria-invalid={!!error}
             aria-required={question.required}
-            style={{ fontFamily: "'JetBrains Mono', monospace" }}
           />
         </div>
       );
@@ -203,20 +220,45 @@ function QuestionInput({
           {question.options.map((opt) => (
             <label
               key={opt}
-              className={cn(
-                "flex cursor-pointer items-center gap-3 rounded border px-4 py-3 text-sm transition-colors",
-                value === opt
-                  ? "border-accent-purple bg-accent-purple-dim text-accent-purple"
-                  : "border-border-default hover:bg-bg-hover",
-              )}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                borderRadius: 3,
+                border: `1px solid ${value === opt ? "var(--color-accent-purple)" : "var(--color-border-default)"}`,
+                background: value === opt ? "var(--color-accent-purple-dim)" : "transparent",
+                padding: "10px 14px",
+                fontSize: 14,
+                fontFamily: "'JetBrains Mono', monospace",
+                cursor: "pointer",
+                color: value === opt ? "var(--color-accent-purple)" : "var(--color-text-primary)",
+              }}
+              className="transition-colors duration-150 hover:bg-bg-hover"
             >
+              <span
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: "50%",
+                  border: `2px solid ${value === opt ? "var(--color-accent-purple)" : "var(--color-border-default)"}`,
+                  background: value === opt ? "var(--color-accent-purple)" : "transparent",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                {value === opt && (
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#fff" }} />
+                )}
+              </span>
               <input
                 type="radio"
                 name={`question-${question.id}`}
                 value={opt}
                 checked={value === opt}
                 onChange={(e) => onChange(e.target.value)}
-                className="h-3.5 w-3.5 accent-accent-purple"
+                className="sr-only"
               />
               {opt}
             </label>
@@ -235,18 +277,43 @@ function QuestionInput({
           {question.options.map((opt) => (
             <label
               key={opt}
-              className={cn(
-                "flex cursor-pointer items-center gap-3 rounded border px-4 py-3 text-sm transition-colors",
-                selected.includes(opt)
-                  ? "border-accent-purple bg-accent-purple-dim text-accent-purple"
-                  : "border-border-default hover:bg-bg-hover",
-              )}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                borderRadius: 3,
+                border: `1px solid ${selected.includes(opt) ? "var(--color-accent-purple)" : "var(--color-border-default)"}`,
+                background: selected.includes(opt) ? "var(--color-accent-purple-dim)" : "transparent",
+                padding: "10px 14px",
+                fontSize: 14,
+                fontFamily: "'JetBrains Mono', monospace",
+                cursor: "pointer",
+                color: selected.includes(opt) ? "var(--color-accent-purple)" : "var(--color-text-primary)",
+              }}
+              className="transition-colors duration-150 hover:bg-bg-hover"
             >
+              <span
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: 3,
+                  border: `1px solid ${selected.includes(opt) ? "var(--color-accent-purple)" : "var(--color-border-default)"}`,
+                  background: selected.includes(opt) ? "var(--color-accent-purple)" : "transparent",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                {selected.includes(opt) && (
+                  <span style={{ color: "#fff", fontSize: 10, lineHeight: 1 }}>✓</span>
+                )}
+              </span>
               <input
                 type="checkbox"
                 checked={selected.includes(opt)}
                 onChange={() => toggle(opt)}
-                className="h-3.5 w-3.5 accent-accent-purple rounded"
+                className="sr-only"
               />
               {opt}
             </label>
@@ -261,7 +328,7 @@ function QuestionInput({
           {["true", "false"].map((opt) => {
             const isSelected = value === opt;
             return (
-              <div key={opt} className="flex-1">
+              <div key={opt} style={{ flex: 1 }}>
                 <input
                   type="radio"
                   id={`${question.id}-${opt}`}
@@ -273,12 +340,20 @@ function QuestionInput({
                 />
                 <label
                   htmlFor={`${question.id}-${opt}`}
-                  className={cn(
-                    "block cursor-pointer rounded border px-6 py-3 text-center text-sm font-medium transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent-purple",
-                    isSelected
-                      ? "border-accent-purple bg-accent-purple-dim text-accent-purple"
-                      : "border-border-default text-text-secondary hover:bg-bg-hover",
-                  )}
+                  style={{
+                    display: "block",
+                    borderRadius: 3,
+                    border: `1px solid ${isSelected ? "var(--color-accent-purple)" : "var(--color-border-default)"}`,
+                    background: isSelected ? "var(--color-accent-purple-dim)" : "transparent",
+                    padding: "10px 0",
+                    textAlign: "center",
+                    fontSize: 14,
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    color: isSelected ? "var(--color-accent-purple)" : "var(--color-text-secondary)",
+                  }}
+                  className="transition-colors duration-150 hover:bg-bg-hover"
                 >
                   {opt === "true" ? "Yes" : "No"}
                 </label>
@@ -307,12 +382,22 @@ function QuestionInput({
                 />
                 <label
                   htmlFor={`${question.id}-scale-${n}`}
-                  className={cn(
-                    "flex h-12 w-12 cursor-pointer items-center justify-center rounded border text-sm font-medium transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-accent-purple",
-                    isSelected
-                      ? "border-accent-purple bg-accent-purple-dim text-accent-purple"
-                      : "border-border-default text-text-secondary hover:bg-bg-hover",
-                  )}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 44,
+                    height: 44,
+                    borderRadius: 3,
+                    border: `1px solid ${isSelected ? "var(--color-accent-purple)" : "var(--color-border-default)"}`,
+                    background: isSelected ? "var(--color-accent-purple-dim)" : "transparent",
+                    fontSize: 14,
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    color: isSelected ? "var(--color-accent-purple)" : "var(--color-text-secondary)",
+                  }}
+                  className="transition-colors duration-150 hover:bg-bg-hover"
                 >
                   {n}
                 </label>

@@ -1,98 +1,103 @@
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import Link, { type LinkProps } from "next/link";
+import { SectionDivider } from "@/components/ui/badge";
 
 function BtnLink({ href, children }: { href: LinkProps["href"]; children: React.ReactNode }) {
   return (
     <Link
       href={href}
-      className="inline-flex items-center justify-center gap-2 rounded bg-accent-purple px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-colors"
+      style={{ borderRadius: 3, padding: "8px 18px", fontSize: 13, fontFamily: "inherit" }}
+      className="inline-flex bg-accent-purple text-white border border-accent-purple font-medium hover:opacity-88 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform] duration-150"
     >
       {children}
     </Link>
   );
 }
 
-const stats = [
+const statRows = [
   { label: "Projects", value: "—" },
   { label: "Blueprints", value: "—" },
   { label: "Tasks", value: "—" },
   { label: "Phases", value: "12" },
 ];
 
+const steps = [
+  { step: "1", title: "Create a project", desc: "Give your idea a name and a short description." },
+  { step: "2", title: "Refine through interview", desc: "Answer structured questions to flesh out requirements, architecture, and constraints." },
+  { step: "3", title: "Get your plan", desc: "Receive a complete blueprint, roadmap, and dependency-aware task graph." },
+];
+
 export default function DashboardPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-text-primary">Dashboard</h1>
-          <p className="mt-1 text-xs text-text-secondary">
+          <h1 style={{ fontSize: 16, fontWeight: 600, color: "var(--color-text-primary)" }}>Dashboard</h1>
+          <p style={{ marginTop: 4, fontSize: 12, color: "var(--color-text-secondary)" }}>
             Welcome to Orchestra. Start by creating your first project.
           </p>
         </div>
         <BtnLink href="/projects/new">New project</BtnLink>
       </div>
 
-      <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <div key={stat.label} className="rounded border border-border-default bg-bg-elevated p-4">
-            <dt className="text-xs text-text-secondary">{stat.label}</dt>
-            <dd className="mt-1 text-xl font-semibold text-text-primary">{stat.value}</dd>
-          </div>
-        ))}
-      </dl>
+      <SectionDivider title="Overview" />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Getting started</CardTitle>
-          <CardDescription>
-            Describe your software idea and let Orchestra build a complete development plan.
-          </CardDescription>
-        </CardHeader>
-        <ol className="space-y-4">
-          <li className="flex items-start gap-4 rounded bg-bg-surface p-4">
-            <span
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-accent-purple-dim text-sm font-semibold text-accent-purple"
-              aria-hidden="true"
-            >
-              1
-            </span>
-            <div>
-              <p className="font-medium text-text-primary text-sm">Create a project</p>
-              <p className="mt-1 text-xs text-text-secondary">
-                Give your idea a name and a short description.
-              </p>
-            </div>
-          </li>
-          <li className="flex items-start gap-4 rounded bg-bg-surface p-4">
-            <span
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-accent-purple-dim text-sm font-semibold text-accent-purple"
-              aria-hidden="true"
-            >
-              2
-            </span>
-            <div>
-              <p className="font-medium text-text-primary text-sm">Refine through interview</p>
-              <p className="mt-1 text-xs text-text-secondary">
-                Answer structured questions to flesh out requirements, architecture, and constraints.
-              </p>
-            </div>
-          </li>
-          <li className="flex items-start gap-4 rounded bg-bg-surface p-4">
-            <span
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-accent-purple-dim text-sm font-semibold text-accent-purple"
-              aria-hidden="true"
-            >
-              3
-            </span>
-            <div>
-              <p className="font-medium text-text-primary text-sm">Get your plan</p>
-              <p className="mt-1 text-xs text-text-secondary">
-                Receive a complete blueprint, roadmap, and dependency-aware task graph.
-              </p>
-            </div>
-          </li>
-        </ol>
-      </Card>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+        <thead>
+          <tr style={{ borderBottom: "1px solid var(--color-border-default)" }}>
+            <th style={{ padding: "6px 0", textAlign: "left", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-muted)", fontWeight: 400 }}>
+              Metric
+            </th>
+            <th style={{ padding: "6px 0", textAlign: "right", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-muted)", fontWeight: 400 }}>
+              Value
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {statRows.map((row) => (
+            <tr key={row.label} style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
+              <td style={{ padding: "10px 0", color: "var(--color-text-secondary)" }}>
+                {row.label}
+              </td>
+              <td style={{ padding: "10px 0", textAlign: "right", fontWeight: 600, color: "var(--color-text-primary)" }}>
+                <span style={{ fontSize: 18 }}>{row.value}</span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <SectionDivider title="Getting Started" />
+
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+        <thead>
+          <tr style={{ borderBottom: "1px solid var(--color-border-default)" }}>
+            <th style={{ padding: "6px 0", width: 32, textAlign: "left", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-muted)", fontWeight: 400 }}>
+              #
+            </th>
+            <th style={{ padding: "6px 0", textAlign: "left", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-muted)", fontWeight: 400 }}>
+              Step
+            </th>
+            <th style={{ padding: "6px 0", textAlign: "left", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-muted)", fontWeight: 400 }}>
+              Description
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {steps.map((s) => (
+            <tr key={s.step} style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
+              <td style={{ padding: "10px 0", color: "var(--color-accent-purple)", fontWeight: 600 }}>
+                {s.step}
+              </td>
+              <td style={{ padding: "10px 0", color: "var(--color-text-primary)", fontWeight: 500 }}>
+                {s.title}
+              </td>
+              <td style={{ padding: "10px 0", color: "var(--color-text-secondary)" }}>
+                {s.desc}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

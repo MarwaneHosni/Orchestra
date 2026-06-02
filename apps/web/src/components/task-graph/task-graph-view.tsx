@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { TaskNodeView } from "./task-node";
+import { TaskChain } from "./task-node";
 import { TaskDetail } from "./task-detail";
 import { PromptPreview } from "./prompt-preview";
 import { getApiBaseUrl } from "@/lib/api-config";
@@ -10,6 +10,7 @@ import { updateTaskStatus } from "@/lib/api";
 import { StepIndicator } from "@/components/ui/step-indicator";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { ThinkingLoader } from "@/components/ui/skeleton";
+import { SectionDivider } from "@/components/ui/badge";
 import type { TaskData } from "./task-node";
 
 const PHASES = [
@@ -99,11 +100,12 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
 
   if (error) {
     return (
-      <div style={{ borderRadius: 3 }} className="border border-accent-red-dim bg-accent-red-dim/30 p-6 text-center">
-        <p className="text-accent-red">{error}</p>
+      <div style={{ borderRadius: 3, border: "1px solid var(--color-accent-red-dim)", background: "var(--color-accent-red-dim)", padding: "20px", textAlign: "center" }}>
+        <p style={{ color: "var(--color-accent-red)", fontSize: 14 }}>{error}</p>
         <button
           onClick={() => window.location.reload()}
-          className="mt-4 rounded bg-accent-purple px-4 py-2 text-sm text-white hover:opacity-90"
+          style={{ marginTop: 14, borderRadius: 3, padding: "8px 18px", fontSize: 13, fontFamily: "inherit" }}
+          className="bg-accent-purple text-white border border-accent-purple font-medium hover:opacity-88 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform] duration-150"
         >
           Retry
         </button>
@@ -116,9 +118,9 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
       <div className="space-y-6">
         <Breadcrumb items={[{ label: "Projects", href: "/projects" }, { label: "Task Graph" }]} />
         <StepIndicator current="tasks" complete={["interview", "review"]} />
-        <div style={{ borderRadius: 3 }} className="border-2 border-dashed border-border-default bg-bg-surface p-12 text-center">
-          <p className="text-sm font-medium text-text-primary">No tasks generated yet</p>
-          <p className="mt-1 text-xs text-text-secondary">
+        <div style={{ borderRadius: 3, border: "2px dashed var(--color-border-default)", background: "var(--color-bg-surface)", padding: "48px", textAlign: "center" }}>
+          <p style={{ fontSize: 14, fontWeight: 500, color: "var(--color-text-primary)" }}>No tasks generated yet</p>
+          <p style={{ marginTop: 4, fontSize: 12, color: "var(--color-text-secondary)" }}>
             Complete the interview and generate a plan to see the task graph.
           </p>
         </div>
@@ -157,8 +159,8 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-text-primary">Task Graph</h1>
-          <p className="mt-1 text-xs text-text-secondary">
+          <h1 style={{ fontSize: 16, fontWeight: 600, fontFamily: "'JetBrains Mono', monospace" }} className="text-text-primary">Task Graph</h1>
+          <p style={{ marginTop: 4, fontSize: 12, color: "var(--color-text-secondary)", fontFamily: "'JetBrains Mono', monospace" }}>
             {graph.tasks.length} task{graph.tasks.length !== 1 ? "s" : ""} ·{" "}
             {graph.dependencies.length} dependenc{graph.dependencies.length !== 1 ? "ies" : "y"} · v{1}
             {needsReviewCount > 0 && ` · ${needsReviewCount} needs review`}
@@ -167,14 +169,16 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => router.push(`/projects/${sessionId}/versions`)}
-            className="rounded border border-border-default bg-bg-surface px-4 py-2 text-xs font-medium text-text-secondary hover:bg-bg-hover"
+            style={{ borderRadius: 3, padding: "8px 14px", fontSize: 12, fontFamily: "'JetBrains Mono', monospace" }}
+            className="border border-border-default bg-transparent text-text-secondary font-medium hover:border-border-strong hover:bg-bg-hover transition-[color,background-color,border-color] duration-150"
           >
             Version history
           </button>
           <button
             onClick={handleExport}
             disabled={exporting}
-            className="rounded bg-accent-purple px-4 py-2 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
+            style={{ borderRadius: 3, padding: "8px 14px", fontSize: 12, fontFamily: "'JetBrains Mono', monospace" }}
+            className="bg-accent-purple text-white border border-accent-purple font-medium hover:opacity-88 active:scale-[0.98] disabled:opacity-50 transition-[color,background-color,border-color,opacity,transform] duration-150"
           >
             {exporting ? "Exporting..." : "Export bundle"}
           </button>
@@ -182,19 +186,19 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
       </div>
 
       {exportError && (
-        <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-3 text-sm text-accent-red">
+        <div style={{ borderRadius: 3, border: "1px solid var(--color-accent-red-dim)", background: "var(--color-accent-red-dim)", padding: "8px 12px", fontSize: 14, color: "var(--color-accent-red)" }}>
           {exportError}
         </div>
       )}
 
       {needsReviewCount > 0 && (
-        <div className="rounded border border-accent-amber-dim bg-accent-amber-dim/30 p-3 text-xs text-accent-amber">
+        <div style={{ borderRadius: 3, border: "1px solid var(--color-accent-amber-dim)", background: "var(--color-accent-amber-dim)", padding: "8px 12px", fontSize: 12, color: "var(--color-accent-amber)", fontFamily: "'JetBrains Mono', monospace" }}>
           {needsReviewCount} task{needsReviewCount !== 1 ? "s" : ""} need{needsReviewCount === 1 ? "s" : ""}{" "}
-          review due to insufficient phase detail. These are marked with an amber border.
+          review due to insufficient phase detail.
         </div>
       )}
 
-      <div className="space-y-6">
+      <div className="space-y-10">
         {PHASES.filter((p) => graph.tasks.some((t) => t.phaseType === p)).map((phase) => {
           const phaseTasks = graph.tasks
             .filter((t) => t.phaseType === phase)
@@ -202,22 +206,14 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
 
           return (
             <div key={phase}>
-              <h3 className="mb-3 text-xs font-semibold text-text-primary">
-                {PHASE_LABELS[phase] ?? phase}
-                <span className="ml-2 font-normal text-text-secondary">
-                  {phaseTasks.length} task{phaseTasks.length !== 1 ? "s" : ""}
-                </span>
-              </h3>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {phaseTasks.map((task) => (
-                  <TaskNodeView
-                    key={task.id}
-                    task={task}
-                    phaseIndex={PHASES.indexOf(phase)}
-                    isSelected={selectedTask?.id === task.id}
-                    onSelect={setSelectedTask}
-                  />
-                ))}
+              <SectionDivider title={PHASE_LABELS[phase] ?? phase} count={phaseTasks.length} />
+              <div style={{ marginTop: 8, paddingLeft: 4 }}>
+                <TaskChain
+                  tasks={phaseTasks}
+                  dependencies={graph.dependencies}
+                  selectedId={selectedTask?.id}
+                  onSelect={setSelectedTask}
+                />
               </div>
             </div>
           );
