@@ -5,7 +5,7 @@ export default function BlueprintsPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-lg font-semibold text-text-primary">Blueprints</h1>
-        <p className="mt-1 text-xs text-text-secondary">
+        <p className="mt-2 text-xs text-text-secondary">
           Generated architecture blueprints for your projects.
         </p>
       </div>

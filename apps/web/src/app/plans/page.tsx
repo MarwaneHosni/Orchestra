@@ -5,7 +5,7 @@ export default function PlansPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-lg font-semibold text-text-primary">Plans</h1>
-        <p className="mt-1 text-xs text-text-secondary">
+        <p className="mt-2 text-xs text-text-secondary">
           Execution roadmaps and dependency-aware task graphs.
         </p>
       </div>

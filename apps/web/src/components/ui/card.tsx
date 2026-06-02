@@ -11,7 +11,7 @@ export function Card({ className, children, ...props }: HTMLAttributes<HTMLDivEl
 
 export function CardHeader({ className, children, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("mb-3", className)} {...props}>
+    <div className={cn("mb-4", className)} {...props}>
       {children}
     </div>
   );
@@ -27,7 +27,7 @@ export function CardTitle({ className, children, ...props }: HTMLAttributes<HTML
 
 export function CardDescription({ className, children, ...props }: HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p className={cn("mt-1 text-xs text-text-secondary", className)} {...props}>
+    <p className={cn("mt-2 text-xs text-text-secondary", className)} {...props}>
       {children}
     </p>
   );

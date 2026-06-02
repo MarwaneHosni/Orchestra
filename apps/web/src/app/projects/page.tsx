@@ -56,7 +56,7 @@ export default function ProjectsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-semibold text-text-primary">Projects</h1>
-            <p className="mt-1 text-xs text-text-secondary">Loading projects...</p>
+            <p className="mt-2 text-xs text-text-secondary">Loading projects...</p>
           </div>
         </div>
       </div>
@@ -69,7 +69,7 @@ export default function ProjectsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-semibold text-text-primary">Projects</h1>
-            <p className="mt-1 text-xs text-text-secondary">
+            <p className="mt-2 text-xs text-text-secondary">
               All your software ideas, organised as projects.
             </p>
           </div>
@@ -79,7 +79,7 @@ export default function ProjectsPage() {
         </div>
         <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-6 text-center" role="alert">
           <p className="text-accent-red">{error}</p>
-          <Button onClick={() => window.location.reload()} className="mt-4">
+          <Button onClick={() => window.location.reload()} className="mt-6">
             Retry
           </Button>
         </div>
@@ -93,7 +93,7 @@ export default function ProjectsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-semibold text-text-primary">Projects</h1>
-            <p className="mt-1 text-xs text-text-secondary">
+            <p className="mt-2 text-xs text-text-secondary">
               All your software ideas, organised as projects.
             </p>
           </div>
@@ -119,7 +119,7 @@ export default function ProjectsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold text-text-primary">Projects</h1>
-          <p className="mt-1 text-xs text-text-secondary">All your software ideas, organised as projects.</p>
+          <p className="mt-2 text-xs text-text-secondary">All your software ideas, organised as projects.</p>
         </div>
         <Link href="/projects/new">
           <Button>New project</Button>

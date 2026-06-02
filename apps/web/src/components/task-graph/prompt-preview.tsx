@@ -103,7 +103,7 @@ function renderContent(text: string): React.ReactNode {
     if (line.startsWith("```")) {
       if (inCodeBlock) {
         elements.push(
-          <pre key={`code-${i}`} className="mb-2 overflow-x-auto p-3 text-xs border-l-2 border-accent-purple" style={{ background: "var(--color-bg-elevated)", borderRadius: 0 }}>
+          <pre key={`code-${i}`} className="mb-3 overflow-x-auto p-3 text-xs border-l-2 border-accent-purple" style={{ background: "var(--color-bg-elevated)", borderRadius: 0 }}>
             {codeLines.join("\n")}
           </pre>,
         );
@@ -146,7 +146,7 @@ function renderContent(text: string): React.ReactNode {
 
   if (inCodeBlock && codeLines.length > 0) {
     elements.push(
-      <pre key="code-end" className="mb-2 overflow-x-auto p-3 text-xs border-l-2 border-accent-purple" style={{ background: "var(--color-bg-elevated)", borderRadius: 0 }}>
+      <pre key="code-end" className="mb-3 overflow-x-auto p-3 text-xs border-l-2 border-accent-purple" style={{ background: "var(--color-bg-elevated)", borderRadius: 0 }}>
         {codeLines.join("\n")}
       </pre>,
     );

@@ -76,7 +76,7 @@ export function VersionCompare({ diff }: VersionCompareProps) {
 
       {changedTasks.length > 0 && (
         <section>
-          <h3 className="mb-2 text-sm font-semibold text-text-primary">
+          <h3 className="mb-3 text-sm font-semibold text-text-primary">
             Tasks ({changedTasks.length} changed)
           </h3>
           <div className="space-y-1.5">
@@ -108,7 +108,7 @@ export function VersionCompare({ diff }: VersionCompareProps) {
 
       {hasBlueprint && hasBlueprintChanges && (
         <section>
-          <h3 className="mb-2 text-sm font-semibold text-text-primary">
+          <h3 className="mb-3 text-sm font-semibold text-text-primary">
             Blueprint ({diff.summary.blueprintChanges} changes)
           </h3>
 

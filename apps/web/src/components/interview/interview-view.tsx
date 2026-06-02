@@ -301,7 +301,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
           <p className="text-sm text-text-secondary" dangerouslySetInnerHTML={{ __html: phaseIntro }} />
           <button
             onClick={() => setShowPhaseIntro(false)}
-            className="mt-2 text-xs font-medium text-accent-purple hover:underline underline-offset-2"
+            className="mt-3 text-xs font-medium text-accent-purple hover:underline underline-offset-2"
           >
             Got it →
           </button>
@@ -332,7 +332,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
           <h2 ref={finishedHeadingRef} className="text-base font-semibold text-text-primary" tabIndex={-1}>
             You&apos;re all set
           </h2>
-          <p className="mt-2 text-xs text-text-secondary">
+          <p className="mt-3 text-xs text-text-secondary">
             You&apos;ve answered enough questions to generate a detailed project plan.
             {answered < total ? " Some advanced questions were skipped — you can refine these after reviewing the plan." : ""}
           </p>
@@ -408,12 +408,12 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
             headingRef={questionHeadingRef}
           />
           {submitting && (
-            <p className="mt-3 text-xs text-text-muted" role="status" aria-label="Saving answer">
+            <p className="mt-4 text-xs text-text-muted" role="status" aria-label="Saving answer">
               Saving...
             </p>
           )}
           {error && (
-            <p className="mt-3 text-xs text-accent-red" role="alert">
+            <p className="mt-4 text-xs text-accent-red" role="alert">
               {error}
             </p>
           )}

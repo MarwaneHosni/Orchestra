@@ -45,7 +45,7 @@ export function PhaseNotice({
             </ul>
           )}
           {(onProvideMore || onContinue) && (
-            <div className="mt-3 flex gap-3">
+            <div className="mt-4 flex gap-3">
               {onProvideMore && (
                 <button
                   onClick={onProvideMore}

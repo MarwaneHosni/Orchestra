@@ -33,7 +33,7 @@ export default function NewProjectPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-lg font-semibold text-text-primary">New project</h1>
-        <p className="mt-1 text-xs text-text-secondary">
+        <p className="mt-2 text-xs text-text-secondary">
           Describe your software idea. Orchestra will guide you through structured questions to build a plan.
         </p>
       </div>

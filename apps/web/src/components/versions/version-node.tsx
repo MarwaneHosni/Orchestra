@@ -92,7 +92,7 @@ export function VersionNode({
               )}
             </div>
           </div>
-          <div className="mt-1.5 flex items-center gap-3 text-xs text-text-secondary">
+          <div className="mt-2 flex items-center gap-3 text-xs text-text-secondary">
             <span>{new Date(snapshot.createdAt).toLocaleDateString()}</span>
             {snapshot.planVersion && <span>Plan v{snapshot.planVersion}</span>}
             {snapshot.answerCount > 0 && <span>{snapshot.answerCount} answers</span>}

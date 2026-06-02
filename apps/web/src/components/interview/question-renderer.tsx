@@ -87,7 +87,7 @@ export function QuestionRenderer({
   return (
     <div style={{ fontFamily: "'JetBrains Mono', monospace" }} className="space-y-5">
       <div>
-        <div className="flex items-center gap-3 mb-2" style={{ fontSize: 12 }}>
+        <div className="flex items-center gap-3 mb-3" style={{ fontSize: 12 }}>
           <span style={{ color: "var(--color-text-muted)" }}>
             [{question.phaseType}]
           </span>

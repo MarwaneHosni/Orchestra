@@ -83,13 +83,13 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChan
         </div>
 
         <div className="mt-6">
-          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">
+          <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-secondary">
             Dependencies
           </h4>
           {depNames.length === 0 ? (
             <p className="text-sm text-text-secondary">No dependencies — first task in chain.</p>
           ) : (
-            <ul className="space-y-1.5.5">
+            <ul className="space-y-1.5">
               {depNames.map((t) => (
                 <li key={t!.id} className="rounded border border-border-subtle bg-bg-surface px-3 py-2 text-sm">
                   {t!.title}
@@ -100,11 +100,11 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChan
         </div>
 
         {task.acceptanceCriteria && task.acceptanceCriteria.length > 0 && (
-          <div className="mt-4">
-            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">
+          <div className="mt-6">
+            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-secondary">
               Acceptance Criteria
             </h4>
-            <ul className="list-inside list-disc space-y-1.5 text-sm text-text-primary">
+            <ul className="space-y-1.5 list-inside list-disc text-sm text-text-primary">
               {task.acceptanceCriteria.map((c, i) => (
                 <li key={i}>{c}</li>
               ))}
@@ -113,11 +113,11 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChan
         )}
 
         {task.dependencies.length > 0 && (
-          <div className="mt-4">
-            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">
+          <div className="mt-6">
+            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-secondary">
               Blocked By
             </h4>
-            <ul className="space-y-1.5.5">
+            <ul className="space-y-1.5">
               {task.dependencies.map((d) => {
                 const depTask = allTasks.find((t) => t.id === d.taskId);
                 return (
@@ -135,7 +135,7 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChan
         )}
 
         <div className="mt-6">
-          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">Metadata</h4>
+          <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-secondary">Metadata</h4>
           <div className="space-y-1.5 text-sm text-text-secondary">
             <p>
               Task ID: <code className="text-xs">{task.id.slice(0, 8)}...</code>

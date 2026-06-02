@@ -46,7 +46,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   failed: { label: "Failed", className: "border-accent-red-dim bg-accent-red-dim/40 text-accent-red" },
 };
 
-const selectClasses = "mt-1 block w-full rounded border border-border-default bg-bg-surface px-3 py-2 text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-purple";
+const selectClasses = "mt-2 block w-full rounded border border-border-default bg-bg-surface px-3 py-2 text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-purple";
 
 export default function SettingsPage() {
   const [credentials, setCredentials] = useState<ProviderCredential[]>([]);
@@ -121,7 +121,7 @@ export default function SettingsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold text-text-primary">Settings</h1>
-          <p className="mt-1 text-xs text-text-secondary">
+          <p className="mt-2 text-xs text-text-secondary">
             Manage your AI provider connections. Keys are encrypted and never exposed.
           </p>
         </div>
@@ -206,7 +206,7 @@ export default function SettingsPage() {
       ) : credentials.length === 0 ? (
         <div className="rounded border-2 border-dashed border-border-default bg-bg-surface p-12 text-center">
           <p className="text-sm font-medium text-text-primary">No providers connected</p>
-          <p className="mt-1 text-xs text-text-secondary">Add an API key to enable AI-powered features.</p>
+          <p className="mt-2 text-xs text-text-secondary">Add an API key to enable AI-powered features.</p>
         </div>
       ) : (
         <div className="space-y-4">

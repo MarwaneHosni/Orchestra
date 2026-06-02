@@ -123,7 +123,7 @@ export function VersionHistory({ sessionId }: VersionHistoryProps) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold text-text-primary">Version History</h1>
-          <p className="mt-1 text-xs text-text-secondary">
+          <p className="mt-2 text-xs text-text-secondary">
             {sorted.length} snapshot{sorted.length !== 1 ? "s" : ""} — Click a snapshot to export, or select
             two to compare
           </p>
@@ -139,7 +139,7 @@ export function VersionHistory({ sessionId }: VersionHistoryProps) {
       {sorted.length === 0 ? (
         <div className="rounded border-2 border-dashed border-border-default bg-bg-surface p-12 text-center">
           <p className="text-sm font-medium text-text-primary">No versions yet</p>
-          <p className="mt-1 text-xs text-text-secondary">
+          <p className="mt-2 text-xs text-text-secondary">
             Complete the interview and generate a plan to create the first snapshot.
           </p>
         </div>

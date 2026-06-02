@@ -83,7 +83,7 @@ export function ExportActionCenter({ snapshot }: ExportActionCenterProps) {
     <div className="space-y-5">
       <div>
         <h3 className="text-sm font-semibold text-text-primary">Export</h3>
-        <p className="mt-1 text-xs text-text-secondary">
+        <p className="mt-2 text-xs text-text-secondary">
           v{snapshot.version} — {snapshot.reason}
         </p>
       </div>
@@ -178,7 +178,7 @@ export function ExportActionCenter({ snapshot }: ExportActionCenterProps) {
 
       {!loading && exports.length > 0 && (
         <div className="border-t border-border-subtle pt-3">
-          <p className="mb-2 text-xs font-medium text-text-secondary">All exports for this snapshot</p>
+          <p className="mb-3 text-xs font-medium text-text-secondary">All exports for this snapshot</p>
           <div className="space-y-1">
             {exports.map((record) => (
               <div
