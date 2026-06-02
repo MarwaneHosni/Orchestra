@@ -28,10 +28,10 @@ const WHY_MATTERS: Record<string, string> = {
 };
 
 const CATEGORY_LABELS: Record<string, { label: string; color: string }> = {
-  critical: { label: "Required", color: "bg-accent-purple-dim text-accent-purple" },
-  "high-value": { label: "Important", color: "bg-bg-hover text-text-secondary" },
-  optional: { label: "Optional", color: "bg-bg-hover text-text-muted" },
-  contextual: { label: "Context dependent", color: "bg-accent-amber-dim/30 text-accent-amber" },
+  critical: { label: "required", color: "var(--color-accent-purple)" },
+  "high-value": { label: "important", color: "var(--color-text-secondary)" },
+  optional: { label: "optional", color: "var(--color-text-muted)" },
+  contextual: { label: "context dependent", color: "var(--color-accent-amber)" },
 };
 
 const NOT_SURE_TEXT = "I am not sure yet — do what you think is more optimal";
@@ -89,12 +89,12 @@ export function QuestionRenderer({
       <div>
         <div className="flex items-center gap-2 mb-2">
           {!question.required && (
-            <span className="rounded border border-dashed border-border-default px-2 py-0.5 text-xs text-text-muted">
-              Optional
+            <span style={{ color: "var(--color-text-muted)", fontSize: 12, fontFamily: "'JetBrains Mono', monospace" }}>
+              [optional]
             </span>
           )}
-          <span className={`rounded px-2 py-0.5 text-xs font-medium ${catInfo.color}`}>
-            {catInfo.label}
+          <span style={{ color: catInfo.color, fontSize: 12, fontFamily: "'JetBrains Mono', monospace" }}>
+            [{catInfo.label}]
           </span>
         </div>
 

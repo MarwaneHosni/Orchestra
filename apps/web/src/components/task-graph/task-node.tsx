@@ -63,7 +63,7 @@ export function TaskNodeView({ task, phaseIndex: _phaseIndex, isSelected, onSele
         <span className="truncate text-xs font-medium text-text-primary">{task.title}</span>
       </div>
       <div className="mt-1 flex items-center gap-2 text-xs text-text-secondary">
-        <span className="rounded bg-bg-hover px-1 py-0.5">{task.type}</span>
+        {task.type}
         <span aria-label={`${task.dependencies.length} dependenc${task.dependencies.length !== 1 ? "ies" : "y"}`}>
           {task.dependencies.length} dep{task.dependencies.length !== 1 ? "s" : ""}
         </span>

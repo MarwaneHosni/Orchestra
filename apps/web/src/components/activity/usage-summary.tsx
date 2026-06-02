@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getProjectSummary, getSnapshots } from "@/lib/api";
 import type { ProjectSummary, SnapshotInfo } from "@/lib/api";
+import { ThinkingLoader } from "@/components/ui/skeleton";
 
 interface UsageSummaryProps {
   projectId: string;
@@ -31,10 +32,8 @@ export function UsageSummary({ projectId }: UsageSummaryProps) {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-16 animate-pulse rounded bg-bg-hover" />
-        ))}
+      <div className="flex flex-col items-center justify-center py-16 gap-3">
+        <ThinkingLoader />
       </div>
     );
   }

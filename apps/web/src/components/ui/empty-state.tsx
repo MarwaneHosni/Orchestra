@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { cn } from "@/lib/utils";
 
 interface EmptyStateProps {
   title: string;
@@ -8,34 +7,34 @@ interface EmptyStateProps {
   className?: string;
 }
 
-function StyledLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      className="inline-flex items-center justify-center gap-2 rounded bg-accent-purple px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-colors"
-    >
-      {children}
-    </Link>
-  );
-}
-
 export function EmptyState({ title, description, action, className }: EmptyStateProps) {
+  const boxTop = `┌${"─".repeat(50)}┐`;
+  const boxMid1 = `│  ${title.padEnd(46)}│`;
+  const boxMid2 = `│  ${description.slice(0, 46).padEnd(46)}│`;
+  const boxBot = `└${"─".repeat(50)}┘`;
+
   return (
-    <div
-      className={cn(
-        "flex flex-col items-center justify-center rounded border-2 border-dashed border-border-default bg-bg-surface px-6 py-16 text-center",
-        className,
-      )}
-    >
-      <h3 className="mb-2 text-sm font-semibold text-text-primary">{title}</h3>
-      <p className="mb-6 max-w-sm text-xs text-text-secondary">{description}</p>
+    <div className={`flex flex-col items-center py-8 gap-4 ${className ?? ""}`}>
+      <pre className="text-text-muted text-xs leading-relaxed" aria-hidden="true">
+        {boxTop}{"\n"}
+        {boxMid1}{"\n"}
+        {description && boxMid2}{"\n"}
+        {boxBot}
+      </pre>
       {action &&
         (action.href ? (
-          <StyledLink href={action.href}>{action.label}</StyledLink>
+          <Link
+            href={action.href}
+            style={{ borderRadius: 3, padding: "8px 18px" }}
+            className="inline-flex items-center justify-center gap-2 bg-accent-purple text-white text-[13px] font-medium border border-accent-purple hover:opacity-88 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform] duration-150"
+          >
+            {action.label}
+          </Link>
         ) : (
           <button
             onClick={action.onClick}
-            className="inline-flex items-center justify-center gap-2 rounded bg-accent-purple px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-colors"
+            style={{ borderRadius: 3, padding: "8px 18px" }}
+            className="inline-flex items-center justify-center gap-2 bg-accent-purple text-white text-[13px] font-medium border border-accent-purple hover:opacity-88 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform] duration-150"
           >
             {action.label}
           </button>

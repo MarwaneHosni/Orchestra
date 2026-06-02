@@ -19,16 +19,21 @@ export function ErrorState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center rounded border border-accent-red-dim bg-accent-red-dim/30 px-6 py-16 text-center",
+        "flex flex-col items-center justify-center px-6 py-16 text-center",
         className,
       )}
+      style={{
+        borderRadius: 3,
+        border: "1px solid var(--color-accent-red-dim)",
+        background: "var(--color-accent-red-dim)",
+      }}
       role="alert"
     >
       <span className="mb-3 text-accent-red text-lg" aria-hidden="true">✗</span>
-      <h3 className="mb-2 text-sm font-semibold text-text-primary">{title}</h3>
-      <p className="mb-6 max-w-sm text-xs text-text-secondary">{message}</p>
+      <h3 className="mb-2" style={{ fontSize: 14, fontWeight: 600 }}>{title}</h3>
+      <p className="mb-6 max-w-sm" style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>{message}</p>
       {onRetry && (
-        <Button variant="secondary" onClick={onRetry}>
+        <Button variant="ghost" onClick={onRetry}>
           Try again
         </Button>
       )}

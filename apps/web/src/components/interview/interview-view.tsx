@@ -8,6 +8,7 @@ import { PhaseNotice } from "./phase-notice";
 import { StepIndicator } from "@/components/ui/step-indicator";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { LiveAnnouncer } from "@/components/ui/live-announcer";
+import { ThinkingLoader } from "@/components/ui/skeleton";
 import {
   getNextQuestion,
   submitAnswer,
@@ -255,12 +256,8 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
 
   if (loading) {
     return (
-      <div className="space-y-6" role="status" aria-label="Loading interview">
-        <div className="h-4 w-36 animate-pulse rounded bg-border-subtle" />
-        <div className="h-1.5 w-full animate-pulse rounded-full bg-border-subtle" />
-        <div className="h-5 w-48 animate-pulse rounded bg-border-subtle" />
-        <div className="h-40 w-full animate-pulse rounded bg-bg-hover" />
-        <div className="h-8 w-28 animate-pulse rounded bg-border-subtle" />
+      <div className="flex flex-col items-center justify-center py-16 gap-3" role="status" aria-label="Loading interview">
+        <ThinkingLoader />
       </div>
     );
   }

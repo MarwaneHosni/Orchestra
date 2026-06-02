@@ -1,25 +1,22 @@
 import { type ButtonHTMLAttributes, forwardRef } from "react";
 import { cn } from "@/lib/utils";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger";
-type Size = "sm" | "md" | "lg";
+type Variant = "primary" | "ghost" | "danger";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
-  size?: Size;
+  size?: "sm" | "md";
 }
 
 const variantStyles: Record<Variant, string> = {
-  primary: "bg-accent-purple text-white hover:opacity-90 focus-visible:ring-accent-purple",
-  secondary: "border border-border-default bg-bg-surface text-text-secondary hover:bg-bg-hover focus-visible:ring-accent-gray",
-  ghost: "text-text-secondary hover:text-text-primary hover:bg-bg-hover focus-visible:ring-accent-gray",
-  danger: "bg-accent-red text-white hover:opacity-90 focus-visible:ring-accent-red",
+  primary: "bg-accent-purple text-white border border-accent-purple hover:opacity-88 active:scale-[0.98] focus-visible:ring-accent-purple",
+  ghost: "bg-transparent border border-border-default text-text-primary hover:border-border-strong hover:bg-bg-hover focus-visible:ring-accent-gray",
+  danger: "bg-transparent border border-accent-red text-accent-red hover:bg-accent-red-dim focus-visible:ring-accent-red",
 };
 
-const sizeStyles: Record<Size, string> = {
+const sizeStyles = {
   sm: "px-3 py-1.5 text-xs",
-  md: "px-4 py-2 text-sm",
-  lg: "px-6 py-3 text-sm",
+  md: "px-[18px] py-2 text-[13px]",
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -29,13 +26,15 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled}
         className={cn(
-          "inline-flex items-center justify-center gap-2 rounded font-medium transition-colors",
+          "inline-flex items-center justify-center gap-2 font-medium transition-[color,background-color,border-color,opacity,transform] duration-150",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-bg-base",
           "disabled:pointer-events-none disabled:opacity-50",
+          "border",
           variantStyles[variant],
           sizeStyles[size],
           className,
         )}
+        style={{ borderRadius: 3 }}
         {...props}
       >
         {children}

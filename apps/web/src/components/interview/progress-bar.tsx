@@ -35,6 +35,12 @@ function estimateMinutesRemaining(total: number, answered: number): string {
   return `${Math.ceil(remaining * 0.4)} min left`;
 }
 
+function confidenceColor(pct: number): string {
+  if (pct >= 60) return "var(--color-accent-green)";
+  if (pct >= 40) return "var(--color-accent-amber)";
+  return "var(--color-accent-red)";
+}
+
 export function ProgressBar({ currentPhaseIndex, total, answered }: ProgressBarProps) {
   const pct = total > 0 ? Math.round((answered / total) * 100) : 0;
 
@@ -55,42 +61,33 @@ export function ProgressBar({ currentPhaseIndex, total, answered }: ProgressBarP
   }, []);
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-xs">
-        <span className="font-medium text-text-primary">
-          {currentGroup ? `${currentGroup}` : "Getting started"}
+    <div className="space-y-1.5" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>
+      <div className="flex items-center justify-between">
+        <span style={{ color: "var(--color-text-primary)", fontWeight: 500 }}>
+          {currentGroup || "Getting started"}
         </span>
-        <span className="text-text-secondary">
+        <span style={{ color: confidenceColor(pct), fontWeight: 600 }}>
+          {pct}%
+        </span>
+        <span style={{ color: "var(--color-text-secondary)" }}>
           {answered}/{total} · {estimateMinutesRemaining(total, answered)}
         </span>
       </div>
 
-      <div
-        role="progressbar"
-        aria-valuenow={answered}
-        aria-valuemin={0}
-        aria-valuemax={total}
-        aria-valuetext={`${pct} percent complete`}
-        className="h-1.5 w-full overflow-hidden rounded-full bg-border-subtle"
-      >
-        <div
-          className="h-full rounded-full bg-accent-purple transition-all duration-500"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-
-      <div className="flex items-center gap-3 overflow-x-auto pb-1" aria-label="Phase groups">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1" aria-label="Phase groups">
         {groupProgress.map((g) => {
           const isActive = g.name === currentGroup;
           return (
             <span
               key={g.name}
-              className={`whitespace-nowrap text-[10px] font-medium ${
-                isActive ? "text-accent-purple" : "text-text-muted"
-              }`}
+              style={{
+                color: isActive ? "var(--color-accent-purple)" : "var(--color-text-muted)",
+                fontWeight: isActive ? 500 : 400,
+                whiteSpace: "nowrap",
+                fontSize: 10,
+              }}
             >
-              {g.name}
-              <span className="ml-1 font-normal text-text-muted">({g.total})</span>
+              {g.name}<span style={{ color: "var(--color-text-muted)", fontWeight: 400, marginLeft: 4 }}>({g.total})</span>
             </span>
           );
         })}

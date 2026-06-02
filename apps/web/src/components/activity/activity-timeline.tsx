@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getProjectActivity, getEventLabel } from "@/lib/api";
 import type { ActivityEvent } from "@/lib/api";
+import { ThinkingLoader } from "@/components/ui/skeleton";
 
 interface ActivityTimelineProps {
   projectId: string;
@@ -30,10 +31,8 @@ export function ActivityTimeline({ projectId, compact }: ActivityTimelineProps) 
 
   if (loading) {
     return (
-      <div className="space-y-3" role="status" aria-label="Loading activity">
-        {Array.from({ length: compact ? 3 : 5 }).map((_, i) => (
-          <div key={i} className="h-10 animate-pulse rounded bg-bg-hover" />
-        ))}
+      <div className="flex flex-col items-center justify-center py-16 gap-3" role="status" aria-label="Loading activity">
+        <ThinkingLoader />
       </div>
     );
   }

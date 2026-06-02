@@ -9,13 +9,13 @@ interface GenerationProgressProps {
 }
 
 const STATUS_DOT: Record<GenerationStatus, string> = {
-  starting: "bg-text-muted",
-  running: "bg-accent-purple",
-  retrying: "bg-accent-amber",
-  warning: "bg-accent-amber",
-  failed: "bg-accent-red",
-  cancelled: "bg-text-muted",
-  completed: "bg-accent-green",
+  starting: "var(--color-text-muted)",
+  running: "var(--color-accent-purple)",
+  retrying: "var(--color-accent-amber)",
+  warning: "var(--color-accent-amber)",
+  failed: "var(--color-accent-red)",
+  cancelled: "var(--color-text-muted)",
+  completed: "var(--color-accent-green)",
 };
 
 const STATUS_LABELS: Record<GenerationStatus, string> = {
@@ -30,13 +30,14 @@ const STATUS_LABELS: Record<GenerationStatus, string> = {
 
 function StatusIndicator({ status }: { status: GenerationStatus }) {
   return (
-    <span className="flex items-center gap-2 text-sm">
-      <span className={cn("h-2 w-2 rounded-full", STATUS_DOT[status])} />
-      <span className={cn(
-        status === "failed" && "text-accent-red",
-        status === "completed" && "text-accent-green",
-        status === "retrying" || status === "warning" ? "text-accent-amber" : "text-text-secondary",
-      )}>
+    <span className="flex items-center gap-2" style={{ fontSize: 14 }}>
+      <span style={{ width: 8, height: 8, borderRadius: "50%", background: STATUS_DOT[status], display: "inline-block", flexShrink: 0 }} />
+      <span style={{
+        color: status === "failed" ? "var(--color-accent-red)" :
+               status === "completed" ? "var(--color-accent-green)" :
+               status === "retrying" || status === "warning" ? "var(--color-accent-amber)" :
+               "var(--color-text-secondary)"
+      }}>
         {STATUS_LABELS[status]}
       </span>
     </span>
@@ -56,23 +57,26 @@ export function GenerationProgress({ workflowId, onCancel }: GenerationProgressP
   };
 
   return (
-    <div className="space-y-4 rounded border border-border-default bg-bg-elevated p-5">
+    <div style={{ borderRadius: 3, padding: "14px 16px" }} className="space-y-4 border border-border-subtle bg-bg-elevated">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <StatusIndicator status={status} />
           {status === "running" && (
-            <span className="text-xs text-text-muted">{Math.round(progressFraction * 100)}%</span>
+            <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
+              {Math.round(progressFraction * 100)}%
+            </span>
           )}
         </div>
       </div>
 
-      <p className="text-sm text-text-secondary">{statusMessage}</p>
+      <p style={{ fontSize: 14 }} className="text-text-secondary">{statusMessage}</p>
 
       {canCancel && onCancel && (
         <div className="flex justify-end">
           <button
             onClick={handleCancel}
-            className="rounded border border-accent-red-dim bg-bg-surface px-3 py-1.5 text-xs font-medium text-accent-red hover:bg-accent-red-dim/30"
+            style={{ borderRadius: 3, padding: "6px 12px", fontSize: 12 }}
+            className="border border-accent-red text-accent-red bg-transparent hover:bg-accent-red-dim font-medium transition-[color,background-color,border-color,opacity] duration-150"
           >
             Cancel
           </button>
@@ -80,25 +84,13 @@ export function GenerationProgress({ workflowId, onCancel }: GenerationProgressP
       )}
 
       {status === "cancelled" && (
-        <p className="text-sm text-text-muted">Generation was cancelled. You can try again when ready.</p>
+        <p style={{ fontSize: 14, color: "var(--color-text-muted)" }}>Generation was cancelled. You can try again when ready.</p>
       )}
       {status === "failed" && (
-        <p className="text-sm text-accent-red">Generation failed. You can try again when ready.</p>
+        <p style={{ fontSize: 14, color: "var(--color-accent-red)" }}>Generation failed. You can try again when ready.</p>
       )}
 
-      {status !== "completed" && status !== "failed" && status !== "cancelled" && (
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-border-subtle">
-          <div
-            className={cn(
-              "h-full rounded-full transition-all duration-700 ease-out",
-              status === "retrying" ? "bg-accent-amber" : "bg-accent-purple",
-            )}
-            style={{ width: `${Math.max(2, Math.round(progressFraction * 100))}%` }}
-          />
-        </div>
-      )}
-
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         {stages.map((s) => {
           const isActive = s.status === "active";
           const isDone = s.status === "done";
@@ -108,8 +100,13 @@ export function GenerationProgress({ workflowId, onCancel }: GenerationProgressP
           return (
             <div
               key={s.stage}
+              style={{
+                borderRadius: 2,
+                padding: "4px 10px",
+                fontSize: 14,
+              }}
               className={cn(
-                "flex items-center gap-3 rounded px-3 py-2 text-sm transition-colors",
+                "flex items-center gap-3 transition-colors",
                 isActive && "bg-accent-purple-dim text-accent-purple",
                 isDone && "text-text-muted",
                 isFailed && "bg-accent-red-dim/30 text-accent-red",
@@ -117,17 +114,24 @@ export function GenerationProgress({ workflowId, onCancel }: GenerationProgressP
               )}
             >
               <span
-                className={cn(
-                  "h-2 w-2 shrink-0 rounded-full",
-                  isActive && "bg-accent-purple",
-                  isDone && "bg-accent-green",
-                  isFailed && "bg-accent-red",
-                  isPending && "bg-text-muted",
-                )}
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  flexShrink: 0,
+                  display: "inline-block",
+                  background: isActive ? "var(--color-accent-purple)" :
+                              isDone ? "var(--color-accent-green)" :
+                              isFailed ? "var(--color-accent-red)" :
+                              "var(--color-text-muted)",
+                }}
               />
               <span className="flex-1">{s.label}</span>
               {s.attempt > 1 && (
-                <span className="rounded bg-accent-amber-dim px-1.5 py-0.5 text-xs text-accent-amber">
+                <span
+                  style={{ borderRadius: 2, padding: "1px 5px", fontSize: 12 }}
+                  className="bg-accent-amber-dim text-accent-amber"
+                >
                   attempt {s.attempt}
                 </span>
               )}

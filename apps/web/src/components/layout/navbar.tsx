@@ -31,16 +31,20 @@ export function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border-subtle bg-bg-base/95 backdrop-blur supports-[backdrop-filter]:bg-bg-base/80">
-      <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 24px" }} className="flex h-12 items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 font-semibold text-text-primary text-sm">
-          <span className="flex h-6 w-6 items-center justify-center rounded bg-accent-purple text-[10px] font-bold text-white">
-            O
-          </span>
-          <span className="hidden sm:inline">Orchestra</span>
+    <header
+      className="sticky top-0 z-[100]"
+      style={{ background: "var(--color-bg-base)", borderBottom: "1px solid var(--color-border-subtle)", height: 48 }}
+    >
+      <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 24px" }} className="flex h-full items-center justify-between">
+        <Link
+          href="/"
+          className="flex items-center gap-2 font-semibold text-text-primary text-sm no-underline"
+          style={{ fontFamily: "'JetBrains Mono', monospace" }}
+        >
+          <span className="hidden sm:inline">orchestra</span>
         </Link>
 
-        <nav className="hidden md:flex md:items-center md:gap-1" aria-label="Main navigation">
+        <nav className="hidden md:flex md:items-center md:h-full" aria-label="Main navigation">
           {navLinks.map((link) => {
             const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
             return (
@@ -48,11 +52,12 @@ export function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "rounded px-3 py-1.5 text-xs font-medium transition-colors",
-                  isActive
-                    ? "bg-accent-purple-dim text-accent-purple"
-                    : "text-text-secondary hover:bg-bg-hover hover:text-text-primary",
+                  "flex items-center h-full px-3 text-xs font-medium transition-colors duration-150 border-b-2",
                 )}
+                style={{
+                  color: isActive ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                  borderBottomColor: isActive ? "var(--color-accent-purple)" : "transparent",
+                }}
                 aria-current={isActive ? "page" : undefined}
               >
                 {link.label}
@@ -63,7 +68,7 @@ export function Navbar() {
 
         <button
           ref={toggleRef}
-          className="inline-flex md:hidden items-center justify-center rounded p-2 text-text-secondary hover:bg-bg-hover text-sm"
+          className="inline-flex md:hidden items-center justify-center p-2 text-text-secondary text-sm"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-expanded={mobileOpen}
           aria-controls="mobile-nav"
@@ -74,23 +79,26 @@ export function Navbar() {
       </div>
 
       {mobileOpen && (
-        <nav id="mobile-nav" className="border-t border-border-subtle bg-bg-elevated md:hidden" aria-label="Mobile navigation">
-          <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 24px" }} className="space-y-1 py-3">
+        <nav
+          id="mobile-nav"
+          className="border-t border-border-subtle bg-bg-elevated md:hidden"
+          aria-label="Mobile navigation"
+          style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
+        >
+          <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 24px" }} className="space-y-0 py-2">
             {navLinks.map((link, i) => {
-              const isActive =
-                pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
+              const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
               return (
                 <Link
                   key={link.href}
                   ref={i === 0 ? firstLinkRef : undefined}
                   href={link.href}
                   onClick={handleLinkClick}
-                  className={cn(
-                    "block rounded px-3 py-2 text-xs font-medium transition-colors",
-                    isActive
-                      ? "bg-accent-purple-dim text-accent-purple"
-                      : "text-text-secondary hover:bg-bg-hover hover:text-text-primary",
-                  )}
+                  className="block px-3 py-2.5 text-xs font-medium transition-colors duration-150 border-l-2"
+                  style={{
+                    color: isActive ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                    borderLeftColor: isActive ? "var(--color-accent-purple)" : "transparent",
+                  }}
                   aria-current={isActive ? "page" : undefined}
                 >
                   {link.label}

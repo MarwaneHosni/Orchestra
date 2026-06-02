@@ -7,6 +7,8 @@ import type { BlueprintResult } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { StepIndicator } from "@/components/ui/step-indicator";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { ThinkingLoader } from "@/components/ui/skeleton";
+import { StatusBadge } from "@/components/ui/badge";
 
 interface SummaryViewProps {
   sessionId: string;
@@ -69,15 +71,8 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
 
   if (loading) {
     return (
-      <div className="space-y-6" role="status" aria-label="Loading blueprint">
-        <div className="h-4 w-36 animate-pulse rounded bg-border-subtle" />
-        <div className="h-6 w-48 animate-pulse rounded bg-border-subtle" />
-        <div className="grid grid-cols-3 gap-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-20 animate-pulse rounded bg-bg-hover" />
-          ))}
-        </div>
-        <div className="h-64 w-full animate-pulse rounded bg-bg-hover" />
+      <div className="flex flex-col items-center justify-center py-16 gap-3" role="status" aria-label="Loading blueprint">
+        <ThinkingLoader />
       </div>
     );
   }
@@ -175,18 +170,10 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
               </div>
               <div className="flex items-center gap-2">
                 {(phase.status === "insufficient" || phase.status === "missing") && (
-                  <span
-                    className={cn(
-                      "text-xs font-medium",
-                      phase.status === "insufficient" && "text-accent-amber",
-                      phase.status === "missing" && "text-text-muted",
-                    )}
-                  >
-                    {phase.status}
-                  </span>
+                  <StatusBadge status={phase.status} />
                 )}
                 {phase.status === "sufficient" && (
-                  <span className="text-xs font-medium text-accent-green">Ready</span>
+                  <StatusBadge status="sufficient" />
                 )}
               </div>
             </div>
@@ -302,7 +289,7 @@ function MetricCard({
   className?: string;
 }) {
   return (
-    <div className="rounded border border-border-default bg-bg-elevated p-4">
+    <div className="rounded border border-border-subtle bg-bg-elevated" style={{ padding: "14px 16px" }}>
       <p className="text-xs text-text-secondary">{label}</p>
       <p className={cn("mt-1 text-lg font-semibold", className ?? "text-text-primary")}>{value}</p>
       {sub && <p className="text-xs text-text-secondary">{sub}</p>}

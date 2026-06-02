@@ -8,6 +8,7 @@ import { ActivityTimeline } from "@/components/activity/activity-timeline";
 import { UsageSummary } from "@/components/activity/usage-summary";
 import { StepIndicator } from "@/components/ui/step-indicator";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { ThinkingLoader } from "@/components/ui/skeleton";
 import { getSnapshots, getSnapshotDiff } from "@/lib/api";
 import type { SnapshotInfo, VersionDiff } from "@/lib/api";
 
@@ -91,14 +92,8 @@ export function VersionHistory({ sessionId }: VersionHistoryProps) {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="h-4 w-36 animate-pulse rounded bg-border-subtle" />
-        <div className="h-6 w-36 animate-pulse rounded bg-border-subtle" />
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-16 animate-pulse rounded bg-bg-hover" />
-          ))}
-        </div>
+      <div className="flex flex-col items-center justify-center py-16 gap-3">
+        <ThinkingLoader />
       </div>
     );
   }
@@ -172,9 +167,8 @@ export function VersionHistory({ sessionId }: VersionHistoryProps) {
 
           <div className="lg:col-span-3">
             {diffLoading && (
-              <div className="space-y-3">
-                <div className="h-6 w-48 animate-pulse rounded bg-border-subtle" />
-                <div className="h-32 w-full animate-pulse rounded bg-bg-hover" />
+              <div className="flex flex-col items-center justify-center py-8 gap-3">
+                <ThinkingLoader />
               </div>
             )}
             {diffError && (

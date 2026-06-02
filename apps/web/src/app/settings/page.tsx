@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ThinkingLoader } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { listCredentials, createCredential, deleteCredential, validateCredential } from "@/lib/api";
 import type { ProviderCredential } from "@/lib/api";
@@ -185,7 +186,7 @@ export default function SettingsPage() {
                 {saving ? "Saving..." : "Connect"}
               </Button>
               <Button
-                variant="secondary"
+                variant="ghost"
                 onClick={() => {
                   setShowAdd(false);
                   setError("");
@@ -199,10 +200,8 @@ export default function SettingsPage() {
       )}
 
       {loading ? (
-        <div className="space-y-3">
-          {[1, 2].map((i) => (
-            <div key={i} className="h-20 animate-pulse rounded bg-bg-hover" />
-          ))}
+        <div className="flex flex-col items-center justify-center py-8 gap-3">
+          <ThinkingLoader />
         </div>
       ) : credentials.length === 0 ? (
         <div className="rounded border-2 border-dashed border-border-default bg-bg-surface p-12 text-center">

@@ -9,6 +9,7 @@ import { getApiBaseUrl } from "@/lib/api-config";
 import { updateTaskStatus } from "@/lib/api";
 import { StepIndicator } from "@/components/ui/step-indicator";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
+import { ThinkingLoader } from "@/components/ui/skeleton";
 import type { TaskData } from "./task-node";
 
 const PHASES = [
@@ -90,21 +91,15 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="h-4 w-36 animate-pulse rounded bg-border-subtle" />
-        <div className="h-6 w-48 animate-pulse rounded bg-border-subtle" />
-        <div className="grid grid-cols-3 gap-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-16 animate-pulse rounded bg-bg-hover" />
-          ))}
-        </div>
+      <div className="flex flex-col items-center justify-center py-16 gap-3">
+        <ThinkingLoader />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-6 text-center">
+      <div style={{ borderRadius: 3 }} className="border border-accent-red-dim bg-accent-red-dim/30 p-6 text-center">
         <p className="text-accent-red">{error}</p>
         <button
           onClick={() => window.location.reload()}
@@ -121,7 +116,7 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
       <div className="space-y-6">
         <Breadcrumb items={[{ label: "Projects", href: "/projects" }, { label: "Task Graph" }]} />
         <StepIndicator current="tasks" complete={["interview", "review"]} />
-        <div className="rounded border-2 border-dashed border-border-default bg-bg-surface p-12 text-center">
+        <div style={{ borderRadius: 3 }} className="border-2 border-dashed border-border-default bg-bg-surface p-12 text-center">
           <p className="text-sm font-medium text-text-primary">No tasks generated yet</p>
           <p className="mt-1 text-xs text-text-secondary">
             Complete the interview and generate a plan to see the task graph.

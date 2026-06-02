@@ -1,13 +1,21 @@
-export function Skeleton({ className }: { className?: string }) {
-  return <div aria-hidden="true" className={`animate-pulse rounded bg-border-subtle ${className ?? ""}`} />;
+export function ThinkingLoader() {
+  return (
+    <span role="status" aria-label="Loading" className="inline-flex items-center gap-1 text-text-muted text-sm">
+      <span>thinking</span>
+      <span className="animate-ellipsis" aria-hidden="true" />
+    </span>
+  );
 }
 
-export function CardSkeleton() {
+export function BlinkCursor() {
+  return <span className="animate-blink text-accent-purple" aria-hidden="true">▋</span>;
+}
+
+export function LoadingBlock({ lines = 3 }: { lines?: number }) {
   return (
-    <div className="rounded border border-border-default bg-bg-elevated p-5" aria-hidden="true">
-      <Skeleton className="mb-4 h-4 w-36" />
-      <Skeleton className="mb-2 h-3 w-full" />
-      <Skeleton className="h-3 w-3/4" />
+    <div role="status" aria-label="Loading" className="flex flex-col items-center justify-center py-12 gap-3">
+      <ThinkingLoader />
+      <BlinkCursor />
     </div>
   );
 }

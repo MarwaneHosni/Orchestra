@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useFocusTrap, useEscapeToClose } from "@/lib/use-focus-trap";
 import { LiveAnnouncer } from "@/components/ui/live-announcer";
+import { LoadingBlock } from "@/components/ui/skeleton";
 import { getApiBaseUrl } from "@/lib/api-config";
 
 interface PromptPreviewProps {
@@ -102,7 +103,7 @@ function renderContent(text: string): React.ReactNode {
     if (line.startsWith("```")) {
       if (inCodeBlock) {
         elements.push(
-          <pre key={`code-${i}`} className="mb-2 overflow-x-auto rounded bg-bg-hover p-3 text-xs">
+          <pre key={`code-${i}`} className="mb-2 overflow-x-auto p-3 text-xs border-l-2 border-accent-purple" style={{ background: "var(--color-bg-elevated)", borderRadius: 0 }}>
             {codeLines.join("\n")}
           </pre>,
         );
@@ -145,7 +146,7 @@ function renderContent(text: string): React.ReactNode {
 
   if (inCodeBlock && codeLines.length > 0) {
     elements.push(
-      <pre key="code-end" className="mb-2 overflow-x-auto rounded bg-bg-hover p-3 text-xs">
+      <pre key="code-end" className="mb-2 overflow-x-auto p-3 text-xs border-l-2 border-accent-purple" style={{ background: "var(--color-bg-elevated)", borderRadius: 0 }}>
         {codeLines.join("\n")}
       </pre>,
     );
@@ -279,14 +280,7 @@ export function PromptPreview({ taskId, sessionId, onClose }: PromptPreviewProps
 
       <div className="flex-1 overflow-y-auto p-4">
         {loading && (
-          <div className="space-y-3" role="status" aria-label="Loading prompt">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded border border-border-default p-4">
-                <div className="mb-3 h-4 w-32 animate-pulse rounded bg-border-subtle" />
-                <div className="h-16 w-full animate-pulse rounded bg-bg-hover" />
-              </div>
-            ))}
-          </div>
+          <LoadingBlock />
         )}
         {!loading && error && (
           <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-4 text-sm text-accent-red" role="alert">

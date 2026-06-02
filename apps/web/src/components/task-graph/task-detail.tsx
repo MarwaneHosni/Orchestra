@@ -2,6 +2,7 @@
 
 import { useRef, useCallback } from "react";
 import { useFocusTrap, useEscapeToClose } from "@/lib/use-focus-trap";
+import { StatusBadge } from "@/components/ui/badge";
 import type { TaskData } from "./task-node";
 
 interface TaskDetailProps {
@@ -51,15 +52,11 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChan
       <div className="flex-1 overflow-y-auto p-4">
         <h3 className="text-sm font-semibold text-text-primary">{task.title}</h3>
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          <span className="rounded bg-bg-hover px-2 py-0.5 text-xs font-medium">{task.phaseType}</span>
-          <span className="rounded bg-bg-hover px-2 py-0.5 text-xs font-medium">{task.type}</span>
-          <span className="rounded bg-bg-hover px-2 py-0.5 text-xs font-medium">
-            Priority: {task.priority}
-          </span>
-          <span className="rounded bg-bg-hover px-2 py-0.5 text-xs font-medium">
-            {STATUS_LABELS[task.status] ?? task.status}
-          </span>
+        <div className="mt-3 flex flex-wrap gap-2" style={{ fontSize: 12 }}>
+          <span style={{ fontSize: 12 }}>{task.phaseType}</span>
+          <span style={{ fontSize: 12 }}>{task.type}</span>
+          <span style={{ fontSize: 12 }}>Priority: {task.priority}</span>
+          <StatusBadge status={task.status} label={STATUS_LABELS[task.status] ?? task.status} />
         </div>
 
         {"failureReason" in task && task.failureReason && (

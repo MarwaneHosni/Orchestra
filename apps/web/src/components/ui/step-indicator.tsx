@@ -1,7 +1,5 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-
 export type StepId = "interview" | "review" | "tasks";
 
 interface Step {
@@ -26,52 +24,58 @@ export function StepIndicator({ current, complete = [], compact }: StepIndicator
   const completeSet = new Set(complete);
 
   return (
-    <nav aria-label="Flow progress" className="flex items-center gap-0">
-      {STEPS.map((step, i) => {
-        const isComplete = i < currentIdx || completeSet.has(step.id);
-        const isCurrent = step.id === current;
-        const isLocked = i > currentIdx && !completeSet.has(step.id);
-        const isActive = isCurrent || isComplete;
+    <nav aria-label="Flow progress" style={{ fontSize: 12, fontFamily: "'JetBrains Mono', monospace" }}>
+      <span>
+        {STEPS.map((step, i) => {
+          const isComplete = i < currentIdx || completeSet.has(step.id);
+          const isCurrent = step.id === current;
+          const isLocked = i > currentIdx && !completeSet.has(step.id);
 
-        return (
-          <div key={step.id} className="flex items-center">
-            {i > 0 && (
-              <div
-                className={cn(
-                  "mx-1 h-px w-6 sm:w-10",
-                  isActive ? "bg-accent-purple" : "bg-border-subtle",
-                )}
-              />
-            )}
-            <div className={cn(isLocked && "opacity-50")} aria-current={isCurrent ? "step" : undefined}>
-              <span className="flex items-center gap-1.5">
-                <span
-                  className={cn(
-                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
-                    isCurrent && "bg-accent-purple text-white",
-                    isComplete && !isCurrent && "bg-accent-green text-white",
-                    isLocked && "bg-border-subtle text-text-muted",
-                  )}
-                >
-                  {isComplete && !isCurrent ? "✓" : i + 1}
-                </span>
-                {!compact && (
-                  <span
-                    className={cn(
-                      "text-xs",
-                      isCurrent && "font-semibold text-accent-purple",
-                      isComplete && !isCurrent && "text-accent-green",
-                      isLocked && "text-text-muted",
-                    )}
-                  >
-                    {step.label}
-                  </span>
-                )}
+          return (
+            <span key={step.id} aria-current={isCurrent ? "step" : undefined}>
+              {i > 0 && (
+                <span className="mx-2" style={{ color: "var(--color-text-muted)" }}>──</span>
+              )}
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 18,
+                  height: 18,
+                  borderRadius: "50%",
+                  border: `1px solid ${
+                    isCurrent ? "var(--color-accent-purple)" :
+                    isComplete ? "var(--color-accent-green)" :
+                    "var(--color-border-default)"
+                  }`,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  opacity: isLocked ? 0.5 : 1,
+                  background: isCurrent ? "var(--color-accent-purple)" :
+                              isComplete ? "var(--color-accent-green)" : "transparent",
+                  color: (isCurrent || isComplete) ? "#fff" : "var(--color-text-muted)",
+                }}
+              >
+                {isComplete && !isCurrent ? "✓" : i + 1}
               </span>
-            </div>
-          </div>
-        );
-      })}
+              {!compact && (
+                <span
+                  className="ml-1.5"
+                  style={{
+                    color: isCurrent ? "var(--color-accent-purple)" :
+                           isComplete ? "var(--color-accent-green)" :
+                           isLocked ? "var(--color-text-muted)" : "var(--color-text-secondary)",
+                    fontWeight: isCurrent ? 600 : 400,
+                  }}
+                >
+                  {step.label}
+                </span>
+              )}
+            </span>
+          );
+        })}
+      </span>
     </nav>
   );
 }
