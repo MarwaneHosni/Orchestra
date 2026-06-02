@@ -5,7 +5,7 @@ function BtnLink({ href, children }: { href: LinkProps["href"]; children: React.
   return (
     <Link
       href={href}
-      style={{ borderRadius: 3, padding: "8px 18px", fontSize: 13, fontFamily: "inherit" }}
+      style={{ borderRadius: 3, padding: "8px 18px", fontSize: 13, fontFamily: "inherit", color: "#fff" }}
       className="inline-flex bg-accent-purple text-white border border-accent-purple font-medium hover:opacity-88 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform] duration-150"
     >
       {children}

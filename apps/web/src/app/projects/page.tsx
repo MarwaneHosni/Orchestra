@@ -10,7 +10,8 @@ function BtnLink({ href, children }: { href: string; children: React.ReactNode }
   return (
     <Link
       href={href}
-      className="inline-flex items-center justify-center gap-2 rounded bg-accent-purple px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-colors"
+      style={{ color: "#fff" }}
+      className="inline-flex items-center justify-center gap-2 rounded bg-accent-purple px-4 py-2 text-sm font-medium hover:opacity-90 transition-colors"
     >
       {children}
     </Link>

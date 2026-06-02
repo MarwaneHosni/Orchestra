@@ -74,14 +74,16 @@ body {
   border-radius: 2px;
 }
 
-a {
-  color: var(--color-accent-purple);
-  text-decoration: none;
-}
+@layer base {
+  a {
+    color: var(--color-accent-purple);
+    text-decoration: none;
+  }
 
-a:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  a:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
 }
 
 @keyframes blink {
