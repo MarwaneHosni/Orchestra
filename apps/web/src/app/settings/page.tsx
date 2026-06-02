@@ -121,7 +121,7 @@ export default function SettingsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold text-text-primary">Settings</h1>
-          <p className="mt-2 text-xs text-text-secondary">
+          <p className="mt-40 text-xs text-text-secondary">
             Manage your AI provider connections. Keys are encrypted and never exposed.
           </p>
         </div>
@@ -140,9 +140,9 @@ export default function SettingsPage() {
             <CardTitle>New provider connection</CardTitle>
             <CardDescription>Your API key is encrypted before storage and never displayed.</CardDescription>
           </CardHeader>
-          <div className="space-y-4 px-6 pb-6">
+          <div className="space-y-5 px-6 pb-6">
             <div>
-              <label className="block text-xs font-medium text-text-primary">Provider</label>
+              <label className="block text-xs font-medium text-text-primary mb-1.5">Provider</label>
               <select
                 value={newProvider}
                 onChange={(e) => setNewProvider(e.target.value)}
@@ -156,7 +156,7 @@ export default function SettingsPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-text-primary">API Key</label>
+              <label className="block text-xs font-medium text-text-primary mb-1.5">API Key</label>
               <Input
                 type="password"
                 placeholder={
@@ -167,7 +167,7 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-text-primary">Default model (optional)</label>
+              <label className="block text-xs font-medium text-text-primary mb-1.5">Default model (optional)</label>
               <select
                 value={newDefaultModel}
                 onChange={(e) => setNewDefaultModel(e.target.value)}
@@ -213,10 +213,10 @@ export default function SettingsPage() {
           {credentials.map((cred) => {
             const statusCfg = STATUS_CONFIG[cred.status] ?? STATUS_CONFIG.unverified;
             return (
-              <div key={cred.id} className="rounded border border-border-default bg-bg-elevated p-4">
+              <div key={cred.id} className="rounded border border-border-default bg-bg-elevated p-5">
                 <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
                       <span className="font-medium text-text-primary text-sm">{cred.displayName}</span>
                       <span
                         className={cn("rounded px-2 py-0.5 text-xs font-medium", statusCfg.className)}
@@ -232,7 +232,7 @@ export default function SettingsPage() {
                     </p>
                     {cred.errorMessage && <p className="text-xs text-accent-red">{cred.errorMessage}</p>}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     {cred.status !== "valid" && (
                       <button
                         onClick={() => handleValidate(cred.id)}
@@ -284,8 +284,8 @@ function CostRow({
   cost: number;
 }) {
   return (
-    <div className="flex items-center justify-between rounded border border-border-default px-3 py-2 text-xs">
-      <div className="flex items-center gap-2">
+    <div className="flex items-center justify-between rounded border border-border-default px-4 py-3 text-xs">
+      <div className="flex items-center gap-3">
         <span className="text-text-primary">{label}</span>
         <span
           className={cn(
@@ -300,7 +300,7 @@ function CostRow({
       </div>
       <div className="text-right">
         <span className="font-medium text-text-primary">${cost.toFixed(4)}</span>
-        <span className="ml-2 text-text-muted">~{tokens} tokens</span>
+        <span className="ml-3 text-text-muted">~{tokens} tokens</span>
       </div>
     </div>
   );
