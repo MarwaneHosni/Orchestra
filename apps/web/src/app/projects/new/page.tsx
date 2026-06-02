@@ -30,7 +30,7 @@ export default function NewProjectPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="text-lg font-semibold text-text-primary">New project</h1>
         <p className="mt-1 text-xs text-text-secondary">

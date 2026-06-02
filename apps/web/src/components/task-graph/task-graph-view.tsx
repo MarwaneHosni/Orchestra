@@ -115,7 +115,7 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
 
   if (!graph || graph.tasks.length === 0) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <Breadcrumb items={[{ label: "Projects", href: "/projects" }, { label: "Task Graph" }]} />
         <StepIndicator current="tasks" complete={["interview", "review"]} />
         <div style={{ borderRadius: 3, border: "2px dashed var(--color-border-default)", background: "var(--color-bg-surface)", padding: "48px", textAlign: "center" }}>
@@ -152,7 +152,7 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
   const needsReviewCount = graph.tasks.filter((t) => t.status === "needs_review").length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumb items={[{ label: "Projects", href: "/projects" }, { label: "Task Graph" }]} />
 
       <StepIndicator current="tasks" complete={["interview", "review"]} />
@@ -198,7 +198,7 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
-      <div className="space-y-10">
+      <div className="space-y-12">
         {PHASES.filter((p) => graph.tasks.some((t) => t.phaseType === p)).map((phase) => {
           const phaseTasks = graph.tasks
             .filter((t) => t.phaseType === phase)

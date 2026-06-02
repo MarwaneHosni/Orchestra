@@ -65,7 +65,7 @@ export default function ProjectsPage() {
 
   if (error) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-semibold text-text-primary">Projects</h1>
@@ -89,7 +89,7 @@ export default function ProjectsPage() {
 
   if (projects.length === 0) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-semibold text-text-primary">Projects</h1>
@@ -115,7 +115,7 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-semibold text-text-primary">Projects</h1>

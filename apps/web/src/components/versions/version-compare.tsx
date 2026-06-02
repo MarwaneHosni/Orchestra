@@ -29,7 +29,7 @@ export function VersionCompare({ diff }: VersionCompareProps) {
   const hasBlueprintChanges = diff.summary.blueprintChanges > 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="rounded border border-border-default bg-bg-elevated p-4">
         <h2 className="text-sm font-semibold text-text-primary">Comparison</h2>
         <div className="mt-2 flex items-center gap-4 text-sm">

@@ -279,7 +279,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <LiveAnnouncer message={announcement} />
 
       <Breadcrumb items={[{ label: "Projects", href: "/projects" }, { label: "Interview" }]} />

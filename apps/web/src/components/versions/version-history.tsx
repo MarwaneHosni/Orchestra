@@ -115,7 +115,7 @@ export function VersionHistory({ sessionId }: VersionHistoryProps) {
   const sorted = [...snapshots].sort((a, b) => a.version - b.version);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumb items={[{ label: "Projects", href: "/projects" }, { label: "Version History" }]} />
 
       <StepIndicator current="review" complete={["interview"]} />
@@ -192,7 +192,7 @@ export function VersionHistory({ sessionId }: VersionHistoryProps) {
       )}
 
       {sorted.length > 0 && (
-        <div className="space-y-6 border-t border-border-subtle pt-6">
+        <div className="space-y-8 border-t border-border-subtle pt-6">
           <details className="group">
             <summary className="cursor-pointer text-sm font-semibold text-text-primary hover:text-accent-purple">
               ▸ Activity timeline
