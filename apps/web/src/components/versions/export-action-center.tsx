@@ -88,7 +88,7 @@ export function ExportActionCenter({ snapshot }: ExportActionCenterProps) {
         </p>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         <span className="text-xs text-text-secondary">Format:</span>
         <button
           onClick={() => setFormat("markdown")}
@@ -114,14 +114,14 @@ export function ExportActionCenter({ snapshot }: ExportActionCenterProps) {
         </button>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {exportTypes.map((type) => {
           const isExporting = exporting === type;
           const existing = exports.find((e) => e.type === type && e.format === format);
 
           return (
             <div key={type} className="rounded border border-border-default bg-bg-elevated p-3">
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-text-primary">{EXPORT_TYPE_LABELS[type]}</p>
                   <p className="mt-0.5 text-xs text-text-secondary">{EXPORT_TYPE_DESC[type]}</p>
@@ -141,7 +141,7 @@ export function ExportActionCenter({ snapshot }: ExportActionCenterProps) {
               </div>
 
               {existing && (
-                <div className="mt-2 flex items-center gap-2 border-t border-border-subtle pt-2 text-xs">
+                <div className="mt-2 flex items-center gap-3 border-t border-border-subtle pt-2 text-xs">
                   <span className="text-text-secondary">
                     Exported {new Date(existing.createdAt).toLocaleDateString()}
                   </span>
@@ -194,7 +194,7 @@ export function ExportActionCenter({ snapshot }: ExportActionCenterProps) {
                     {new Date(record.createdAt).toLocaleDateString()}
                   </span>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                   <button
                     onClick={() => handleRedownload(record)}
                     className="text-accent-purple hover:underline"

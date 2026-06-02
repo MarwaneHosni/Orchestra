@@ -193,7 +193,7 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
           marginTop: 16,
           fontSize: 13,
         }}
-        className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-0"
+        className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-0"
       >
         <span className="flex items-center gap-1">
           <span style={{ color: "#666" }}>confidence:</span>

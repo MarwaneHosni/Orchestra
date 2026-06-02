@@ -38,7 +38,7 @@ export function VersionCompare({ diff }: VersionCompareProps) {
           <span className="font-medium text-text-primary">v{diff.right.version}</span>
           <ScopeBadge scope={diff.summary.regenerationScope} />
         </div>
-        <div className="mt-2 flex gap-2 text-xs text-text-secondary">
+        <div className="mt-2 flex gap-3 text-xs text-text-secondary">
           <span>{diff.left.reason}</span>
           <span>·</span>
           <span>{diff.right.reason}</span>
@@ -79,12 +79,12 @@ export function VersionCompare({ diff }: VersionCompareProps) {
           <h3 className="mb-2 text-sm font-semibold text-text-primary">
             Tasks ({changedTasks.length} changed)
           </h3>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             {changedTasks.map((t, i) => (
               <div
                 key={i}
                 className={cn(
-                  "flex items-center gap-3 rounded border px-3 py-2 text-sm",
+                  "flex items-center gap-4 rounded border px-3 py-2 text-sm",
                   t.changeType === "added" && "border-accent-green-dim bg-accent-green-dim/30",
                   t.changeType === "removed" && "border-accent-red-dim bg-accent-red-dim/30",
                   t.changeType === "modified" && "border-accent-amber-dim bg-accent-amber-dim/30",
@@ -115,14 +115,14 @@ export function VersionCompare({ diff }: VersionCompareProps) {
           {diff.blueprint!.assumptions.filter((a) => a.changeType !== "unchanged").length > 0 && (
             <div className="mb-3">
               <p className="mb-1 text-xs font-medium text-text-secondary">Assumptions</p>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 {diff
                   .blueprint!.assumptions.filter((a) => a.changeType !== "unchanged")
                   .map((a, i) => (
                     <div
                       key={i}
                       className={cn(
-                        "flex items-center gap-2 rounded border px-3 py-2 text-sm",
+                        "flex items-center gap-3 rounded border px-3 py-2 text-sm",
                         a.changeType === "added" && "border-accent-green-dim bg-accent-green-dim/30",
                         a.changeType === "removed" && "border-accent-red-dim bg-accent-red-dim/30",
                       )}
@@ -140,7 +140,7 @@ export function VersionCompare({ diff }: VersionCompareProps) {
           ).length > 0 && (
             <div>
               <p className="mb-1 text-xs font-medium text-text-secondary">Phase summaries</p>
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 {diff
                   .blueprint!.phaseSummaries.filter(
                     (p) => p.summaryChanged || p.confidenceChanged || p.statusChanged,
@@ -148,7 +148,7 @@ export function VersionCompare({ diff }: VersionCompareProps) {
                   .map((p, i) => (
                     <div
                       key={i}
-                      className="flex items-center gap-3 rounded border border-accent-amber-dim bg-accent-amber-dim/30 px-3 py-2 text-sm"
+                       className="flex items-center gap-4 rounded border border-accent-amber-dim bg-accent-amber-dim/30 px-3 py-2 text-sm"
                     >
                       <span className="text-accent-amber">~</span>
                       <span className="text-xs text-text-secondary">

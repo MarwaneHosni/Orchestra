@@ -237,7 +237,7 @@ export function PromptPreview({ taskId, sessionId, onClose }: PromptPreviewProps
 
       <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
         <h2 className="text-sm font-semibold text-text-primary">Execution Prompt</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {prompt && (
             <button
               onClick={handleCopy}
@@ -293,7 +293,7 @@ export function PromptPreview({ taskId, sessionId, onClose }: PromptPreviewProps
           </pre>
         )}
         {!loading && !error && parsed.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {parsed.map((section) => (
               <div
                 key={section.id}
@@ -319,7 +319,7 @@ export function PromptPreview({ taskId, sessionId, onClose }: PromptPreviewProps
                 {expanded.has(section.id) && (
                   <div className="border-t border-border-subtle px-4 py-3">
                     {section.subSections.length > 0 ? (
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         {section.subSections.map((sub) => (
                           <div key={sub.heading}>
                             <h4 className="mb-1 text-xs font-semibold text-text-secondary">{sub.heading}</h4>

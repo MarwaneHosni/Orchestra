@@ -290,7 +290,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
 
       {showPhaseIntro && !finished && phaseIntro && (
         <div className="rounded border border-accent-purple-dim bg-accent-purple-dim/30 p-4">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-3 mb-1">
             <span className="rounded bg-accent-purple-dim px-2.5 py-0.5 text-xs font-medium text-accent-purple">
               {PHASE_GROUP[currentPhaseType] ?? ""}
             </span>
@@ -337,9 +337,9 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
             {answered < total ? " Some advanced questions were skipped — you can refine these after reviewing the plan." : ""}
           </p>
 
-          <div className="mx-auto mt-6 max-w-sm space-y-3 text-left">
+          <div className="mx-auto mt-6 max-w-sm space-y-4 text-left">
             <p className="text-xs font-medium uppercase tracking-wide text-text-secondary">Phase summary</p>
-            <ul className="space-y-2">
+            <ul className="space-y-3">
               {PHASES.map((phase) => {
                 const phaseQ = history.filter((h) => h.question.phaseType === phase);
                 const isEmpty = phaseQ.length === 0;
@@ -352,7 +352,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
                         : "border-accent-green-dim bg-accent-green-dim/30 text-accent-green"
                     }`}
                   >
-                    <span className="flex items-center gap-2">
+                    <span className="flex items-center gap-3">
                       <span className={`h-1.5 w-1.5 rounded-full ${isEmpty ? "bg-border-default" : "bg-accent-green"}`} />
                       {PHASE_LABELS[phase] ?? phase}
                     </span>
@@ -365,7 +365,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
             </ul>
           </div>
 
-          <div className="mt-6 flex justify-center gap-3">
+          <div className="mt-6 flex justify-center gap-4">
             {history.length > 0 && (
               <button
                 onClick={handleBack}

@@ -126,7 +126,7 @@ export default function ProjectsPage() {
         </Link>
       </div>
 
-      <ul className="space-y-3">
+      <ul className="space-y-4">
         {projects.map((project) => {
           const dotColor = STATUS_DOTS[project.status] ?? "bg-text-muted";
           const badge = STATUS_LABELS[project.status] ?? STATUS_LABELS.draft;

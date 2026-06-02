@@ -209,7 +209,7 @@ export default function SettingsPage() {
           <p className="mt-1 text-xs text-text-secondary">Add an API key to enable AI-powered features.</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {credentials.map((cred) => {
             const statusCfg = STATUS_CONFIG[cred.status] ?? STATUS_CONFIG.unverified;
             return (

@@ -30,7 +30,7 @@ const STATUS_LABELS: Record<GenerationStatus, string> = {
 
 function StatusIndicator({ status }: { status: GenerationStatus }) {
   return (
-    <span className="flex items-center gap-2" style={{ fontSize: 14 }}>
+    <span className="flex items-center gap-3" style={{ fontSize: 14 }}>
       <span style={{ width: 8, height: 8, borderRadius: "50%", background: STATUS_DOT[status], display: "inline-block", flexShrink: 0 }} />
       <span style={{
         color: status === "failed" ? "var(--color-accent-red)" :
@@ -59,7 +59,7 @@ export function GenerationProgress({ workflowId, onCancel }: GenerationProgressP
   return (
     <div style={{ borderRadius: 3, padding: "14px 16px" }} className="space-y-4 border border-border-subtle bg-bg-elevated">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <StatusIndicator status={status} />
           {status === "running" && (
             <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
@@ -90,7 +90,7 @@ export function GenerationProgress({ workflowId, onCancel }: GenerationProgressP
         <p style={{ fontSize: 14, color: "var(--color-accent-red)" }}>Generation failed. You can try again when ready.</p>
       )}
 
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         {stages.map((s) => {
           const isActive = s.status === "active";
           const isDone = s.status === "done";

@@ -166,7 +166,7 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
             {needsReviewCount > 0 && ` · ${needsReviewCount} needs review`}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <button
             onClick={() => router.push(`/projects/${sessionId}/versions`)}
             style={{ borderRadius: 3, padding: "8px 14px", fontSize: 12, fontFamily: "'JetBrains Mono', monospace" }}

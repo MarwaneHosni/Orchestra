@@ -67,14 +67,14 @@ export function VersionNode({
           )}
           aria-label={`Version ${snapshot.version}: ${reasonLabel}`}
         >
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-3">
             <div>
               <span className="text-sm font-medium text-text-primary">{reasonLabel}</span>
               {parentVersion !== null && (
                 <span className="ml-2 text-xs text-text-secondary">(derived from v{parentVersion})</span>
               )}
             </div>
-            <div className="flex shrink-0 gap-1.5">
+            <div className="flex shrink-0 gap-2">
               {parentVersion === null && snapshot.version === 1 && (
                 <span className="rounded bg-accent-purple-dim px-2 py-0.5 text-xs font-medium text-accent-purple">
                   Initial

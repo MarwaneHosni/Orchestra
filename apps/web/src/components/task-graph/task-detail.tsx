@@ -52,7 +52,7 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChan
       <div className="flex-1 overflow-y-auto p-4">
         <h3 className="text-sm font-semibold text-text-primary">{task.title}</h3>
 
-        <div className="mt-3 flex flex-wrap gap-2" style={{ fontSize: 12 }}>
+        <div className="mt-3 flex flex-wrap gap-3" style={{ fontSize: 12 }}>
           <span style={{ fontSize: 12 }}>{task.phaseType}</span>
           <span style={{ fontSize: 12 }}>{task.type}</span>
           <span style={{ fontSize: 12 }}>Priority: {task.priority}</span>
@@ -69,7 +69,7 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChan
           </div>
         )}
 
-        <div className="mt-4 flex items-center gap-3 rounded border border-border-default p-3">
+        <div className="mt-4 flex items-center gap-4 rounded border border-border-default p-3">
           <input
             type="checkbox"
             id="task-done"
@@ -89,7 +89,7 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChan
           {depNames.length === 0 ? (
             <p className="text-sm text-text-secondary">No dependencies — first task in chain.</p>
           ) : (
-            <ul className="space-y-1.5">
+            <ul className="space-y-1.5.5">
               {depNames.map((t) => (
                 <li key={t!.id} className="rounded border border-border-subtle bg-bg-surface px-3 py-2 text-sm">
                   {t!.title}
@@ -104,7 +104,7 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChan
             <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">
               Acceptance Criteria
             </h4>
-            <ul className="list-inside list-disc space-y-1 text-sm text-text-primary">
+            <ul className="list-inside list-disc space-y-1.5 text-sm text-text-primary">
               {task.acceptanceCriteria.map((c, i) => (
                 <li key={i}>{c}</li>
               ))}
@@ -117,13 +117,13 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChan
             <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">
               Blocked By
             </h4>
-            <ul className="space-y-1.5">
+            <ul className="space-y-1.5.5">
               {task.dependencies.map((d) => {
                 const depTask = allTasks.find((t) => t.id === d.taskId);
                 return (
                   <li
                     key={d.taskId}
-                    className="flex items-center gap-2 rounded border border-accent-red-dim bg-accent-red-dim/30 px-3 py-2 text-sm"
+                    className="flex items-center gap-3 rounded border border-accent-red-dim bg-accent-red-dim/30 px-3 py-2 text-sm"
                   >
                     <span className="h-2 w-2 rounded-full bg-accent-red" aria-hidden="true" />
                     <span className="text-accent-red">{depTask?.title ?? d.taskId}</span>
@@ -136,7 +136,7 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChan
 
         <div className="mt-6">
           <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">Metadata</h4>
-          <div className="space-y-1 text-sm text-text-secondary">
+          <div className="space-y-1.5 text-sm text-text-secondary">
             <p>
               Task ID: <code className="text-xs">{task.id.slice(0, 8)}...</code>
             </p>

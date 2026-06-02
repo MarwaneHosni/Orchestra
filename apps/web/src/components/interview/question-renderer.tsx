@@ -87,7 +87,7 @@ export function QuestionRenderer({
   return (
     <div style={{ fontFamily: "'JetBrains Mono', monospace" }} className="space-y-5">
       <div>
-        <div className="flex items-center gap-2 mb-2" style={{ fontSize: 12 }}>
+        <div className="flex items-center gap-3 mb-2" style={{ fontSize: 12 }}>
           <span style={{ color: "var(--color-text-muted)" }}>
             [{question.phaseType}]
           </span>
@@ -139,7 +139,7 @@ export function QuestionRenderer({
         </p>
       )}
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-4">
         <button
           onClick={handleSubmit}
           style={{ borderRadius: 3, padding: "8px 18px", fontSize: 13, fontFamily: "inherit" }}
@@ -216,7 +216,7 @@ function QuestionInput({
 
     case "select":
       return (
-        <div className="space-y-2" role="radiogroup" aria-label={question.text}>
+        <div className="space-y-3" role="radiogroup" aria-label={question.text}>
           {question.options.map((opt) => (
             <label
               key={opt}
@@ -273,7 +273,7 @@ function QuestionInput({
         onChange(next.join(","));
       };
       return (
-        <div className="space-y-2" role="group" aria-label={question.text}>
+        <div className="space-y-3" role="group" aria-label={question.text}>
           {question.options.map((opt) => (
             <label
               key={opt}
@@ -365,7 +365,7 @@ function QuestionInput({
 
     case "scale":
       return (
-        <div className="flex gap-2" role="radiogroup" aria-label={question.text}>
+        <div className="flex gap-3" role="radiogroup" aria-label={question.text}>
           {[1, 2, 3, 4, 5].map((n) => {
             const strN = String(n);
             const isSelected = value === strN;

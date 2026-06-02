@@ -74,7 +74,7 @@ export function ProgressBar({ currentPhaseIndex, total, answered }: ProgressBarP
         </span>
       </div>
 
-      <div className="flex items-center gap-2 overflow-x-auto pb-1" aria-label="Phase groups">
+      <div className="flex items-center gap-3 overflow-x-auto pb-1" aria-label="Phase groups">
         {groupProgress.map((g) => {
           const isActive = g.name === currentGroup;
           return (

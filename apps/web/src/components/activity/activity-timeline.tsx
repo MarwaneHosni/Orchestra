@@ -56,7 +56,7 @@ export function ActivityTimeline({ projectId, compact }: ActivityTimelineProps) 
   const displayEvents = compact ? events.slice(0, 10) : events;
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       {displayEvents.map((event, i) => (
         <div key={event.id} className="flex gap-3">
           <div className="flex flex-col items-center">
