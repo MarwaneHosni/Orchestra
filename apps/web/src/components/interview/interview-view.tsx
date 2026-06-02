@@ -279,7 +279,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <LiveAnnouncer message={announcement} />
 
       <Breadcrumb items={[{ label: "Projects", href: "/projects" }, { label: "Interview" }]} />
@@ -399,7 +399,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
           )}
         </div>
       ) : question ? (
-        <div className="rounded border border-border-default bg-bg-elevated p-6">
+        <div className="rounded border border-border-default bg-bg-elevated p-[18px]">
           <QuestionRenderer
             question={question}
             initialValue={initialValue}

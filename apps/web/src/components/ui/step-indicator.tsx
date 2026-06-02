@@ -34,7 +34,7 @@ export function StepIndicator({ current, complete = [], compact }: StepIndicator
           return (
             <span key={step.id} aria-current={isCurrent ? "step" : undefined}>
               {i > 0 && (
-                <span className="mx-2" style={{ color: "var(--color-text-muted)" }}>──</span>
+                <span className="mx-3" style={{ color: "var(--color-text-muted)" }}>──</span>
               )}
               <span
                 style={{

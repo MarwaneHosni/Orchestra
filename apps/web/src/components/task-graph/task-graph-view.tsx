@@ -166,7 +166,7 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
             {needsReviewCount > 0 && ` · ${needsReviewCount} needs review`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => router.push(`/projects/${sessionId}/versions`)}
             style={{ borderRadius: 3, padding: "8px 14px", fontSize: 12, fontFamily: "'JetBrains Mono', monospace" }}
@@ -207,7 +207,7 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
           return (
             <div key={phase}>
               <SectionDivider title={PHASE_LABELS[phase] ?? phase} count={phaseTasks.length} />
-              <div style={{ marginTop: 8, paddingLeft: 4 }}>
+              <div style={{ marginTop: 14, paddingLeft: 4 }}>
                 <TaskChain
                   tasks={phaseTasks}
                   dependencies={graph.dependencies}

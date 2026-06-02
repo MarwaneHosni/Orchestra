@@ -260,7 +260,7 @@ export default function SettingsPage() {
           <CardTitle>Cost estimate</CardTitle>
           <CardDescription>Estimated cost per generation for common task types.</CardDescription>
         </CardHeader>
-        <div className="space-y-2 px-6 pb-6">
+        <div className="space-y-3 px-6 pb-6">
           <CostRow label="Clarification question" tier="cheap" tokens={400} cost={0.0001} />
           <CostRow label="Summary" tier="cheap" tokens={600} cost={0.0002} />
           <CostRow label="Roadmap generation" tier="balanced" tokens={2000} cost={0.005} />

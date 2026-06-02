@@ -126,7 +126,7 @@ export default function ProjectsPage() {
         </Link>
       </div>
 
-      <ul className="space-y-2">
+      <ul className="space-y-3">
         {projects.map((project) => {
           const dotColor = STATUS_DOTS[project.status] ?? "bg-text-muted";
           const badge = STATUS_LABELS[project.status] ?? STATUS_LABELS.draft;
@@ -135,7 +135,7 @@ export default function ProjectsPage() {
             <li key={project.id}>
               <Link
                 href={`/projects/${project.id}/interview`}
-                className="flex items-center gap-4 rounded border border-border-default bg-bg-elevated px-5 py-4 transition-colors hover:bg-bg-hover"
+                className="flex items-center gap-5 rounded border border-border-default bg-bg-elevated px-5 py-4 transition-colors hover:bg-bg-hover"
                 aria-label={`${project.name}, ${statusLabel}`}
               >
                 <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotColor}`} aria-hidden="true" />

@@ -31,7 +31,7 @@ export function ActivityTimeline({ projectId, compact }: ActivityTimelineProps) 
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 gap-3" role="status" aria-label="Loading activity">
+      <div className="flex flex-col items-center justify-center gap-3" role="status" aria-label="Loading activity">
         <ThinkingLoader />
       </div>
     );

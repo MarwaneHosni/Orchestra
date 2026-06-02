@@ -51,9 +51,9 @@ export function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={cn(
-                  "flex items-center h-full px-3 text-xs font-medium transition-colors duration-150 border-b-2",
-                )}
+                  className={cn(
+                    "flex items-center h-full px-[14px] text-xs font-medium transition-colors duration-150 border-b-2",
+                  )}
                 style={{
                   color: isActive ? "var(--color-text-primary)" : "var(--color-text-secondary)",
                   borderBottomColor: isActive ? "var(--color-accent-purple)" : "transparent",
