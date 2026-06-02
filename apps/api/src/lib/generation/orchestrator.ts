@@ -342,8 +342,14 @@ async function retryPromptWithAI(
   const fixPrompt = buildFixPrompt(aiPrompt, errors, context);
 
   // Select a model for the fix — use cheap tier since this is a targeted edit
-  const decision = router.select("prompt_generation");
-  const selections = [decision.selection, ...decision.fallbackChain.slice(0, 2)];
+  let selections: ModelSelection[];
+  try {
+    const decision = router.select("prompt_generation");
+    selections = [decision.selection, ...decision.fallbackChain.slice(0, 2)];
+  } catch {
+    log.warn({ taskId: context.task.id, phaseType: context.task.phaseType }, "prompt_retry_no_provider_available");
+    return null;
+  }
 
   for (const selection of selections) {
     const provider = createFixProvider(selection);
