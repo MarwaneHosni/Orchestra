@@ -41,7 +41,7 @@ export default function InterviewPage() {
 
   if (resolving) {
     return (
-      <div className="pt-12 text-center" role="status">
+      <div className="text-center" role="status">
         <p style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>resolving session...</p>
       </div>
     );
@@ -49,7 +49,7 @@ export default function InterviewPage() {
 
   if (error) {
     return (
-      <div className="pt-12">
+      <div>
         <div style={{ borderRadius: 3, border: "1px solid var(--color-accent-red-dim)", background: "var(--color-accent-red-dim)", padding: "20px", textAlign: "center" }} role="alert">
           <p style={{ fontSize: 14, color: "var(--color-accent-red)" }}>{error}</p>
         </div>
@@ -59,7 +59,7 @@ export default function InterviewPage() {
 
   if (!sessionId) {
     return (
-      <div className="pt-12 text-center" role="alert">
+      <div className="text-center" role="alert">
         <p style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>No active session found for this project.</p>
       </div>
     );

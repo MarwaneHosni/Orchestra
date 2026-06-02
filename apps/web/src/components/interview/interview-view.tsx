@@ -256,7 +256,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center pt-12 gap-3" role="status" aria-label="Loading interview">
+      <div className="flex flex-col items-center justify-center gap-3" role="status" aria-label="Loading interview">
         <ThinkingLoader />
       </div>
     );
@@ -264,7 +264,7 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
 
   if (error && !question) {
     return (
-      <div className="pt-12">
+      <div>
         <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-6 text-center" role="alert">
           <p className="text-accent-red">{error}</p>
           <button

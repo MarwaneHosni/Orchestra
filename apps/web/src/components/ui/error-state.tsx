@@ -22,7 +22,7 @@ export function ErrorState({
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        padding: "40px 24px",
+        padding: "28px 20px",
         borderRadius: 3,
         border: "1px solid var(--color-accent-red-dim)",
         background: "var(--color-accent-red-dim)",

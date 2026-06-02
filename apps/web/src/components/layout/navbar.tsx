@@ -35,7 +35,7 @@ export function Navbar() {
       className="sticky top-0 z-[100]"
       style={{ background: "var(--color-bg-base)", borderBottom: "1px solid var(--color-border-subtle)", height: 48 }}
     >
-      <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 24px" }} className="flex h-full items-center justify-between">
+      <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 16px" }} className="flex h-full items-center justify-between">
         <Link
           href="/"
           className="flex items-center gap-2 font-semibold text-text-primary text-sm no-underline"
@@ -85,7 +85,7 @@ export function Navbar() {
           aria-label="Mobile navigation"
           style={{ borderBottom: "1px solid var(--color-border-subtle)" }}
         >
-          <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 24px" }} className="space-y-0 py-2">
+          <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 16px" }} className="space-y-0 py-2">
             {navLinks.map((link, i) => {
               const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
               return (

@@ -95,7 +95,7 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center pt-12 gap-3" role="status" aria-label="Loading blueprint">
+      <div className="flex flex-col items-center justify-center gap-3" role="status" aria-label="Loading blueprint">
         <ThinkingLoader />
       </div>
     );

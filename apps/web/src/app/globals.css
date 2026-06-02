@@ -57,7 +57,9 @@ body {
   background: var(--color-bg-base);
   color: var(--color-text-primary);
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Menlo', monospace;
-  font-size: 14px;
+  font-size: 15px;
+
+  --text-xs: 0.8125rem;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }

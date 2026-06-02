@@ -1,6 +1,6 @@
 export default function NotFound() {
   return (
-    <div className="flex flex-col items-center justify-center pt-16 text-center">
+    <div className="flex flex-col items-center justify-center pt-8 text-center">
       <p style={{ fontSize: 36, fontWeight: 700, color: "var(--color-text-muted)" }}>404</p>
       <h1 style={{ marginTop: 12, fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>Page not found</h1>
       <p style={{ marginTop: 6, fontSize: 12, color: "var(--color-text-secondary)" }}>
