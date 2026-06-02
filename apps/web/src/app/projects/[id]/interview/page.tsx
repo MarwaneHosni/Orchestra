@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { InterviewView } from "@/components/interview/interview-view";
 import { createOrResumeSession, resumeSession } from "@/lib/api";
 
 export default function InterviewPage() {
   const params = useParams();
+  const router = useRouter();
   const rawId = params.id as string;
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -27,6 +28,10 @@ export default function InterviewPage() {
       // rawId is a project ID — get or create a session for it
       try {
         const result = await createOrResumeSession(rawId);
+        if (result.status === "completed") {
+          router.push(`/projects/${rawId}/summary`);
+          return;
+        }
         setSessionId(result.sessionId);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load project");
@@ -34,7 +39,7 @@ export default function InterviewPage() {
       setResolving(false);
     };
     resolve();
-  }, [rawId]);
+  }, [rawId, router]);
 
   if (resolving) {
     return (

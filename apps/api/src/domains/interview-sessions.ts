@@ -21,9 +21,15 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
     if (!project) throw new NotFoundError("Project", projectId);
 
     const sessions = getStore().getSessionsByProject(project.id);
-    const active = sessions.find((s) => s.status !== "completed");
-    if (active) {
-      return { sessionId: active.id, status: active.status };
+    // Resume in-progress session first
+    const inProgress = sessions.find((s) => s.status !== "completed" && s.status !== "draft");
+    if (inProgress) {
+      return { sessionId: inProgress.id, status: inProgress.status };
+    }
+    // Return completed session for viewing results
+    const completed = sessions.find((s) => s.status === "completed");
+    if (completed) {
+      return { sessionId: completed.id, status: completed.status };
     }
 
     const body = (request.body ?? {}) as { mode?: string };
