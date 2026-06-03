@@ -231,7 +231,7 @@ export function PromptPreview({ taskId, sessionId, onClose }: PromptPreviewProps
       role="dialog"
       aria-modal="true"
       aria-label="Execution prompt"
-      className="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border-default bg-bg-elevated sm:w-[42rem]"
+      className="fixed top-12 bottom-0 right-0 z-50 flex w-full flex-col border-l border-border-default bg-bg-elevated sm:w-[42rem]"
     >
       <LiveAnnouncer message={announcement} />
 

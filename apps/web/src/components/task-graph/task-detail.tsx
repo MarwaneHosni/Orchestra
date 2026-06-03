@@ -36,7 +36,7 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChan
       role="dialog"
       aria-modal="true"
       aria-label={`Task details: ${task.title}`}
-      className="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-border-default bg-bg-elevated sm:w-96"
+      className="fixed top-12 bottom-0 right-0 z-50 flex w-full flex-col border-l border-border-default bg-bg-elevated sm:w-96"
     >
       <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
         <h2 className="text-sm font-semibold text-text-primary">Task Details</h2>

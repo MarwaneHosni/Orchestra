@@ -47,11 +47,11 @@ export function TaskNodeView({ task, index, total, isSelected, onSelect }: TaskN
   const dotColor = STATUS_DOT_COLOR[task.status] ?? "var(--color-text-muted)";
 
   return (
-    <div className="flex gap-0" style={{ minHeight: 44, overflow: "hidden" }}>
+    <div style={{ display: "flex", gap: 0, minHeight: 44, minWidth: 0 }}>
       {/* Connector rail */}
-      <div className="flex flex-col items-center" style={{ width: 24, flexShrink: 0 }}>
+      <div style={{ width: 24, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center" }}>
         {index > 0 && (
-          <div style={{ width: 1, height: 6, background: "var(--color-border-default)" }} />
+          <div style={{ width: 1, height: 6, background: "var(--color-border-default)", flexShrink: 0 }} />
         )}
         <span
           style={{
@@ -64,7 +64,7 @@ export function TaskNodeView({ task, index, total, isSelected, onSelect }: TaskN
           }}
         />
         {index < total - 1 && (
-          <div style={{ flex: 1, width: 1, background: "var(--color-border-subtle)" }} />
+          <div style={{ flex: 1, width: 1, minHeight: 8, background: "var(--color-border-subtle)", flexShrink: 0 }} />
         )}
       </div>
 
@@ -75,28 +75,29 @@ export function TaskNodeView({ task, index, total, isSelected, onSelect }: TaskN
         aria-label={`${task.title} — ${STATUS_LABELS[task.status] ?? task.status} — ${task.dependencies.length} dep${task.dependencies.length !== 1 ? "s" : ""}`}
         style={{
           flex: 1,
+          minWidth: 0,
           borderRadius: 3,
           border: `1px solid ${isSelected ? "var(--color-accent-purple)" : "var(--color-border-subtle)"}`,
           background: isSelected ? "var(--color-accent-purple-dim)" : "var(--color-bg-surface)",
           padding: "12px 18px",
           textAlign: "left",
           fontFamily: "'JetBrains Mono', monospace",
-          marginBottom: index < total - 1 ? 0 : 0,
+          cursor: "pointer",
         }}
         className="transition-colors duration-150 hover:bg-bg-hover focus:outline-none focus:shadow-[0_0_0_2px_var(--color-accent-purple-dim)]"
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+          <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>
             {task.title}
           </span>
-          <span style={{ fontSize: 11, color: dotColor, whiteSpace: "nowrap" }}>
+          <span style={{ flexShrink: 0, fontSize: 11, color: dotColor, whiteSpace: "nowrap" }}>
             [{STATUS_LABELS[task.status] ?? task.status}]
           </span>
         </div>
-        <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 10, fontSize: 11, color: "var(--color-text-secondary)" }}>
-          <span>{task.type}</span>
+        <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 10, minWidth: 0, fontSize: 11, color: "var(--color-text-secondary)", flexWrap: "wrap" }}>
+          <span style={{ flexShrink: 0 }}>{task.type}</span>
           {task.dependencies.length > 0 && (
-            <span>
+            <span style={{ flexShrink: 0 }}>
               ← {task.dependencies.length} dep{task.dependencies.length !== 1 ? "s" : ""}
             </span>
           )}
@@ -136,7 +137,7 @@ function DependencyArrows({ tasks, dependencies }: DependencyConnectorProps) {
 
   return (
     <svg
-      style={{ position: "absolute", left: 0, top: 0, width: 48, height: svgHeight, pointerEvents: "none", zIndex: 0 }}
+      style={{ position: "absolute", left: 0, top: 0, width: 48, height: svgHeight, pointerEvents: "none", zIndex: 0, overflow: "visible" }}
       aria-hidden="true"
     >
       {lines.map((line, i) => (
@@ -169,11 +170,11 @@ export function TaskChain({ tasks, dependencies, selectedId, onSelect }: TaskCha
   );
 
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative", minWidth: 0 }}>
       {phaseDeps.length > 0 && (
         <DependencyArrows tasks={tasks} dependencies={phaseDeps} />
       )}
-      <div className="space-y-0">
+      <div style={{ minWidth: 0 }}>
         {tasks.map((task, i) => (
           <TaskNodeView
             key={task.id}
