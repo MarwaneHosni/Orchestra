@@ -350,10 +350,15 @@ async function retryPromptWithAI(
 ): Promise<string | null> {
   const fixPrompt = buildFixPrompt(aiPrompt, errors, context);
 
-  // Select a model for the fix — use cheap tier since this is a targeted edit
+  // Select a model for the fix — use user's configured credential first, fall back to policy
   let selections: ModelSelection[];
   try {
-    const decision = router.select("prompt_generation");
+    const allCreds = getCredentialStore().list();
+    const userCred = allCreds.find((c) => c.status === "valid" || c.status === "unverified");
+    const preferences = userCred?.defaultModel
+      ? { preferredProvider: userCred.provider, preferredModel: userCred.defaultModel }
+      : undefined;
+    const decision = router.select("prompt_generation", preferences);
     selections = [decision.selection, ...decision.fallbackChain.slice(0, 2)];
   } catch {
     log.warn({ taskId: context.task.id, phaseType: context.task.phaseType }, "prompt_retry_no_provider_available");
