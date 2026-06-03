@@ -223,86 +223,68 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
-      {/* Master/Detail layout */}
-      <div className="graph-layout" style={{ display: "flex", gap: 0, marginTop: 8 }}>
-        {/* Left: Task list */}
-        <div ref={listRef} className="graph-list" style={{ flex: showRightPanel ? "0 0 calc(100% - 440px)" : "1 1 auto", minWidth: 0, overflowY: "auto", paddingRight: 0 }}>
-          {activePhases.map((phase) => {
-            const phaseTasks = graph.tasks.filter((t) => t.phaseType === phase).sort((a, b) => a.order - b.order);
-            const isCollapsed = collapsedPhases.has(phase);
-            return (
-              <div key={phase} style={{ marginBottom: 8 }}>
-                <button onClick={() => togglePhase(phase)}
-                  style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: "transparent", border: "none", cursor: "pointer", padding: "24px 0 8px", fontFamily: "inherit", color: "var(--color-text-muted)", fontSize: 11, letterSpacing: "0.10em", textTransform: "uppercase", fontWeight: 500 }}
-                  className="graph-phase-header"
-                >
-                  <span style={{ color: "var(--color-border-strong)", width: "2ch", flexShrink: 0 }}>{isCollapsed ? "▸ " : "▾ "}</span>
-                  <span style={{ color: "var(--color-text-muted)", flexShrink: 0 }}>{PHASE_LABELS[phase] ?? phase}</span>
-                  <span style={{ color: "var(--color-text-muted)", flexShrink: 0 }}>({phaseTasks.length})</span>
-                  <span style={{ flex: 1, borderTop: "1px solid var(--color-border-subtle)", alignSelf: "center" }} />
-                </button>
-                {!isCollapsed && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                    {phaseTasks.map((task) => (
-                      <TaskNodeView key={task.id} task={task} isSelected={selectedTask?.id === task.id} onSelect={(t) => { setSelectedTask(t); setPromptTaskId(null); }} indent={false} />
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Right: Panel */}
-        <div className={`graph-panel ${showRightPanel ? "graph-panel-visible" : ""}`}
-          style={{
-            width: 440, flexShrink: 0, borderLeft: showRightPanel ? "1px solid var(--color-border-default)" : "1px solid var(--color-border-default)",
-            background: showRightPanel ? "var(--color-bg-elevated)" : "transparent",
-            position: "sticky", top: 48, height: "calc(100vh - 48px)", overflow: "hidden", zIndex: 10,
-          }}>
-          {showRightPanel ? (
-            promptTaskId ? (
-              <PromptPreview taskId={promptTaskId} sessionId={sessionId}
-                onClose={() => { setPromptTaskId(null); }} />
-            ) : (
-              <TaskDetail task={selectedTask!} allTasks={graph.tasks}
-                onClose={() => { setSelectedTask(null); setPromptTaskId(null); }}
-                onShowPrompt={(id) => { setPromptTaskId(id); }}
-                onStatusChange={handleStatusChange}
-                onSelectTask={(t) => { setSelectedTask(t); setPromptTaskId(null); }} />
-            )
-          ) : (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-              <div style={{
-                border: "1px solid var(--color-border-subtle)", borderRadius: 3,
-                padding: "24px 28px", margin: "40px 20px", textAlign: "center",
-                color: "var(--color-text-muted)", fontSize: 13, fontFamily: "'JetBrains Mono', monospace", lineHeight: 2,
-              }}>
-                <div>no task selected</div>
-                <div>← click a task to inspect it</div>
-                <div>or view its execution prompt</div>
-              </div>
+      {/* Task list — always full width */}
+      <div ref={listRef} style={{ marginTop: 8 }}>
+        {activePhases.map((phase) => {
+          const phaseTasks = graph.tasks.filter((t) => t.phaseType === phase).sort((a, b) => a.order - b.order);
+          const isCollapsed = collapsedPhases.has(phase);
+          return (
+            <div key={phase} style={{ marginBottom: 8 }}>
+              <button onClick={() => togglePhase(phase)}
+                style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: "transparent", border: "none", cursor: "pointer", padding: "24px 0 8px", fontFamily: "inherit", color: "var(--color-text-muted)", fontSize: 11, letterSpacing: "0.10em", textTransform: "uppercase", fontWeight: 500 }}
+                className="graph-phase-header"
+              >
+                <span style={{ color: "var(--color-border-strong)", width: "2ch", flexShrink: 0 }}>{isCollapsed ? "▸ " : "▾ "}</span>
+                <span style={{ color: "var(--color-text-muted)", flexShrink: 0 }}>{PHASE_LABELS[phase] ?? phase}</span>
+                <span style={{ color: "var(--color-text-muted)", flexShrink: 0 }}>({phaseTasks.length})</span>
+                <span style={{ flex: 1, borderTop: "1px solid var(--color-border-subtle)", alignSelf: "center" }} />
+              </button>
+              {!isCollapsed && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                  {phaseTasks.map((task) => (
+                    <TaskNodeView key={task.id} task={task} isSelected={selectedTask?.id === task.id} onSelect={(t) => { setSelectedTask(t); setPromptTaskId(null); }} indent={false} />
+                  ))}
+                </div>
+              )}
             </div>
+          );
+        })}
+      </div>
+
+      {/* Right panel — only visible when a task is selected */}
+      {showRightPanel && (
+        <div className="graph-panel"
+          style={{
+            position: "fixed", top: 48, right: 0, bottom: 0, width: 440,
+            borderLeft: "1px solid var(--color-border-default)",
+            background: "var(--color-bg-elevated)",
+            overflow: "hidden", zIndex: 50,
+          }}>
+          {promptTaskId ? (
+            <PromptPreview taskId={promptTaskId} sessionId={sessionId}
+              onClose={() => { setPromptTaskId(null); }} />
+          ) : (
+            <TaskDetail task={selectedTask!} allTasks={graph.tasks}
+              onClose={() => { setSelectedTask(null); setPromptTaskId(null); }}
+              onShowPrompt={(id) => { setPromptTaskId(id); }}
+              onStatusChange={handleStatusChange}
+              onSelectTask={(t) => { setSelectedTask(t); setPromptTaskId(null); }} />
           )}
         </div>
-      </div>
+      )}
 
       {/* Keyboard hints */}
       <div style={{ position: "fixed", bottom: 12, left: 16, fontSize: 11, color: "var(--color-text-muted)", fontFamily: "'JetBrains Mono', monospace", zIndex: 5, pointerEvents: "none" }}>
         j/k navigate · enter select · p prompt · esc close
       </div>
 
-      {/* Responsive: <900px bottom sheet via CSS */}
+      {/* Responsive: <900px bottom sheet */}
       <style>{`
         @media (max-width: 900px) {
-          .graph-layout { flex-direction: column; }
-          .graph-list { flex: 1 1 auto !important; max-width: none !important; }
-          .graph-panel { width: 100% !important; flex-shrink: 1 !important; height: auto !important;
-            position: fixed !important; bottom: 0 !important; left: 0 !important; right: 0 !important; top: auto !important;
-            border-top: 1px solid var(--color-border-strong) !important; border-radius: 4px 4px 0 0 !important;
-            background: var(--color-bg-surface) !important; overflow-y: auto !important; z-index: 50 !important;
-            max-height: 60vh !important; display: ${showRightPanel ? "block" : "none"} !important; }
-          .graph-panel-visible { display: block !important; }
+          .graph-panel { width: 100% !important; left: 0 !important; right: 0 !important;
+            top: auto !important; bottom: 0 !important; height: 60vh !important;
+            border-top: 1px solid var(--color-border-strong) !important; border-left: none !important;
+            border-radius: 4px 4px 0 0 !important; background: var(--color-bg-surface) !important; }
           .graph-header-btns { display: none; }
         }
         .graph-phase-header:hover span:nth-child(4) { border-top-color: var(--color-border-default) !important; }
