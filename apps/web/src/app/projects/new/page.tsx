@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { TerminalTitle } from "@/components/ui/terminal-title";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormField } from "@/components/forms/form-field";
 import { Input } from "@/components/ui/input";
@@ -32,7 +33,7 @@ export default function NewProjectPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-lg font-semibold text-text-primary">New project</h1>
+        <TerminalTitle className="text-lg font-semibold text-text-primary">New project</TerminalTitle>
         <p className="mt-2 text-xs text-text-secondary">
           Describe your software idea. Orchestra will guide you through structured questions to build a plan.
         </p>

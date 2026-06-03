@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { TerminalTitle } from "@/components/ui/terminal-title";
 import { exportArtifact, getExports, triggerDownload } from "@/lib/api";
 import type { ExportRecord, SnapshotInfo } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -82,7 +83,7 @@ export function ExportActionCenter({ snapshot }: ExportActionCenterProps) {
   return (
     <div className="space-y-5">
       <div>
-        <h3 className="text-sm font-semibold text-text-primary">Export</h3>
+        <TerminalTitle as="h3" className="text-sm font-semibold text-text-primary">Export</TerminalTitle>
         <p className="mt-2 text-xs text-text-secondary">
           v{snapshot.version} — {snapshot.reason}
         </p>

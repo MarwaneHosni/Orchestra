@@ -1,3 +1,4 @@
+import { TerminalTitle } from "@/components/ui/terminal-title";
 import { SectionDivider } from "@/components/ui/badge";
 import Link from "next/link";
 
@@ -31,7 +32,7 @@ export default function DashboardPage() {
     <div className="space-y-8" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-text-primary">Dashboard</h1>
+          <TerminalTitle className="text-lg font-semibold text-text-primary">Dashboard</TerminalTitle>
           <p className="mt-2 text-xs text-text-secondary">
             Welcome to Orchestra. Start by creating your first project.
           </p>

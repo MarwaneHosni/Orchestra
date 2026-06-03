@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { TerminalTitle } from "@/components/ui/terminal-title";
 import { getApiBaseUrl } from "@/lib/api-config";
 import { ThinkingLoader } from "@/components/ui/skeleton";
 
@@ -142,7 +143,7 @@ export function PromptPreview({ taskId, sessionId, onClose }: PromptPreviewProps
 
       {/* Panel header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--color-border-default)", padding: "16px 20px", flexShrink: 0 }}>
-        <span style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>Execution Prompt</span>
+        <TerminalTitle as="span" style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>Execution Prompt</TerminalTitle>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {prompt && (
             <button onClick={handleCopy}

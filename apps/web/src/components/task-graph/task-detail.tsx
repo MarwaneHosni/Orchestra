@@ -1,5 +1,6 @@
 "use client";
 
+import { TerminalTitle } from "@/components/ui/terminal-title";
 import type { TaskData } from "./task-node";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -39,7 +40,7 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChan
 
       {/* Panel header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--color-border-default)", padding: "16px 20px", flexShrink: 0 }}>
-        <span style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>Task Details</span>
+        <TerminalTitle as="span" style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>Task Details</TerminalTitle>
         <button onClick={onClose} aria-label="Close task details"
           style={{ border: "1px solid var(--color-border-default)", borderRadius: 2, padding: "2px 7px", fontSize: 13, fontFamily: "inherit", color: "var(--color-text-secondary)", background: "transparent", cursor: "pointer" }}
           className="hover:text-text-primary hover:border-border-strong"

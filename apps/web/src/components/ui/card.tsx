@@ -1,5 +1,6 @@
 import type { HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
+import { TerminalTitle } from "@/components/ui/terminal-title";
 
 export function Card({ className, children, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
@@ -19,9 +20,9 @@ export function CardHeader({ className, children, ...props }: HTMLAttributes<HTM
 
 export function CardTitle({ className, children, ...props }: HTMLAttributes<HTMLHeadingElement>) {
   return (
-    <h3 className={cn("text-sm font-semibold text-text-primary", className)} {...props}>
-      {children}
-    </h3>
+    <TerminalTitle as="h3" className={cn("text-sm font-semibold text-text-primary", className)} {...props}>
+      {children as string}
+    </TerminalTitle>
   );
 }
 

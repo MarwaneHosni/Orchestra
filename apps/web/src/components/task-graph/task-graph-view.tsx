@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { TerminalTitle } from "@/components/ui/terminal-title";
 import { TaskNodeView } from "./task-node";
 import { TaskDetail } from "./task-detail";
 import { PromptPreview } from "./prompt-preview";
@@ -209,7 +210,7 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
       {/* Top bar */}
       <div style={{ borderBottom: "1px solid var(--color-border-subtle)", padding: "20px 0 16px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <h1 style={{ fontSize: 18, fontWeight: 500, color: "var(--color-text-primary)" }}>Task Graph</h1>
+          <TerminalTitle style={{ fontSize: 18, fontWeight: 500, color: "var(--color-text-primary)" }}>Task Graph</TerminalTitle>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }} className="graph-header-btns">
             <button onClick={() => router.push(`/projects/${sessionId}/versions`)}
               style={{ borderRadius: 3, padding: "6px 14px", fontSize: 12, fontFamily: "inherit", border: "1px solid var(--color-border-default)", background: "transparent", color: "var(--color-text-primary)", cursor: "pointer" }}

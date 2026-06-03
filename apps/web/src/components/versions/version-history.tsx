@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { TerminalTitle } from "@/components/ui/terminal-title";
 import { VersionNode } from "./version-node";
 import { VersionCompare } from "./version-compare";
 import { ExportActionCenter } from "./export-action-center";
@@ -122,7 +123,7 @@ export function VersionHistory({ sessionId }: VersionHistoryProps) {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-text-primary">Version History</h1>
+          <TerminalTitle className="text-lg font-semibold text-text-primary">Version History</TerminalTitle>
           <p className="mt-2 text-xs text-text-secondary">
             {sorted.length} snapshot{sorted.length !== 1 ? "s" : ""} — Click a snapshot to export, or select
             two to compare

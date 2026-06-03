@@ -1,3 +1,5 @@
+import { TerminalTitle } from "@/components/ui/terminal-title";
+
 export function StatusBadge({
   status,
   label,
@@ -46,6 +48,7 @@ export function StatusBadge({
 }
 
 export function SectionDivider({ title, count }: { title: string; count?: number }) {
+  const label = count !== undefined ? `${title} (${count})` : title;
   return (
     <div className="flex items-center gap-3 py-3" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>
       <span
@@ -56,7 +59,7 @@ export function SectionDivider({ title, count }: { title: string; count?: number
           whiteSpace: "nowrap",
         }}
       >
-        ── {title}{count !== undefined ? ` (${count})` : ""}
+        ── <TerminalTitle as="span">{label}</TerminalTitle>
       </span>
       <span
         style={{

@@ -1,0 +1,79 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+
+interface TerminalTitleProps {
+  children: string;
+  as?: "h1" | "h2" | "h3" | "h4" | "span" | "div";
+  className?: string;
+  style?: React.CSSProperties;
+  delay?: number;
+}
+
+function useReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduced(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setReduced(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return reduced;
+}
+
+export function TerminalTitle({ children, as: Tag = "h1", className, style, delay = 0 }: TerminalTitleProps) {
+  const reduced = useReducedMotion();
+  const text = children;
+  const [revealed, setRevealed] = useState(reduced ? text.length : 0);
+  const done = revealed >= text.length;
+  const initialized = useRef(false);
+
+  useEffect(() => {
+    if (reduced) {
+      setRevealed(text.length);
+      return;
+    }
+    if (initialized.current) return;
+    initialized.current = true;
+
+    const duration = Math.max(300, Math.min(1200, text.length * 40));
+    const stepMs = duration / text.length;
+    let idx = 0;
+
+    const startTimer = setTimeout(() => {
+      const interval = setInterval(() => {
+        idx++;
+        setRevealed(idx);
+        if (idx >= text.length) clearInterval(interval);
+      }, stepMs);
+    }, delay);
+
+    return () => {
+      clearTimeout(startTimer);
+    };
+  }, [text, reduced, delay]);
+
+  return (
+    <Tag className={className} style={{ ...style, visibility: "visible" }} aria-label={text}>
+      <span style={{ visibility: "hidden", display: "block", height: 0, overflow: "hidden" }} aria-hidden="true">
+        {text}
+      </span>
+      {text.slice(0, revealed)}
+      {!done && (
+        <span
+          style={{
+            display: "inline-block",
+            width: "0.45em",
+            height: "1em",
+            verticalAlign: "text-bottom",
+            marginLeft: 1,
+            background: "currentColor",
+            animation: "blink 1s step-end infinite",
+          }}
+          aria-hidden="true"
+        />
+      )}
+    </Tag>
+  );
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import { TerminalTitle } from "@/components/ui/terminal-title";
 import { Button } from "@/components/ui/button";
 
 interface ErrorStateProps {
@@ -31,7 +32,7 @@ export function ErrorState({
       role="alert"
     >
       <span style={{ marginBottom: 8, color: "var(--color-accent-red)", fontSize: 18 }} aria-hidden="true">✗</span>
-      <h3 style={{ marginBottom: 4, fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>{title}</h3>
+      <TerminalTitle as="h3" style={{ marginBottom: 4, fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>{title}</TerminalTitle>
       <p style={{ marginBottom: 20, maxWidth: 320, fontSize: 12, color: "var(--color-text-secondary)", textAlign: "center" }}>{message}</p>
       {onRetry && (
         <Button variant="ghost" onClick={onRetry}>

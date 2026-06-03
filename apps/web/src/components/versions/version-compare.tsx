@@ -1,5 +1,6 @@
 "use client";
 
+import { TerminalTitle } from "@/components/ui/terminal-title";
 import { cn } from "@/lib/utils";
 import type { VersionDiff } from "@/lib/api";
 
@@ -31,7 +32,7 @@ export function VersionCompare({ diff }: VersionCompareProps) {
   return (
     <div className="space-y-8">
       <div className="rounded border border-border-default bg-bg-elevated p-4">
-        <h2 className="text-sm font-semibold text-text-primary">Comparison</h2>
+        <TerminalTitle as="h2" className="text-sm font-semibold text-text-primary">Comparison</TerminalTitle>
         <div className="mt-2 flex items-center gap-4 text-sm">
           <span className="text-text-secondary">v{diff.left.version}</span>
           <span className="text-text-secondary">→</span>

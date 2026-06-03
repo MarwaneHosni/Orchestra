@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { TerminalTitle } from "@/components/ui/terminal-title";
 import { listProjects } from "@/lib/api";
 import type { ProjectRecord } from "@/lib/api";
 
@@ -56,7 +57,7 @@ export default function ProjectsPage() {
       <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-text-primary">Projects</h1>
+            <TerminalTitle className="text-lg font-semibold text-text-primary">Projects</TerminalTitle>
             <p className="mt-2 text-xs text-text-secondary">Loading projects...</p>
           </div>
         </div>
@@ -69,7 +70,7 @@ export default function ProjectsPage() {
       <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-text-primary">Projects</h1>
+            <TerminalTitle className="text-lg font-semibold text-text-primary">Projects</TerminalTitle>
             <p className="mt-2 text-xs text-text-secondary">
               All your software ideas, organised as projects.
             </p>
@@ -91,7 +92,7 @@ export default function ProjectsPage() {
       <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-text-primary">Projects</h1>
+            <TerminalTitle className="text-lg font-semibold text-text-primary">Projects</TerminalTitle>
             <p className="mt-2 text-xs text-text-secondary">
               All your software ideas, organised as projects.
             </p>
@@ -113,7 +114,7 @@ export default function ProjectsPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-text-primary">Projects</h1>
+          <TerminalTitle className="text-lg font-semibold text-text-primary">Projects</TerminalTitle>
           <p className="mt-2 text-xs text-text-secondary">All your software ideas, organised as projects.</p>
         </div>
         <BtnLink href="/projects/new">New project</BtnLink>

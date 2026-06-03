@@ -1,10 +1,11 @@
+import { TerminalTitle } from "@/components/ui/terminal-title";
 import { EmptyState } from "@/components/ui/empty-state";
 
 export default function BlueprintsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-lg font-semibold text-text-primary">Blueprints</h1>
+        <TerminalTitle className="text-lg font-semibold text-text-primary">Blueprints</TerminalTitle>
         <p className="mt-2 text-xs text-text-secondary">
           Generated architecture blueprints for your projects.
         </p>

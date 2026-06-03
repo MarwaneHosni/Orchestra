@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { TerminalTitle } from "@/components/ui/terminal-title";
 import { QuestionRenderer } from "./question-renderer";
 import { ProgressBar } from "./progress-bar";
 import { PhaseNotice } from "./phase-notice";
@@ -329,9 +330,9 @@ export function InterviewView({ sessionId }: InterviewViewProps) {
           role="region"
           aria-label="Interview complete"
         >
-          <h2 ref={finishedHeadingRef} className="text-base font-semibold text-text-primary" tabIndex={-1}>
+          <TerminalTitle as="h2" className="text-base font-semibold text-text-primary">
             You&apos;re all set
-          </h2>
+          </TerminalTitle>
           <p className="mt-3 text-xs text-text-secondary">
             You&apos;ve answered enough questions to generate a detailed project plan.
             {answered < total ? " Some advanced questions were skipped — you can refine these after reviewing the plan." : ""}

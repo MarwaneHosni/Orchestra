@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { TerminalTitle } from "@/components/ui/terminal-title";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -120,7 +121,7 @@ export default function SettingsPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-text-primary">Settings</h1>
+          <TerminalTitle className="text-lg font-semibold text-text-primary">Settings</TerminalTitle>
           <p className="mt-2 text-xs text-text-secondary">
             Manage your AI provider connections. Keys are encrypted and never exposed.
           </p>

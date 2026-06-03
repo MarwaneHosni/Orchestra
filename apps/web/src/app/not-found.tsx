@@ -1,8 +1,10 @@
+import { TerminalTitle } from "@/components/ui/terminal-title";
+
 export default function NotFound() {
   return (
     <div className="flex flex-col items-center justify-center pt-8 text-center">
-      <p style={{ fontSize: 36, fontWeight: 700, color: "var(--color-text-muted)" }}>404</p>
-      <h1 style={{ marginTop: 12, fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>Page not found</h1>
+      <TerminalTitle as="span" style={{ fontSize: 36, fontWeight: 700, color: "var(--color-text-muted)" }}>404</TerminalTitle>
+      <TerminalTitle style={{ marginTop: 12, fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>Page not found</TerminalTitle>
       <p style={{ marginTop: 6, fontSize: 12, color: "var(--color-text-secondary)" }}>
         The page you are looking for does not exist or has been moved.
       </p>
