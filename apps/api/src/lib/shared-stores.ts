@@ -1,16 +1,21 @@
 import { createInMemoryGraphStore } from "./task-graph/generator.js";
 import { createInMemoryPromptStore } from "./prompt/index.js";
+import type { GraphStore } from "./task-graph/generator.js";
 import type { PromptStore } from "./prompt/types.js";
 
 let _graphStore = createInMemoryGraphStore();
 let _promptStore: PromptStore = createInMemoryPromptStore();
 
-export function getGraphStore() {
+export function getGraphStore(): GraphStore {
   return _graphStore;
 }
 
 export function getPromptStore(): PromptStore {
   return _promptStore;
+}
+
+export function replaceGraphStore(store: GraphStore): void {
+  _graphStore = store;
 }
 
 export function replacePromptStore(store: PromptStore): void {

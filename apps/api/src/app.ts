@@ -6,9 +6,10 @@ import { initDb } from "./db/sqlite/index.js";
 import { createSqliteSessionStore } from "./lib/repositories/session-repository.js";
 import { createSqliteCredentialStore } from "./lib/repositories/credential-repository.js";
 import { createSqlitePromptStore } from "./lib/repositories/prompt-repository.js";
+import { createSqliteGraphStore } from "./lib/repositories/graph-repository.js";
 import { replaceStore } from "./lib/orchestration/store.js";
 import { _replaceCredentialStore } from "./lib/credentials/store.js";
-import { replacePromptStore } from "./lib/shared-stores.js";
+import { replacePromptStore, replaceGraphStore } from "./lib/shared-stores.js";
 import { registerHealthRoutes } from "./routes/health.js";
 import { registerVersionRoutes } from "./routes/version.js";
 import { registerObservabilityRoutes } from "./routes/observability.js";
@@ -26,6 +27,7 @@ export async function buildApp() {
   replaceStore(createSqliteSessionStore());
   _replaceCredentialStore(createSqliteCredentialStore());
   replacePromptStore(createSqlitePromptStore());
+  replaceGraphStore(createSqliteGraphStore());
 
   const app = Fastify({
     logger: {

@@ -128,5 +128,18 @@ export function createSqliteGraphStore(): GraphStore {
       }
       return graphs;
     },
+    updateTaskStatus(planId, planVersion, taskId, newStatus) {
+      const graph = this.getGraph(planId, planVersion);
+      if (!graph) return undefined;
+      const task = graph.tasks.find((t) => t.id === taskId);
+      if (!task) return undefined;
+      task.status = newStatus as TaskNode["status"];
+      getDb()
+        .update(schema.executionTasks)
+        .set({ status: newStatus as any, updatedAt: now() })
+        .where(eq(schema.executionTasks.id, taskId))
+        .run();
+      return { ...task };
+    },
   };
 }
