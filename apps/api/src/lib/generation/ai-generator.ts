@@ -21,6 +21,14 @@ import { createModuleLogger } from "../logging/logger.js";
 
 const log = createModuleLogger("ai-generator");
 
+export interface SummaryResult {
+  summary: ProjectSummary | null;
+  model?: string;
+  provider?: string;
+  durationMs: number;
+  error?: string;
+}
+
 export class AIBlueprintGenerator {
   private projectDescription: string = "";
 
@@ -64,50 +72,105 @@ export class AIBlueprintGenerator {
     }
   }
 
-  async generateProjectSummary(blueprint: BlueprintOutput): Promise<ProjectSummary | null> {
+  async generateProjectSummary(blueprint: BlueprintOutput): Promise<SummaryResult> {
+    const overallStartTime = Date.now();
+    const systemPrompt = buildProjectSummarySystemPrompt();
+    const messages = buildProjectSummaryMessage(blueprint);
+
+    let currentDecision: RouterDecision;
     try {
-      const decision = this.router.select("summary", {});
-      const provider = this.createProvider(decision.selection);
+      currentDecision = this.router.select("summary", {});
+    } catch (err) {
+      return { summary: null, durationMs: Date.now() - overallStartTime, error: "Router selection failed" };
+    }
+
+    const MAX_ATTEMPTS = 3;
+    for (let attemptCount = 0; attemptCount < MAX_ATTEMPTS; attemptCount++) {
+      const selection = currentDecision.selection;
+
+      const provider = this.createProvider(selection);
       if (!provider) {
-        log.warn({ provider: decision.selection.provider }, "summary_no_provider");
-        return null;
+        const next = this.advanceFallback(currentDecision, `No provider for ${selection.provider}`);
+        if (!next) break;
+        currentDecision = next;
+        continue;
       }
 
-      const systemPrompt = buildProjectSummarySystemPrompt();
-      const messages = buildProjectSummaryMessage(blueprint);
-
       const input: GenerationInput = {
-        model: decision.selection.model,
+        model: selection.model,
         systemPrompt,
         messages,
         temperature: 0.3,
       };
 
-      const result = await instrumentProviderCall(decision.selection.provider, decision.selection.model, () =>
-        provider.generate(input),
-      );
+      try {
+        const result = await instrumentProviderCall(selection.provider, selection.model, () =>
+          provider.generate(input),
+        );
 
-      // Extract JSON from response
-      const content = result.content.trim();
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        log.warn({ preview: content.slice(0, 200) }, "summary_no_json");
-        return null;
+        const content = result.content.trim();
+        const summary = this.extractProjectSummary(content);
+        if (summary) {
+          log.info({ model: result.model, provider: selection.provider, attempt: attemptCount }, "summary_generated");
+          return { summary, model: result.model, provider: selection.provider, durationMs: Date.now() - overallStartTime };
+        }
+
+        log.warn({ preview: content.slice(0, 200), attempt: attemptCount }, "summary_parse_failed");
+        const next = this.advanceFallback(currentDecision, "Failed to parse summary JSON");
+        if (!next) break;
+        currentDecision = next;
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        log.warn({ err: errorMsg, attempt: attemptCount, provider: selection.provider }, "summary_provider_error");
+        const next = this.advanceFallback(currentDecision, errorMsg);
+        if (!next) break;
+        currentDecision = next;
       }
-
-      const parsed = JSON.parse(jsonMatch[0]);
-      const validated = ProjectSummarySchema.safeParse(parsed);
-      if (!validated.success) {
-        log.warn({ issues: validated.error.issues }, "summary_zod_error");
-        return null;
-      }
-
-      log.info({ model: result.model, provider: decision.selection.provider }, "summary_generated");
-      return validated.data;
-    } catch (err) {
-      log.warn({ err: err instanceof Error ? err.message : err }, "summary_generation_failed");
-      return null;
     }
+
+    return { summary: null, durationMs: Date.now() - overallStartTime, error: "All attempts failed" };
+  }
+
+  private extractProjectSummary(content: string): ProjectSummary | null {
+    // Brace-depth JSON extraction — same approach as parseBlueprintResponse
+    let best: unknown = null;
+    let bestSize = 0;
+    let searchFrom = 0;
+    while (searchFrom < content.length) {
+      const openIdx = content.indexOf("{", searchFrom);
+      if (openIdx < 0) break;
+      let depth = 0;
+      let inString = false;
+      let closeIdx = -1;
+      for (let i = openIdx; i < content.length; i++) {
+        const ch = content[i];
+        if (inString) {
+          if (ch === "\\") i++;
+          else if (ch === '"') inString = false;
+        } else {
+          if (ch === '"') inString = true;
+          else if (ch === "{") depth++;
+          else if (ch === "}") {
+            depth--;
+            if (depth === 0) { closeIdx = i; break; }
+          }
+        }
+      }
+      if (closeIdx < 0) break;
+      const candidate = content.slice(openIdx, closeIdx + 1);
+      try {
+        const obj = JSON.parse(candidate);
+        if (obj && typeof obj === "object" && (obj as Record<string, unknown>).projectOverview) {
+          const size = candidate.length;
+          if (size > bestSize) { best = obj; bestSize = size; }
+        }
+      } catch { /* skip */ }
+      searchFrom = openIdx + 1;
+    }
+
+    if (!best) return null;
+    const validated = ProjectSummarySchema.safeParse(best);
+    return validated.success ? validated.data : null;
   }
 
   private recordAttempt(

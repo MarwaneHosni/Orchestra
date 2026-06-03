@@ -670,14 +670,18 @@ export async function generateWithAI(
       // 8. Generate project summary
       updateWorkflowStep(workflowId, "summary", "running");
       emitProgress(createEvent(workflowId, "stage_started", "summary", { stageLabel: "Generating project summary", attempt: 1 }));
-      const projectSummary = await aiGen.generateProjectSummary(blueprint);
-      if (projectSummary) {
-        (blueprint as Record<string, unknown>).projectSummary = projectSummary;
-        log.info({}, "project_summary_generated");
+      const summaryResult = await aiGen.generateProjectSummary(blueprint);
+      if (summaryResult.summary) {
+        (blueprint as Record<string, unknown>).projectSummary = summaryResult.summary;
+        log.info({ model: summaryResult.model, provider: summaryResult.provider, durationMs: summaryResult.durationMs }, "project_summary_generated");
+        const sp: Record<string, unknown> = { stageLabel: "Generating project summary", attempt: 1, durationMs: summaryResult.durationMs };
+        if (summaryResult.model) sp.model = summaryResult.model;
+        if (summaryResult.provider) sp.provider = summaryResult.provider;
+        emitProgress(createEvent(workflowId, "stage_completed", "summary", sp as any));
       } else {
-        log.warn({}, "project_summary_failed_continuing");
+        log.warn({ durationMs: summaryResult.durationMs, error: summaryResult.error }, "project_summary_failed_continuing");
+        emitProgress(createEvent(workflowId, "stage_completed", "summary", { stageLabel: "Generating project summary", attempt: 1, durationMs: summaryResult.durationMs }));
       }
-      emitProgress(createEvent(workflowId, "stage_completed", "summary", { stageLabel: "Generating project summary", attempt: 1, durationMs: 0 }));
       updateWorkflowStep(workflowId, "summary", "completed");
     } catch {
       completeWorkflowRun(workflowId, "failed", result.provider, result.model, "Prompt generation failed");
