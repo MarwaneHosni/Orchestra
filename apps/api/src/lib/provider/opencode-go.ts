@@ -37,18 +37,27 @@ export class OpencodeGoProvider implements AIProvider {
 
   async validate(): Promise<ValidationResult> {
     try {
-      const res = await this.apiFetch("/models");
+      const res = await this.apiFetch("/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        timeout: 30_000,
+        body: JSON.stringify({
+          model: "deepseek-v4-flash",
+          messages: [{ role: "user", content: "Say OK" }],
+          temperature: 0,
+          max_tokens: 5,
+          stream: false,
+        }),
+      });
       if (res.status === 401) return { valid: false, error: "Invalid API key" };
-      if (!res.ok) return { valid: false, error: `OpenCode Go API error: ${res.status}` };
-      const body = (await res.json()) as { data?: { id: string }[] };
-      const models: ModelInfo[] = (body.data ?? [])
-        .filter((m) => GO_MODEL_IDS.has(m.id))
-        .map((m) => ({ id: m.id, provider: "opencode-go" }));
+      if (!res.ok) {
+        const bodyText = await res.text().catch(() => "(could not read body)");
+        return { valid: false, error: `OpenCode Go API error (${res.status}): ${bodyText.slice(0, 200)}` };
+      }
+      const models = [...GO_MODEL_IDS].map((id) => ({ id, provider: "opencode-go" }));
       return { valid: true, models };
     } catch (err) {
-      if (err instanceof ProviderRequestError) {
-        return { valid: false, error: err.message };
-      }
+      if (err instanceof ProviderRequestError) return { valid: false, error: err.message };
       return {
         valid: false,
         error: `OpenCode Go connection failed: ${err instanceof Error ? err.message : String(err)}`,
