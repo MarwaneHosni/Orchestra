@@ -1,14 +1,12 @@
 "use client";
 
-import { SectionDivider } from "@/components/ui/badge";
-
-const STATUS_DOT_COLOR: Record<string, string> = {
-  ready: "var(--color-accent-green)",
-  blocked: "var(--color-accent-red)",
-  needs_review: "var(--color-accent-amber)",
-  pending: "var(--color-text-muted)",
-  in_progress: "var(--color-accent-purple)",
-  complete: "var(--color-accent-green)",
+const STATUS_GLYPH: Record<string, { glyph: string; color: string; halo: string }> = {
+  ready:       { glyph: "●", color: "var(--color-accent-green)",  halo: "0 0 0 3px var(--color-accent-green-dim)" },
+  blocked:     { glyph: "●", color: "var(--color-accent-red)",    halo: "0 0 0 3px var(--color-accent-red-dim)" },
+  needs_review:{ glyph: "◐", color: "var(--color-accent-amber)",  halo: "0 0 0 3px var(--color-accent-amber-dim)" },
+  pending:     { glyph: "○", color: "var(--color-text-muted)",    halo: "none" },
+  in_progress: { glyph: "●", color: "var(--color-accent-purple)", halo: "0 0 0 3px var(--color-accent-purple-dim)" },
+  complete:    { glyph: "✓", color: "var(--color-accent-green)",  halo: "0 0 0 3px var(--color-accent-green-dim)" },
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -37,155 +35,109 @@ export interface TaskData {
 
 interface TaskNodeProps {
   task: TaskData;
-  index: number;
-  total: number;
   isSelected: boolean;
   onSelect: (task: TaskData) => void;
+  hasDependencies: boolean;
+  indent: boolean;
 }
 
-export function TaskNodeView({ task, index, total, isSelected, onSelect }: TaskNodeProps) {
-  const dotColor = STATUS_DOT_COLOR[task.status] ?? "var(--color-text-muted)";
+export function TaskNodeView({ task, isSelected, onSelect, indent }: TaskNodeProps) {
+  const g = STATUS_GLYPH[task.status] ?? STATUS_GLYPH.pending;
 
   return (
-    <div style={{ display: "flex", gap: 0, minHeight: 44, minWidth: 0 }}>
-      {/* Connector rail */}
-      <div style={{ width: 24, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center" }}>
-        {index > 0 && (
-          <div style={{ width: 1, height: 6, background: "var(--color-border-default)", flexShrink: 0 }} />
-        )}
+    <button
+      onClick={() => onSelect(task)}
+      aria-pressed={isSelected}
+      style={{
+        display: "block",
+        textAlign: "left",
+        borderRadius: 3,
+        borderTop: "1px solid var(--color-border-subtle)",
+        borderRight: "1px solid var(--color-border-subtle)",
+        borderBottom: "1px solid var(--color-border-subtle)",
+        borderLeft: isSelected
+          ? "3px solid var(--color-accent-purple)"
+          : task.dependencies.length > 0
+            ? "2px solid var(--color-border-default)"
+            : "1px solid var(--color-border-subtle)",
+        background: isSelected ? "var(--color-accent-purple-dim)" : "var(--color-bg-surface)",
+        padding: "12px 14px",
+        marginTop: 4,
+        marginBottom: 4,
+        marginRight: 0,
+        cursor: "pointer",
+        fontFamily: "'JetBrains Mono', monospace",
+        marginLeft: indent ? 20 : 0,
+        width: indent ? "calc(100% - 20px)" : "100%",
+        transition: "border-color 150ms, background 150ms",
+      }}
+      className="hover:border-border-strong hover:bg-bg-elevated focus:outline-none focus:shadow-[0_0_0_2px_var(--color-accent-purple-dim)]"
+      aria-label={`${task.title} — ${STATUS_LABELS[task.status] ?? task.status} — ${task.dependencies.length} dep${task.dependencies.length !== 1 ? "s" : ""}`}
+    >
+      {/* Line 1: Glyph + Title */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
         <span
           style={{
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            background: dotColor,
-            display: "inline-block",
+            width: 16,
+            height: 16,
             flexShrink: 0,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 12,
+            lineHeight: 1,
+            color: g.color,
+            boxShadow: g.halo,
+            borderRadius: g.glyph === "◐" ? 0 : "50%",
           }}
-        />
-        {index < total - 1 && (
-          <div style={{ flex: 1, width: 1, minHeight: 8, background: "var(--color-border-subtle)", flexShrink: 0 }} />
-        )}
+        >
+          {g.glyph}
+        </span>
+        <span
+          style={{
+            flex: 1,
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            fontSize: 13,
+            fontWeight: 500,
+            color: "var(--color-text-primary)",
+          }}
+        >
+          {task.title}
+        </span>
       </div>
 
-      {/* Task card */}
-      <button
-        onClick={() => onSelect(task)}
-        aria-pressed={isSelected}
-        aria-label={`${task.title} — ${STATUS_LABELS[task.status] ?? task.status} — ${task.dependencies.length} dep${task.dependencies.length !== 1 ? "s" : ""}`}
-        style={{
-          flex: 1,
-          minWidth: 0,
-          borderRadius: 3,
-          border: `1px solid ${isSelected ? "var(--color-accent-purple)" : "var(--color-border-subtle)"}`,
-          background: isSelected ? "var(--color-accent-purple-dim)" : "var(--color-bg-surface)",
-          padding: "12px 18px",
-          textAlign: "left",
-          fontFamily: "'JetBrains Mono', monospace",
-          cursor: "pointer",
-        }}
-        className="transition-colors duration-150 hover:bg-bg-hover focus:outline-none focus:shadow-[0_0_0_2px_var(--color-accent-purple-dim)]"
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-          <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>
-            {task.title}
-          </span>
-          <span style={{ flexShrink: 0, fontSize: 11, color: dotColor, whiteSpace: "nowrap" }}>
-            [{STATUS_LABELS[task.status] ?? task.status}]
-          </span>
-        </div>
-        <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 10, minWidth: 0, fontSize: 11, color: "var(--color-text-secondary)", flexWrap: "wrap" }}>
-          <span style={{ flexShrink: 0 }}>{task.type}</span>
-          {task.dependencies.length > 0 && (
-            <span style={{ flexShrink: 0 }}>
-              ← {task.dependencies.length} dep{task.dependencies.length !== 1 ? "s" : ""}
-            </span>
-          )}
-        </div>
-      </button>
-    </div>
+      {/* Line 2: Metadata chips + status */}
+      <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, minWidth: 0, fontSize: 11, color: "var(--color-text-muted)" }}>
+        <TypePill type={task.type} />
+        <span>·</span>
+        <span>{task.dependencies.length > 0 ? `+${task.dependencies.length} dep${task.dependencies.length !== 1 ? "s" : ""}` : "no deps"}</span>
+        <span>·</span>
+        <span>priority: {task.priority}</span>
+        <span style={{ flex: 1 }} />
+        <span style={{ fontSize: 11, color: g.color, whiteSpace: "nowrap" }}>
+          [{STATUS_LABELS[task.status] ?? task.status}]
+        </span>
+      </div>
+    </button>
   );
 }
 
-interface DependencyConnectorProps {
-  tasks: TaskData[];
-  dependencies: { taskId: string; dependsOnTaskId: string; dependencyType: string }[];
-}
-
-function DependencyArrows({ tasks, dependencies }: DependencyConnectorProps) {
-  const taskIndex = new Map(tasks.map((t, i) => [t.id, i]));
-  const svgHeight = tasks.length * 50;
-  if (tasks.length === 0) return null;
-
-  const lines: { x1: number; y1: number; x2: number; y2: number }[] = [];
-
-  for (const dep of dependencies) {
-    const fromIdx = taskIndex.get(dep.dependsOnTaskId);
-    const toIdx = taskIndex.get(dep.taskId);
-    if (fromIdx === undefined || toIdx === undefined) continue;
-
-    const y1 = fromIdx * 50 + 22;
-    const y2 = toIdx * 50 + 22;
-    const midY = (y1 + y2) / 2;
-
-    lines.push({ x1: 24, y1, x2: 24, y2: midY });
-    lines.push({ x1: 24, y1: midY, x2: 40, y2: midY });
-    lines.push({ x1: 40, y1: midY, x2: 40, y2 });
-    lines.push({ x1: 7, y1: y2, x2: 16, y2: y2 - 4 });
-    lines.push({ x1: 7, y1: y2, x2: 16, y2: y2 + 4 });
-  }
-
+function TypePill({ type }: { type: string }) {
   return (
-    <svg
-      style={{ position: "absolute", left: 0, top: 0, width: 48, height: svgHeight, pointerEvents: "none", zIndex: 0, overflow: "visible" }}
-      aria-hidden="true"
+    <span
+      style={{
+        display: "inline-block",
+        border: "1px solid var(--color-border-default)",
+        borderRadius: 2,
+        padding: "0 5px",
+        fontSize: 10,
+        color: "var(--color-text-secondary)",
+      }}
     >
-      {lines.map((line, i) => (
-        <line
-          key={i}
-          x1={line.x1}
-          y1={line.y1}
-          x2={line.x2}
-          y2={line.y2}
-          stroke="var(--color-border-default)"
-          strokeWidth={1}
-        />
-      ))}
-    </svg>
-  );
-}
-
-interface TaskChainProps {
-  tasks: TaskData[];
-  dependencies: { taskId: string; dependsOnTaskId: string; dependencyType: string }[];
-  selectedId?: string;
-  onSelect: (task: TaskData) => void;
-}
-
-export function TaskChain({ tasks, dependencies, selectedId, onSelect }: TaskChainProps) {
-  if (tasks.length === 0) return null;
-
-  const phaseDeps = dependencies.filter(
-    (d) => tasks.some((t) => t.id === d.taskId) || tasks.some((t) => t.id === d.dependsOnTaskId),
-  );
-
-  return (
-    <div style={{ position: "relative", minWidth: 0 }}>
-      {phaseDeps.length > 0 && (
-        <DependencyArrows tasks={tasks} dependencies={phaseDeps} />
-      )}
-      <div style={{ minWidth: 0 }}>
-        {tasks.map((task, i) => (
-          <TaskNodeView
-            key={task.id}
-            task={task}
-            index={i}
-            total={tasks.length}
-            isSelected={selectedId === task.id}
-            onSelect={onSelect}
-          />
-        ))}
-      </div>
-    </div>
+      {type}
+    </span>
   );
 }
