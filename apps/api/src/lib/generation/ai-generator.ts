@@ -5,7 +5,7 @@ import { OpenRouterProvider } from "../provider/openrouter.js";
 import { MockAIProvider } from "../provider/mock.js";
 import { OpencodeGoProvider } from "../provider/opencode-go.js";
 import type { RouterService } from "../router/router.js";
-import type { RouterDecision, ModelSelection } from "../router/types.js";
+import type { RouterDecision, ModelSelection, UserPreferences } from "../router/types.js";
 import type { AnalysisPack } from "../analysis/types.js";
 import type { BlueprintOutput, RoadmapOutput, PhaseType, ProjectSummary } from "../contract/output-schema.js";
 import { BlueprintOutputSchema, RoadmapOutputSchema, ProjectSummarySchema, PHASE_ORDER } from "../contract/output-schema.js";
@@ -72,14 +72,14 @@ export class AIBlueprintGenerator {
     }
   }
 
-  async generateProjectSummary(blueprint: BlueprintOutput): Promise<SummaryResult> {
+  async generateProjectSummary(blueprint: BlueprintOutput, preferences?: UserPreferences): Promise<SummaryResult> {
     const overallStartTime = Date.now();
     const systemPrompt = buildProjectSummarySystemPrompt();
     const messages = buildProjectSummaryMessage(blueprint);
 
     let currentDecision: RouterDecision;
     try {
-      currentDecision = this.router.select("summary", {});
+      currentDecision = this.router.select("summary", preferences);
     } catch (err) {
       return { summary: null, durationMs: Date.now() - overallStartTime, error: "Router selection failed" };
     }

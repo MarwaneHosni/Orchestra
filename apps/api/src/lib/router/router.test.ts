@@ -92,8 +92,8 @@ describe("RouterService", () => {
 
     it("falls back when no preferred models meet qualityThreshold", () => {
       const router = new RouterService(() => allAvailable());
-      const decision = router.select("summary", { qualityThreshold: "balanced" });
-      expect(decision.selection.tier).toBe("balanced");
+      const decision = router.select("summary", { qualityThreshold: "strong" });
+      expect(decision.selection.tier).toBe("strong");
       expect(decision.usedFallback).toBe(true);
     });
 

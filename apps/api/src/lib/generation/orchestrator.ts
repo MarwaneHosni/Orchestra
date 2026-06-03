@@ -21,7 +21,7 @@ import { saveAnalysisResults } from "../repositories/analysis-repository.js";
 import { createUsageRecord, createInMemoryUsageStore } from "../accounting/index.js";
 import type { TokenUsage } from "../provider/types.js";
 import type { AIProvider, GenerationInput, Message } from "../provider/types.js";
-import type { ModelSelection } from "../router/types.js";
+import type { ModelSelection, UserPreferences } from "../router/types.js";
 import { validateExecutionPrompt, extractSectionContent, PROMPT_SCHEMA_VERSION } from "../prompt/structural-validator.js";
 import { EXECUTION_PROMPT_SECTIONS } from "../prompt/schema.js";
 import type { PromptSection } from "../prompt/types.js";
@@ -670,7 +670,11 @@ export async function generateWithAI(
       // 8. Generate project summary
       updateWorkflowStep(workflowId, "summary", "running");
       emitProgress(createEvent(workflowId, "stage_started", "summary", { stageLabel: "Generating project summary", attempt: 1 }));
-      const summaryResult = await aiGen.generateProjectSummary(blueprint);
+      const userCred = allCreds.find((c) => c.status === "valid" || c.status === "unverified");
+      const summaryPreferences: UserPreferences | undefined = userCred?.defaultModel
+        ? { preferredProvider: userCred.provider, preferredModel: userCred.defaultModel }
+        : undefined;
+      const summaryResult = await aiGen.generateProjectSummary(blueprint, summaryPreferences);
       if (summaryResult.summary) {
         (blueprint as Record<string, unknown>).projectSummary = summaryResult.summary;
         log.info({ model: summaryResult.model, provider: summaryResult.provider, durationMs: summaryResult.durationMs }, "project_summary_generated");
