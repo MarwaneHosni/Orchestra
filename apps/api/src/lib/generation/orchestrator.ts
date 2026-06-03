@@ -33,7 +33,6 @@ import { createModuleLogger } from "../logging/logger.js";
 import { OpenAIProvider } from "../provider/openai.js";
 import { AnthropicProvider } from "../provider/anthropic.js";
 import { OpenRouterProvider } from "../provider/openrouter.js";
-import { MockAIProvider } from "../provider/mock.js";
 import { OpencodeGoProvider } from "../provider/opencode-go.js";
 import { instrumentProviderCall } from "../metrics/index.js";
 
@@ -330,7 +329,6 @@ function createFixProvider(selection: ModelSelection): AIProvider | undefined {
     case "openai": return new OpenAIProvider(apiKey);
     case "anthropic": return new AnthropicProvider(apiKey);
     case "openrouter": return new OpenRouterProvider(apiKey);
-    case "mock": return new MockAIProvider(apiKey);
     case "opencode-go": return new OpencodeGoProvider(apiKey);
     default: return undefined;
   }
@@ -451,36 +449,12 @@ export async function generateWithAI(
     return { output: null as any, mode: "deterministic_only" };
   }
 
-  // 2. Always ensure a mock credential exists as last-resort fallback
+  // 2. Check credentials — no mock fallback
   const store = getCredentialStore();
   let allCreds = store.list();
   log.debug({ credentialCount: allCreds.length, providers: allCreds.map((c) => ({ provider: c.provider, status: c.status, id: c.id })) }, "credential_check_start");
-  const hasMock = allCreds.some(
-    (c) => c.provider === "mock" && (c.status === "valid" || c.status === "unverified"),
-  );
 
-  if (!hasMock) {
-    const _now = now();
-    store.insert({
-      id: "mock-credential",
-      userId: "00000000-0000-0000-0000-000000000000",
-      projectId: null,
-      provider: "mock",
-      displayName: "Mock AI Provider",
-      status: "valid",
-      encryptedApiKey: "mock-key",
-      keyReference: null,
-      defaultModel: "mock-blueprint-v1",
-      modelsAvailable: null,
-      lastVerifiedAt: _now,
-      errorMessage: null,
-      createdAt: _now,
-      updatedAt: _now,
-    });
-    allCreds = store.list();
-  }
-
-  const hasValidCreds = allCreds.some((c) => c.status === "valid" || c.status === "unverified");
+  const hasValidCreds = allCreds.some((c) => c.provider !== "mock" && (c.status === "valid" || c.status === "unverified"));
   log.debug({ hasValidCreds, credentialCount: allCreds.length, providers: allCreds.map((c) => ({ provider: c.provider, status: c.status })) }, "credential_check_result");
 
   if (!hasValidCreds) {
@@ -501,7 +475,6 @@ export async function generateWithAI(
 
   // 4. Create AI generator
   const aiGen = new AIBlueprintGenerator(router, (provider: string) => {
-    if (provider === "mock") return "mock-key";
     for (const c of allCreds) {
       if (c.provider === provider) {
         const raw = store.getRaw(c.id);

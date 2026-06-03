@@ -24,7 +24,6 @@ export const POLICIES: RoutingPolicy[] = [
     ],
     fallback: [
       { provider: "openrouter", model: "anthropic/claude-sonnet-4", tier: "strong" },
-      { provider: "mock", model: "mock-blueprint-v1", tier: "cheap" },
     ],
   },
   {
@@ -78,7 +77,6 @@ export const POLICIES: RoutingPolicy[] = [
     ],
     fallback: [
       { provider: "openrouter", model: "anthropic/claude-sonnet-4", tier: "strong" },
-      { provider: "mock", model: "mock-blueprint-v1", tier: "cheap" },
     ],
   },
 ];
