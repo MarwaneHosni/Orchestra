@@ -148,6 +148,22 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [graph, flatTasks, selectedTask, promptTaskId]);
 
+  // Phase completion status derived from tasks — must be before early returns
+  const activePhases = PHASES.filter((p) => graph?.tasks.some((t) => t.phaseType === p));
+  const phaseStatus = useMemo(() => {
+    const result = new Map<string, "complete" | "in_progress" | "pending">();
+    for (const phase of activePhases) {
+      const tasks = (graph?.tasks ?? []).filter((t) => t.phaseType === phase);
+      const allComplete = tasks.every((t) => t.status === "complete");
+      const anyComplete = tasks.some((t) => t.status === "complete");
+      result.set(phase, allComplete ? "complete" : anyComplete ? "in_progress" : "pending");
+    }
+    return result;
+  }, [graph, activePhases]);
+  const phaseC = (s: string) => s === "complete" ? "var(--color-accent-green)" : s === "in_progress" ? "var(--color-accent-purple)" : "var(--color-text-muted)";
+  const phaseG = (s: string) => s === "complete" ? "✓" : s === "in_progress" ? "●" : "○";
+  const phaseL = (c: string, n: string) => c === "complete" ? "var(--color-accent-green)" : c === "in_progress" ? "var(--color-accent-purple)" : "var(--color-border-subtle)";
+
   if (loading) return <div className="flex flex-col items-center justify-center gap-3 py-20"><ThinkingLoader /></div>;
   if (error) {
     return (
@@ -184,34 +200,7 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
   };
 
   const needsReviewCount = graph.tasks.filter((t) => t.status === "needs_review").length;
-  const activePhases = PHASES.filter((p) => graph.tasks.some((t) => t.phaseType === p));
   const showRightPanel = selectedTask !== null;
-
-  // Phase completion status derived from tasks
-  const phaseStatus = useMemo(() => {
-    const result = new Map<string, "complete" | "in_progress" | "pending">();
-    for (const phase of activePhases) {
-      const tasks = graph.tasks.filter((t) => t.phaseType === phase);
-      const allComplete = tasks.every((t) => t.status === "complete");
-      const anyComplete = tasks.some((t) => t.status === "complete");
-      result.set(phase, allComplete ? "complete" : anyComplete ? "in_progress" : "pending");
-    }
-    return result;
-  }, [graph, activePhases]);
-
-  const phaseDotColor = (s: string) =>
-    s === "complete" ? "var(--color-accent-green)" :
-    s === "in_progress" ? "var(--color-accent-purple)" :
-    "var(--color-text-muted)";
-
-  const phaseDotGlyph = (s: string) =>
-    s === "complete" ? "✓" : s === "in_progress" ? "●" : "○";
-
-  const phaseLineColor = (current: string, next: string) => {
-    if (current === "complete") return "var(--color-accent-green)";
-    if (current === "in_progress") return "var(--color-accent-purple)";
-    return "var(--color-border-subtle)";
-  };
 
   return (
     <div style={{ fontFamily: "'JetBrains Mono', monospace", minWidth: 0 }}>
@@ -254,10 +243,10 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
           const phaseTasks = graph.tasks.filter((t) => t.phaseType === phase).sort((a, b) => a.order - b.order);
           const isCollapsed = collapsedPhases.has(phase);
           const status = phaseStatus.get(phase) ?? "pending";
-          const dotColor = phaseDotColor(status);
-          const dotGlyph = phaseDotGlyph(status);
           const nextPhase = activePhases[phaseIdx + 1];
-          const lineColor = nextPhase ? phaseLineColor(status, phaseStatus.get(nextPhase) ?? "pending") : "transparent";
+          const dotColor = phaseC(status);
+          const dotGlyph = phaseG(status);
+          const lineColor = nextPhase ? phaseL(status, phaseStatus.get(nextPhase) ?? "pending") : "transparent";
 
           return (
             <div key={phase} style={{ display: "flex", gap: 0, position: "relative" }}>
