@@ -14,11 +14,11 @@ function BtnLink({ href, children }: { href: string; children: React.ReactNode }
   );
 }
 
-const statRows = [
-  { label: "Projects", value: "—" },
-  { label: "Blueprints", value: "—" },
-  { label: "Tasks", value: "—" },
-  { label: "Phases", value: "12" },
+const statCards = [
+  { label: "Projects", value: "—", color: "var(--color-accent-purple)", glyph: "◆" },
+  { label: "Blueprints", value: "—", color: "#4a9eff", glyph: "◈" },
+  { label: "Tasks", value: "—", color: "var(--color-accent-green)", glyph: "⚙" },
+  { label: "Phases", value: "12", color: "var(--color-accent-amber)", glyph: "◉" },
 ];
 
 const steps = [
@@ -42,63 +42,70 @@ export default function DashboardPage() {
 
       <SectionDivider title="Overview" />
 
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-        <thead>
-          <tr style={{ borderBottom: "1px solid var(--color-border-default)" }}>
-            <th style={{ padding: "8px 0", textAlign: "left", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-muted)", fontWeight: 400 }}>
-              Metric
-            </th>
-            <th style={{ padding: "8px 0", textAlign: "right", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-muted)", fontWeight: 400 }}>
-              Value
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {statRows.map((row) => (
-            <tr key={row.label} style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
-              <td style={{ padding: "10px 0", color: "var(--color-text-secondary)" }}>
-                {row.label}
-              </td>
-              <td style={{ padding: "10px 0", textAlign: "right", fontWeight: 600, color: "var(--color-text-primary)" }}>
-                <span style={{ fontSize: 16 }}>{row.value}</span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+        {statCards.map((card) => (
+          <div
+            key={card.label}
+            style={{
+              border: "1px solid var(--color-border-subtle)",
+              borderLeft: `3px solid ${card.color}`,
+              borderRadius: 3,
+              background: "var(--color-bg-surface)",
+              padding: "16px 18px",
+              transition: "background 150ms, border-color 150ms",
+            }}
+            className="hover:bg-bg-hover hover:border-border-default"
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              <span style={{ color: card.color, fontSize: 10 }}>{card.glyph}</span>
+              <span>{card.label}</span>
+            </div>
+            <div style={{ marginTop: 8, fontSize: 28, fontWeight: 600, color: "var(--color-text-primary)", lineHeight: 1 }}>
+              {card.value}
+            </div>
+          </div>
+        ))}
+      </div>
 
       <SectionDivider title="Getting Started" />
 
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-        <thead>
-          <tr style={{ borderBottom: "1px solid var(--color-border-default)" }}>
-            <th style={{ padding: "8px 0", width: 32, textAlign: "left", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-muted)", fontWeight: 400 }}>
-              #
-            </th>
-            <th style={{ padding: "8px 0", textAlign: "left", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-muted)", fontWeight: 400 }}>
-              Step
-            </th>
-            <th style={{ padding: "8px 0", textAlign: "left", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--color-text-muted)", fontWeight: 400 }}>
-              Description
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {steps.map((s) => (
-            <tr key={s.step} style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
-              <td style={{ padding: "10px 0", color: "var(--color-accent-purple)", fontWeight: 600 }}>
-                {s.step}
-              </td>
-              <td style={{ padding: "10px 0", color: "var(--color-text-primary)", fontWeight: 500 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {steps.map((s) => (
+          <div
+            key={s.step}
+            style={{
+              display: "flex",
+              gap: 14,
+              border: "1px solid var(--color-border-subtle)",
+              borderLeft: "3px solid var(--color-accent-purple)",
+              borderRadius: 3,
+              background: "var(--color-bg-surface)",
+              padding: "14px 16px",
+              transition: "background 150ms, border-color 150ms",
+            }}
+            className="hover:bg-bg-hover hover:border-border-default"
+          >
+            <div style={{
+              width: 28, height: 28, flexShrink: 0,
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              borderRadius: "50%",
+              background: "var(--color-accent-purple-dim)",
+              color: "var(--color-accent-purple)",
+              fontSize: 13, fontWeight: 600, lineHeight: 1,
+            }}>
+              {s.step}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>
                 {s.title}
-              </td>
-              <td style={{ padding: "10px 0", color: "var(--color-text-secondary)" }}>
+              </p>
+              <p style={{ marginTop: 2, fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.5 }}>
                 {s.desc}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
