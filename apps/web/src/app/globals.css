@@ -1,20 +1,20 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg-base: #0d0d0d;
-  --color-bg-surface: #111111;
-  --color-bg-elevated: #161616;
-  --color-bg-hover: #1a1a1a;
-  --color-bg-selected: #1f1f1f;
+  --color-bg-base: #b1ada1;
+  --color-bg-surface: #a5a196;
+  --color-bg-elevated: #c2beb2;
+  --color-bg-hover: #a09c91;
+  --color-bg-selected: #979388;
 
-  --color-border-subtle: #1e1e1e;
-  --color-border-default: #2a2a2a;
-  --color-border-strong: #3a3a3a;
+  --color-border-subtle: #9e9a8f;
+  --color-border-default: #8a867c;
+  --color-border-strong: #727068;
 
-  --color-text-primary: #e8e8e8;
-  --color-text-secondary: #888888;
-  --color-text-muted: #555555;
-  --color-text-inverse: #0d0d0d;
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #555555;
+  --color-text-muted: #88847a;
+  --color-text-inverse: #b1ada1;
 
   --color-accent-purple: #D77757;
   --color-accent-purple-dim: color-mix(in srgb, #D77757 15%, transparent);
@@ -29,20 +29,20 @@
   --text-xs: 0.8125rem;
 }
 
-@media (prefers-color-scheme: light) {
+@media (prefers-color-scheme: dark) {
   :root {
-    --color-bg-base: #fafaf9;
-    --color-bg-surface: #f5f5f4;
-    --color-bg-elevated: #ffffff;
-    --color-bg-hover: #f0f0ef;
-    --color-bg-selected: #e7e5e4;
-    --color-border-subtle: #e5e5e4;
-    --color-border-default: #d4d4d3;
-    --color-border-strong: #b8b8b7;
-    --color-text-primary: #111111;
-    --color-text-secondary: #666666;
-    --color-text-muted: #aaaaaa;
-    --color-text-inverse: #fafaf9;
+    --color-bg-base: #0d0d0d;
+    --color-bg-surface: #111111;
+    --color-bg-elevated: #161616;
+    --color-bg-hover: #1a1a1a;
+    --color-bg-selected: #1f1f1f;
+    --color-border-subtle: #1e1e1e;
+    --color-border-default: #2a2a2a;
+    --color-border-strong: #3a3a3a;
+    --color-text-primary: #e8e8e8;
+    --color-text-secondary: #888888;
+    --color-text-muted: #555555;
+    --color-text-inverse: #0d0d0d;
   }
 }
 
