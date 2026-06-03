@@ -115,7 +115,7 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
 
   if (!graph || graph.tasks.length === 0) {
     return (
-      <div className="space-y-8">
+    <div className="space-y-8" style={{ maxWidth: "100%", overflow: "hidden" }}>
         <Breadcrumb items={[{ label: "Projects", href: "/projects" }, { label: "Task Graph" }]} />
         <StepIndicator current="tasks" complete={["interview", "review"]} />
         <div style={{ borderRadius: 3, border: "2px dashed var(--color-border-default)", background: "var(--color-bg-surface)", padding: "48px", textAlign: "center" }}>

@@ -47,7 +47,7 @@ export function TaskNodeView({ task, index, total, isSelected, onSelect }: TaskN
   const dotColor = STATUS_DOT_COLOR[task.status] ?? "var(--color-text-muted)";
 
   return (
-    <div className="flex gap-0" style={{ minHeight: 44 }}>
+    <div className="flex gap-0" style={{ minHeight: 44, overflow: "hidden" }}>
       {/* Connector rail */}
       <div className="flex flex-col items-center" style={{ width: 24, flexShrink: 0 }}>
         {index > 0 && (
