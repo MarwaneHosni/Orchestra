@@ -300,22 +300,33 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
             <span>── assumptions ({blueprint.assumptions.length})</span>
             <span style={{ flex: 1, borderTop: "1px solid #222", display: "inline-block" }} />
           </div>
-          <div style={{ marginTop: 10 }}>
+          <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
             {blueprint.assumptions.map((a, i) => (
               <div
                 key={i}
+                className="hover:bg-[#161616]"
                 style={{
-                  borderLeft: "2px solid #2a2a2a",
-                  padding: "8px 0 8px 14px",
+                  borderLeft: "2px solid var(--color-accent-purple)",
+                  borderRight: "1px solid #1a1a1a",
+                  borderTop: "1px solid #1a1a1a",
+                  borderBottom: "1px solid #1a1a1a",
+                  borderRadius: 3,
+                  padding: "10px 14px",
                   fontSize: 13,
                   color: "var(--color-text-primary)",
                   lineHeight: 1.6,
+                  display: "flex",
+                  gap: 10,
+                  transition: "background 150ms",
                 }}
               >
-                <p>{a.description}</p>
-                <p style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-                  source: {a.source}
-                </p>
+                <span style={{ color: "var(--color-accent-purple)", fontSize: 11, flexShrink: 0, marginTop: 2 }}>[A]</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p>{a.description}</p>
+                  <p style={{ fontSize: 11, color: "#666", marginTop: 6, fontFamily: "'JetBrains Mono', monospace" }}>
+                    <span style={{ color: "var(--color-accent-purple)" }}>◆</span> source: {a.source}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
@@ -329,22 +340,33 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
             <span>── constraints ({blueprint.constraints.length})</span>
             <span style={{ flex: 1, borderTop: "1px solid #222", display: "inline-block" }} />
           </div>
-          <div style={{ marginTop: 10 }}>
+          <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
             {blueprint.constraints.map((c, i) => (
               <div
                 key={i}
+                className="hover:bg-[#161616]"
                 style={{
-                  borderLeft: "2px solid #2a2a2a",
-                  padding: "8px 0 8px 14px",
+                  borderLeft: "2px solid var(--color-accent-amber)",
+                  borderRight: "1px solid #1a1a1a",
+                  borderTop: "1px solid #1a1a1a",
+                  borderBottom: "1px solid #1a1a1a",
+                  borderRadius: 3,
+                  padding: "10px 14px",
                   fontSize: 13,
                   color: "var(--color-text-primary)",
                   lineHeight: 1.6,
+                  display: "flex",
+                  gap: 10,
+                  transition: "background 150ms",
                 }}
               >
-                <p>{c.description}</p>
-                <p style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-                  source: {c.source}
-                </p>
+                <span style={{ color: "var(--color-accent-amber)", fontSize: 11, flexShrink: 0, marginTop: 2 }}>[C]</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p>{c.description}</p>
+                  <p style={{ fontSize: 11, color: "#666", marginTop: 6, fontFamily: "'JetBrains Mono', monospace" }}>
+                    <span style={{ color: "var(--color-accent-amber)" }}>◆</span> source: {c.source}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
@@ -358,22 +380,33 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
             <span>── risks ({blueprint.risks.length})</span>
             <span style={{ flex: 1, borderTop: "1px solid #222", display: "inline-block" }} />
           </div>
-          <div style={{ marginTop: 10 }}>
+          <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
             {blueprint.risks.map((r, i) => (
               <div
                 key={i}
+                className="hover:bg-[#161616]"
                 style={{
                   borderLeft: "2px solid #c0392b",
-                  padding: "8px 0 8px 14px",
+                  borderRight: "1px solid #1a1a1a",
+                  borderTop: "1px solid #1a1a1a",
+                  borderBottom: "1px solid #1a1a1a",
+                  borderRadius: 3,
+                  padding: "10px 14px",
                   fontSize: 13,
                   color: "var(--color-text-primary)",
                   lineHeight: 1.6,
+                  display: "flex",
+                  gap: 10,
+                  transition: "background 150ms",
                 }}
               >
-                <p>{r.description}</p>
-                <p style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-                  source: {r.source}
-                </p>
+                <span style={{ color: "#c0392b", fontSize: 11, flexShrink: 0, marginTop: 2 }}>⚠</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p>{r.description}</p>
+                  <p style={{ fontSize: 11, color: "#666", marginTop: 6, fontFamily: "'JetBrains Mono', monospace" }}>
+                    <span style={{ color: "#c0392b" }}>◆</span> source: {r.source}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
@@ -387,27 +420,41 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
             <span>── flags ({blueprint.ambiguityFlags.length})</span>
             <span style={{ flex: 1, borderTop: "1px solid #222", display: "inline-block" }} />
           </div>
-          <div style={{ marginTop: 10 }}>
+          <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
             {blueprint.ambiguityFlags.map((f, i) => {
-              const flagBorder =
+              const flagColor =
                 f.severity === "high" ? "#c0392b" :
                 f.severity === "medium" ? "var(--color-accent-amber)" :
                 "#555";
+              const flagGlyph =
+                f.severity === "high" ? "✗" :
+                f.severity === "medium" ? "~" : "○";
               return (
                 <div
                   key={i}
+                  className="hover:bg-[#161616]"
                   style={{
-                    borderLeft: `2px solid ${flagBorder}`,
-                    padding: "8px 0 8px 14px",
+                    borderLeft: `2px solid ${flagColor}`,
+                    borderRight: "1px solid #1a1a1a",
+                    borderTop: "1px solid #1a1a1a",
+                    borderBottom: "1px solid #1a1a1a",
+                    borderRadius: 3,
+                    padding: "10px 14px",
                     fontSize: 13,
                     color: "var(--color-text-primary)",
                     lineHeight: 1.6,
+                    display: "flex",
+                    gap: 10,
+                    transition: "background 150ms",
                   }}
                 >
-                  <p>
-                    <code style={{ fontSize: 12, color: flagBorder, fontFamily: "inherit" }}>{f.type}:</code>{" "}
-                    {f.message}
-                  </p>
+                  <span style={{ color: flagColor, fontSize: 11, flexShrink: 0, marginTop: 2 }}>{flagGlyph}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p>
+                      <code style={{ fontSize: 12, color: flagColor, fontFamily: "inherit", background: "transparent", padding: 0 }}>{f.type}:</code>{" "}
+                      {f.message}
+                    </p>
+                  </div>
                 </div>
               );
             })}
