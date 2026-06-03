@@ -95,11 +95,11 @@ body {
   75%  { content: "..."; }
 }
 
-@keyframes cursor-rotate {
-  0%, 80% { transform: rotate(0deg); opacity: 1; }
-  85% { transform: rotate(90deg); opacity: 0.5; }
-  90% { transform: rotate(90deg); opacity: 0.5; }
-  95% { transform: rotate(0deg); opacity: 1; }
+@keyframes cursor-spin {
+  0%, 90% { transform: rotate(0deg); opacity: 1; }
+  95% { transform: rotate(360deg); opacity: 0.6; }
+  97% { transform: rotate(360deg); opacity: 0.6; }
+  100% { transform: rotate(0deg); opacity: 1; }
 }
 
 .animate-blink {
