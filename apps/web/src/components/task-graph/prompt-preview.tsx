@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useFocusTrap, useEscapeToClose } from "@/lib/use-focus-trap";
-import { LiveAnnouncer } from "@/components/ui/live-announcer";
-import { LoadingBlock } from "@/components/ui/skeleton";
+import { useState, useEffect, useMemo } from "react";
 import { getApiBaseUrl } from "@/lib/api-config";
+import { ThinkingLoader } from "@/components/ui/skeleton";
 
 interface PromptPreviewProps {
   taskId: string;
@@ -16,17 +14,12 @@ interface ParsedSection {
   id: string;
   heading: string;
   content: string;
-  subSections: { heading: string; content: string }[];
+  lines: string[];
 }
 
 const SECTION_ORDER = [
-  "Objective",
-  "Context",
-  "Constraints",
-  "Expected Output",
-  "Validation Criteria",
-  "Architectural Alignment",
-  "Agent Tips",
+  "Objective", "Context", "Constraints", "Expected Output",
+  "Validation Criteria", "Architectural Alignment", "Agent Tips",
 ];
 
 function parsePrompt(markdown: string | null | undefined): ParsedSection[] {
@@ -34,173 +27,100 @@ function parsePrompt(markdown: string | null | undefined): ParsedSection[] {
   const sections: ParsedSection[] = [];
   const lines = markdown.split("\n");
   let currentHeading = "";
-  let currentContent: string[] = [];
-  let currentSubHeading = "";
-  let currentSubContent: string[] = [];
-  const subs: { heading: string; content: string }[] = [];
+  let currentLines: string[] = [];
 
-  function flushSub() {
-    if (currentSubHeading) {
-      subs.push({ heading: currentSubHeading, content: currentSubContent.join("\n").trim() });
-      currentSubContent = [];
-      currentSubHeading = "";
-    }
-  }
-
-  function flushSection() {
-    flushSub();
+  function flush() {
     if (currentHeading) {
       sections.push({
         id: currentHeading.toLowerCase().replace(/\s+/g, "-"),
         heading: currentHeading,
-        content: currentContent.join("\n").trim(),
-        subSections: [...subs],
+        content: currentLines.join("\n").trim(),
+        lines: [...currentLines],
       });
-      subs.length = 0;
-      currentContent = [];
+      currentLines = [];
     }
   }
 
   for (const line of lines) {
-    const h2Match = line.match(/^##\s+(.+)/);
-    const h3Match = line.match(/^###\s+(.+)/);
-
-    if (h2Match) {
-      flushSection();
-      currentHeading = h2Match[1]!.trim();
-    } else if (h3Match && currentHeading) {
-      flushSub();
-      currentSubHeading = h3Match[1]!.trim();
-    } else if (currentSubHeading) {
-      currentSubContent.push(line);
-    } else if (currentHeading) {
-      currentContent.push(line);
-    }
+    const h2 = line.match(/^##\s+(.+)/);
+    if (h2) { flush(); currentHeading = h2[1]!.trim(); continue; }
+    if (currentHeading) currentLines.push(line);
   }
-  flushSection();
+  flush();
 
   const orderMap = new Map(SECTION_ORDER.map((h, i) => [h, i]));
-  sections.sort((a, b) => {
-    const ai = orderMap.get(a.heading) ?? 99;
-    const bi = orderMap.get(b.heading) ?? 99;
-    return ai - bi;
-  });
-
+  sections.sort((a, b) => (orderMap.get(a.heading) ?? 99) - (orderMap.get(b.heading) ?? 99));
   return sections;
 }
 
-function renderContent(text: string): React.ReactNode {
-  if (!text) return <span className="text-text-muted italic">(empty)</span>;
+function SectionContent({ section }: { section: ParsedSection }) {
+  return (
+    <div style={{ fontSize: 13, lineHeight: 1.7, color: "var(--color-text-secondary)", padding: "0 20px 16px" }}>
+      {section.lines.map((line, i) => {
+        if (!line.trim()) return <div key={i} style={{ height: 8 }} />;
 
-  const lines = text.split("\n");
-  const elements: React.ReactNode[] = [];
-  let inCodeBlock = false;
-  let codeLines: string[] = [];
+        // Code blocks
+        if (line.startsWith("```")) return null;
+        const isInCode = section.content.includes("```");
+        if (isInCode) return <div key={i} style={{ background: "var(--color-bg-surface)", padding: "12px 16px", borderRadius: 3, fontFamily: "inherit", fontSize: 12, overflowX: "auto" }}>{line}</div>;
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!;
+        // Bullet list
+        const bullet = line.match(/^\s*-\s+(.+)/);
+        if (bullet) {
+          return <div key={i} style={{ display: "flex", gap: 8 }}>
+            <span style={{ color: "var(--color-text-muted)", flexShrink: 0 }}>·</span>
+            <span>{bullet[1]}</span>
+          </div>;
+        }
 
-    if (line.startsWith("```")) {
-      if (inCodeBlock) {
-        elements.push(
-          <pre key={`code-${i}`} className="mb-3 overflow-x-auto p-3 text-xs border-l-2 border-accent-purple" style={{ background: "var(--color-bg-elevated)", borderRadius: 0 }}>
-            {codeLines.join("\n")}
-          </pre>,
-        );
-        codeLines = [];
-        inCodeBlock = false;
-      } else {
-        inCodeBlock = true;
-      }
-      continue;
-    }
+        // Numbered list (for Constraints, Validation Criteria etc)
+        const num = line.match(/^\s*(\d+)\.\s+(.+)/);
+        if (num) {
+          return <div key={i} style={{ display: "flex", gap: 8 }}>
+            <span style={{ color: "var(--color-text-muted)", flexShrink: 0, minWidth: 24, textAlign: "right" }}>{num[1]}.</span>
+            <span>{num[2]}</span>
+          </div>;
+        }
 
-    if (inCodeBlock) {
-      codeLines.push(line);
-      continue;
-    }
-
-    if (line.startsWith("#### ")) {
-      elements.push(
-        <h4 key={i} className="mb-1 mt-3 text-xs font-semibold text-text-secondary">
-          {line.slice(5)}
-        </h4>,
-      );
-    } else if (line.match(/^\s*[-*]\s+/)) {
-      const item = line.replace(/^\s*[-*]\s+/, "");
-      elements.push(
-        <li key={i} className="ml-4 list-disc text-sm text-text-primary">
-          {item}
-        </li>,
-      );
-    } else if (line.trim() === "") {
-      elements.push(<div key={i} className="h-2" />);
-    } else {
-      elements.push(
-        <p key={i} className="text-sm leading-relaxed text-text-primary">
-          {line}
-        </p>,
-      );
-    }
-  }
-
-  if (inCodeBlock && codeLines.length > 0) {
-    elements.push(
-      <pre key="code-end" className="mb-3 overflow-x-auto p-3 text-xs border-l-2 border-accent-purple" style={{ background: "var(--color-bg-elevated)", borderRadius: 0 }}>
-        {codeLines.join("\n")}
-      </pre>,
-    );
-  }
-
-  return elements;
+        return <p key={i}>{line}</p>;
+      })}
+    </div>
+  );
 }
 
 export function PromptPreview({ taskId, sessionId, onClose }: PromptPreviewProps) {
-  const panelRef = useRef<HTMLDivElement>(null);
-  const sectionsRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const [prompt, setPrompt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
-  const [announcement, setAnnouncement] = useState("");
-  const [expanded, setExpanded] = useState<Set<string>>(new Set(SECTION_ORDER.map((h) => h.toLowerCase().replace(/\s+/g, "-"))));
-  const [activeSection, setActiveSection] = useState<string>("");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set(["objective"]));
+  const [activeTab, setActiveTab] = useState<string>("objective");
 
   const parsed = useMemo(() => (prompt ? parsePrompt(prompt) : []), [prompt]);
 
-  const close = useCallback(() => onClose(), [onClose]);
-  useFocusTrap(panelRef, true);
-  useEscapeToClose(close, true);
-
   useEffect(() => {
-    const load = async () => {
+    let cancelled = false;
+    (async () => {
       setLoading(true);
       try {
         const res = await fetch(`${getApiBaseUrl()}/api/v1/plans/plan-${sessionId}/tasks/${taskId}/prompt`);
         if (!res.ok) throw new Error("Failed to load prompt");
         const data = await res.json();
-        setPrompt(data.promptText ?? null);
-        setAnnouncement("Prompt loaded");
+        if (!cancelled) setPrompt(data.promptText ?? null);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load");
-        setAnnouncement("Failed to load prompt");
+        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    };
-    load();
+    })();
+    return () => { cancelled = true; };
   }, [taskId, sessionId]);
 
   const handleCopy = async () => {
     if (!prompt) return;
-    try {
-      await navigator.clipboard.writeText(prompt);
-      setCopied(true);
-      setAnnouncement("Prompt copied to clipboard");
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setAnnouncement("Could not copy prompt");
-    }
+    await navigator.clipboard.writeText(prompt);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   };
 
   const toggleSection = (id: string) => {
@@ -212,132 +132,85 @@ export function PromptPreview({ taskId, sessionId, onClose }: PromptPreviewProps
     });
   };
 
-  const scrollToSection = (id: string) => {
-    setActiveSection(id);
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      return next;
-    });
-    const el = sectionsRef.current.get(id);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+  const selectTab = (id: string) => {
+    setActiveTab(id);
+    setExpanded((prev) => new Set(prev).add(id));
   };
 
   return (
-    <div
-      ref={panelRef}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Execution prompt"
-      className="fixed top-12 bottom-0 right-0 z-50 flex w-full flex-col border-l border-border-default bg-bg-elevated sm:w-[42rem]"
-    >
-      <LiveAnnouncer message={announcement} />
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", fontFamily: "'JetBrains Mono', monospace" }}>
 
-      <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
-        <h2 className="text-sm font-semibold text-text-primary">Execution Prompt</h2>
-        <div className="flex items-center gap-3">
+      {/* Panel header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid var(--color-border-default)", padding: "16px 20px", flexShrink: 0 }}>
+        <span style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>Execution Prompt</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {prompt && (
-            <button
-              onClick={handleCopy}
-              aria-label="Copy prompt to clipboard"
-              className="rounded border border-border-default px-3 py-1 text-xs font-medium text-text-secondary hover:bg-bg-hover focus:outline-none focus:ring-2 focus:ring-accent-purple"
+            <button onClick={handleCopy}
+              style={{ border: "1px solid var(--color-border-default)", borderRadius: 2, padding: "2px 7px", fontSize: 12, fontFamily: "inherit", color: copied ? "var(--color-accent-green)" : "var(--color-text-secondary)", background: "transparent", cursor: "pointer" }}
+              className="hover:text-text-primary hover:border-border-strong"
             >
-              {copied ? "Copied!" : "Copy raw"}
+              {copied ? "✓ copied" : "[ copy raw ]"}
             </button>
           )}
-          <button
-            onClick={onClose}
-            aria-label="Close prompt preview"
-            className="rounded p-1 text-text-secondary hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-purple"
+          <button onClick={onClose} aria-label="Close prompt"
+            style={{ border: "1px solid var(--color-border-default)", borderRadius: 2, padding: "2px 7px", fontSize: 13, fontFamily: "inherit", color: "var(--color-text-secondary)", background: "transparent", cursor: "pointer" }}
+            className="hover:text-text-primary hover:border-border-strong"
           >
-            <span aria-hidden="true">✗</span>
+            ✗
           </button>
         </div>
       </div>
 
-      {parsed.length > 0 && (
-        <nav
-          aria-label="Section navigation"
-          className="flex shrink-0 gap-1 overflow-x-auto border-b border-border-subtle px-3 py-2"
-        >
-          {parsed.map((section) => (
-            <button
-              key={section.id}
-              onClick={() => scrollToSection(section.id)}
-              className={`shrink-0 rounded px-2.5 py-1 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-accent-purple ${
-                activeSection === section.id
-                  ? "bg-accent-purple text-white"
-                  : "bg-bg-hover text-text-secondary hover:bg-bg-selected"
-              }`}
+      {/* Section tabs */}
+      {!loading && parsed.length > 0 && (
+        <div style={{ display: "flex", gap: 0, borderBottom: "1px solid var(--color-border-default)", padding: "0 20px", overflowX: "auto", flexShrink: 0, scrollbarWidth: "none" } as any}>
+          {parsed.map((s) => (
+            <button key={s.id} onClick={() => selectTab(s.id)}
+              style={{
+                padding: "10px 14px", fontSize: 12, fontFamily: "inherit", cursor: "pointer",
+                color: activeTab === s.id ? "var(--color-text-primary)" : "var(--color-text-muted)",
+                borderBottom: activeTab === s.id ? "2px solid var(--color-accent-purple)" : "2px solid transparent",
+                marginBottom: -1, background: "transparent", whiteSpace: "nowrap", borderTop: "none", borderLeft: "none", borderRight: "none",
+              }}
+              className="hover:text-text-secondary"
             >
-              {section.heading}
+              {s.heading.length > 12 ? s.heading.slice(0, 10) + ".." : s.heading}
             </button>
           ))}
-        </nav>
+        </div>
       )}
 
-      <div className="flex-1 overflow-y-auto p-4">
+      {/* Scrollable content */}
+      <div style={{ flex: 1, overflowY: "auto" }}>
         {loading && (
-          <LoadingBlock />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 40 }}>
+            <ThinkingLoader />
+          </div>
         )}
         {!loading && error && (
-          <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-4 text-sm text-accent-red" role="alert">
-            {error}
-          </div>
-        )}
-        {!loading && !error && parsed.length === 0 && prompt && (
-          <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed text-text-primary">
-            {prompt}
-          </pre>
+          <div style={{ padding: 20, fontSize: 13, color: "var(--color-accent-red)" }}>{error}</div>
         )}
         {!loading && !error && parsed.length > 0 && (
-          <div className="space-y-4">
-            {parsed.map((section) => (
-              <div
-                key={section.id}
-                ref={(el) => {
-                  if (el) sectionsRef.current.set(section.id, el);
-                  else sectionsRef.current.delete(section.id);
-                }}
-                className="rounded border border-border-default"
-              >
-                <button
-                  onClick={() => toggleSection(section.id)}
-                  aria-expanded={expanded.has(section.id)}
-                  className="flex w-full items-center justify-between rounded-t px-4 py-3 text-left hover:bg-bg-hover focus:outline-none focus:ring-2 focus:ring-inset focus:ring-accent-purple"
-                >
-                  <span className="text-sm font-semibold text-text-primary">{section.heading}</span>
-                  <span
-                    className={`text-xs text-text-secondary transition-transform ${expanded.has(section.id) ? "rotate-180" : ""}`}
-                    aria-hidden="true"
+          <div>
+            {parsed.map((section) => {
+              const isExpanded = expanded.has(section.id);
+              return (
+                <div key={section.id} style={{ borderBottom: "1px solid var(--color-border-subtle)" }}>
+                  <button onClick={() => toggleSection(section.id)}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "14px 20px", fontSize: 13, fontWeight: 500, fontFamily: "inherit", color: "var(--color-text-primary)", background: "transparent", border: "none", cursor: "pointer", textAlign: "left" }}
+                    className="hover:bg-bg-hover"
                   >
-                    ▼
-                  </span>
-                </button>
-                {expanded.has(section.id) && (
-                  <div className="border-t border-border-subtle px-4 py-3">
-                    {section.subSections.length > 0 ? (
-                      <div className="space-y-4">
-                        {section.subSections.map((sub) => (
-                          <div key={sub.heading}>
-                            <h4 className="mb-1 text-xs font-semibold text-text-secondary">{sub.heading}</h4>
-                            <div className="space-y-1">{renderContent(sub.content)}</div>
-                          </div>
-                        ))}
-                        {section.content && (
-                          <div className="pt-2">{renderContent(section.content)}</div>
-                        )}
-                      </div>
-                    ) : (
-                      renderContent(section.content)
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
+                    <span>{section.heading}</span>
+                    <span style={{ color: "var(--color-text-muted)", fontSize: 10 }}>{isExpanded ? "▾" : "▸"}</span>
+                  </button>
+                  {isExpanded && <SectionContent section={section} />}
+                </div>
+              );
+            })}
           </div>
+        )}
+        {!loading && !error && !prompt && (
+          <div style={{ padding: 20, fontSize: 13, color: "var(--color-text-muted)" }}>No prompt data available.</div>
         )}
       </div>
     </div>

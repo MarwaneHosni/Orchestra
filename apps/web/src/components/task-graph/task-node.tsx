@@ -37,7 +37,6 @@ interface TaskNodeProps {
   task: TaskData;
   isSelected: boolean;
   onSelect: (task: TaskData) => void;
-  hasDependencies: boolean;
   indent: boolean;
 }
 
