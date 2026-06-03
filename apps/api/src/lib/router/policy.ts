@@ -57,6 +57,7 @@ export const POLICIES: RoutingPolicy[] = [
     taskType: "summary",
     minTier: "cheap",
     preferred: [
+      { provider: "opencode-go", model: "deepseek-v4-flash", tier: "cheap" },
       { provider: "openrouter", model: "deepseek/deepseek-v4-flash:free", tier: "cheap" },
       { provider: "openai", model: "gpt-4o-mini", tier: "cheap" },
       { provider: "anthropic", model: "claude-3-5-haiku-latest", tier: "cheap" },
