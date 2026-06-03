@@ -72,6 +72,9 @@ export async function fetchWithTimeout(
   options: RequestInit & { timeout?: number } = {},
 ): Promise<Response> {
   const timeout = options.timeout ?? DEFAULT_TIMEOUT_MS;
+  if (timeout === 0) {
+    return fetch(url, { ...options });
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   try {

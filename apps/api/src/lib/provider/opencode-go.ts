@@ -5,7 +5,7 @@ import { createModuleLogger } from "../logging/logger.js";
 const log = createModuleLogger("opencode-go");
 
 const BASE_URL = "https://opencode.ai/zen/go/v1";
-const GENERATE_TIMEOUT_MS = 180_000;
+const GENERATE_TIMEOUT_MS = 0;
 
 const GO_MODEL_IDS = new Set([
   "glm-5.1",
@@ -44,8 +44,7 @@ export class OpencodeGoProvider implements AIProvider {
         body: JSON.stringify({
           model: "deepseek-v4-flash",
           messages: [{ role: "user", content: "Say OK" }],
-          temperature: 0,
-          max_tokens: 5,
+          temperature: 0.7,
           stream: false,
         }),
       });
