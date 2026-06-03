@@ -26,19 +26,20 @@ export function TerminalTitle({ children, as: Tag = "h1", className, style, dela
   const reduced = useReducedMotion();
   const text = children;
   const [revealed, setRevealed] = useState(0);
+  const [cursorOn, setCursorOn] = useState(true);
+  const [spinning, setSpinning] = useState(false);
   const done = revealed >= text.length;
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Reveal animation
   useEffect(() => {
     if (reduced) {
       setRevealed(text.length);
       return;
     }
-
     const duration = Math.max(300, Math.min(1200, text.length * 40));
     const stepMs = duration / text.length;
     let idx = 0;
-
     const startTimer = setTimeout(() => {
       timerRef.current = setInterval(() => {
         idx++;
@@ -49,15 +50,30 @@ export function TerminalTitle({ children, as: Tag = "h1", className, style, dela
         }
       }, stepMs);
     }, delay);
-
     return () => {
       clearTimeout(startTimer);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
+      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     };
   }, [text, reduced, delay]);
+
+  // Blink during typing, then occasional spin after done
+  useEffect(() => {
+    if (reduced) return;
+
+    if (!done) {
+      // Fast blink while typing
+      const blink = setInterval(() => setCursorOn((v) => !v), 400);
+      return () => clearInterval(blink);
+    } else {
+      // After done: spin every 8s
+      setCursorOn(true);
+      const spin = setInterval(() => {
+        setSpinning(true);
+        setTimeout(() => setSpinning(false), 600);
+      }, 8000);
+      return () => clearInterval(spin);
+    }
+  }, [done, reduced]);
 
   return (
     <Tag className={className} style={{ ...style, visibility: "visible" }} aria-label={text}>
@@ -73,13 +89,9 @@ export function TerminalTitle({ children, as: Tag = "h1", className, style, dela
           fontSize: "0.85em",
           lineHeight: 1,
           color: "var(--color-accent-purple)",
-          animation: done
-            ? reduced
-              ? "none"
-              : "cursor-spin 8s ease-in-out infinite"
-            : reduced
-              ? "none"
-              : "blink 0.8s step-end infinite",
+          opacity: spinning ? 0.6 : cursorOn ? 1 : 0,
+          transition: "opacity 0.15s, transform 0.6s ease-in-out",
+          transform: spinning ? "rotate(360deg)" : "rotate(0deg)",
         }}
         aria-hidden="true"
       >
