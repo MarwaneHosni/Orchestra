@@ -25,32 +25,37 @@ function useReducedMotion(): boolean {
 export function TerminalTitle({ children, as: Tag = "h1", className, style, delay = 0 }: TerminalTitleProps) {
   const reduced = useReducedMotion();
   const text = children;
-  const [revealed, setRevealed] = useState(reduced ? text.length : 0);
+  const [revealed, setRevealed] = useState(0);
   const done = revealed >= text.length;
-  const initialized = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (reduced) {
       setRevealed(text.length);
       return;
     }
-    if (initialized.current) return;
-    initialized.current = true;
 
     const duration = Math.max(300, Math.min(1200, text.length * 40));
     const stepMs = duration / text.length;
     let idx = 0;
 
     const startTimer = setTimeout(() => {
-      const interval = setInterval(() => {
+      timerRef.current = setInterval(() => {
         idx++;
         setRevealed(idx);
-        if (idx >= text.length) clearInterval(interval);
+        if (idx >= text.length && timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
       }, stepMs);
     }, delay);
 
     return () => {
       clearTimeout(startTimer);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     };
   }, [text, reduced, delay]);
 
