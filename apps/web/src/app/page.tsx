@@ -1,7 +1,7 @@
-import Link, { type LinkProps } from "next/link";
 import { SectionDivider } from "@/components/ui/badge";
+import Link from "next/link";
 
-function BtnLink({ href, children }: { href: LinkProps["href"]; children: React.ReactNode }) {
+function BtnLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
     <Link
       href={href}
@@ -28,11 +28,11 @@ const steps = [
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-6" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+    <div className="space-y-8" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
       <div className="flex items-center justify-between">
         <div>
-          <h1 style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-primary)" }}>Dashboard</h1>
-          <p style={{ marginTop: 2, fontSize: 11, color: "var(--color-text-secondary)" }}>
+          <h1 className="text-lg font-semibold text-text-primary">Dashboard</h1>
+          <p className="mt-2 text-xs text-text-secondary">
             Welcome to Orchestra. Start by creating your first project.
           </p>
         </div>

@@ -10,8 +10,8 @@ function BtnLink({ href, children }: { href: string; children: React.ReactNode }
   return (
     <Link
       href={href}
-      style={{ color: "#fff" }}
-      className="inline-flex items-center justify-center gap-2 rounded bg-accent-purple px-4 py-2 text-sm font-medium hover:opacity-90 transition-colors"
+      style={{ borderRadius: 3, padding: "8px 18px", fontSize: 13, fontFamily: "inherit", color: "#fff" }}
+      className="inline-flex bg-accent-purple text-white border border-accent-purple font-medium hover:opacity-88 active:scale-[0.98] transition-[color,background-color,border-color,opacity,transform] duration-150"
     >
       {children}
     </Link>
@@ -53,7 +53,7 @@ export default function ProjectsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-8" m-20>
+      <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-lg font-semibold text-text-primary">Projects</h1>
@@ -74,9 +74,7 @@ export default function ProjectsPage() {
               All your software ideas, organised as projects.
             </p>
           </div>
-          <Link href="/projects/new">
-            <Button>New project</Button>
-          </Link>
+          <BtnLink href="/projects/new">New project</BtnLink>
         </div>
         <div className="rounded border border-accent-red-dim bg-accent-red-dim/30 p-6 text-center" role="alert">
           <p className="text-accent-red">{error}</p>
@@ -98,18 +96,14 @@ export default function ProjectsPage() {
               All your software ideas, organised as projects.
             </p>
           </div>
-          <Link href="/projects/new">
-            <Button>New project</Button>
-          </Link>
+          <BtnLink href="/projects/new">New project</BtnLink>
         </div>
         <div className="flex flex-col items-center justify-center rounded border-2 border-dashed border-border-default bg-bg-surface px-6 py-16 text-center">
           <h3 className="mb-2 text-sm font-semibold text-text-primary">No projects yet</h3>
           <p className="mb-6 max-w-sm text-xs text-text-secondary">
             Create your first project to start transforming an idea into a structured development plan.
           </p>
-          <Link href="/projects/new">
-            <Button>Create project</Button>
-          </Link>
+          <BtnLink href="/projects/new">Create project</BtnLink>
         </div>
       </div>
     );
@@ -122,9 +116,7 @@ export default function ProjectsPage() {
           <h1 className="text-lg font-semibold text-text-primary">Projects</h1>
           <p className="mt-2 text-xs text-text-secondary">All your software ideas, organised as projects.</p>
         </div>
-        <Link href="/projects/new">
-          <Button>New project</Button>
-        </Link>
+        <BtnLink href="/projects/new">New project</BtnLink>
       </div>
 
       <ul className="space-y-4">

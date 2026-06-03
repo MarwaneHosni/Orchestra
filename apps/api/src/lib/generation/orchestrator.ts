@@ -346,6 +346,7 @@ async function retryPromptWithAI(
   errors: StructuralValidationError[],
   context: TaskContext,
   router: RouterService,
+  forceful: boolean = false,
 ): Promise<string | null> {
   const fixPrompt = buildFixPrompt(aiPrompt, errors, context);
 
@@ -364,10 +365,13 @@ async function retryPromptWithAI(
     if (!provider) continue;
 
     try {
+      const systemPrompt = forceful
+        ? "You are an expert at fixing AI-generated execution prompts. The previous fix attempt ALSO failed validation. You MUST expand every section that is too short to exceed its minimum character count. Sections that are already valid must NOT be changed. Output ONLY the corrected markdown with no code fences, no explanations, no preamble. Failure to meet minimum lengths will result in another wasted generation attempt."
+        : "You are an expert at fixing AI-generated execution prompts. The user will show you a prompt with structural validation errors (missing/empty/too-short/out-of-order sections). Fix ONLY the reported issues. Expand any sections that are too short. Do NOT change sections that passed validation. Output ONLY the corrected markdown with no code fences, no explanations, no preamble.";
       const input: GenerationInput = {
         model: selection.model,
-        systemPrompt: "You are an expert at fixing AI-generated execution prompts. The user will show you a prompt with structural validation errors (missing/empty/too-short/out-of-order sections). Fix ONLY the reported issues. Expand any sections that are too short. Do NOT change sections that passed validation. Output ONLY the corrected markdown with no code fences, no explanations, no preamble.",
-        messages: [{ role: "user", content: fixPrompt }],
+        systemPrompt,
+        messages: [{ role: "user" as const, content: fixPrompt }],
         temperature: 0.3,
       };
 
@@ -563,7 +567,14 @@ export async function generateWithAI(
         if (!validation.valid) {
           const context = buildTaskContext(task, phaseData, blueprint, projectName, graph, taskMap);
           const fix = await retryPromptWithAI(aiPrompt, validation.errors, context, router);
-          promptFixes.set(task.id, fix);
+          if (fix) {
+            promptFixes.set(task.id, fix);
+          } else {
+            // First retry failed — try again with a more forceful instruction
+            log.warn({ taskId: task.id, phaseType: task.phaseType }, "prompt_retry_attempt_2");
+            const fix2 = await retryPromptWithAI(aiPrompt, validation.errors, context, router, true);
+            promptFixes.set(task.id, fix2);
+          }
         }
       }
     }

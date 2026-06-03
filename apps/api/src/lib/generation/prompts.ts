@@ -132,14 +132,16 @@ FIELD SPECIFICATIONS:
     This raw markdown is sent DIRECTLY to another AI (e.g. ChatGPT, Claude, Copilot)
     to implement the task. It must be self-contained and specific enough that the
     receiving AI can execute without additional context.
-    Each section:
-      ## Objective (3-5 sentences) — exact files, functions, or components to create
-      ## Context (5-8 sentences) — project background, phase goal, specific tech/patterns
-      ## Constraints (8-15 items) — ALL tech choices, patterns, interview-derived constraints
-      ## Expected Output (3-5 sentences) — concrete deliverables with artifact names
-      ## Validation Criteria (5-10 items) — specific, measurable, testable requirements
-      ## Architectural Alignment (3-5 sentences) — interfaces, data flow, integration points
-      ## Agent Tips (5-10 per category) — phase-specific security, edge cases, dependencies
+    Each section — you MUST meet the minimum length or the output will be REJECTED:
+      ## Objective (3-5 sentences, min 100 chars) — exact files, functions, or components to create
+      ## Context (5-8 sentences, min 200 chars) — project background, phase goal, specific tech/patterns
+      ## Constraints (8-15 items, min 1 char each) — ALL tech choices, patterns, interview-derived constraints
+      ## Expected Output (3-5 sentences, min 100 chars) — concrete deliverables with artifact names
+      ## Validation Criteria (5-10 items, min 1 char each) — specific, measurable, testable requirements
+      ## Architectural Alignment (3-5 sentences, min 80 chars) — interfaces, data flow, integration points
+      ## Agent Tips (5-10 per category, min 1 char each) — phase-specific security, edge cases, dependencies
+    FAILURE TO MEET MINIMUM LENGTHS WILL CAUSE THE PROMPT TO BE DISCARDED AND REGENERATED.
+    Write each section long enough to be useful — short sections waste a generation credit.
 
 CRITICAL JSON RULES:
 - "phases" must be an ARRAY, not an object
