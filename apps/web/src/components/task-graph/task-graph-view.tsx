@@ -222,10 +222,6 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <TerminalTitle style={{ fontSize: 18, fontWeight: 500, color: "var(--color-text-primary)" }}>Task Graph</TerminalTitle>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }} className="graph-header-btns">
-            <button onClick={() => router.push(`/projects/${sessionId}/versions`)}
-              style={{ borderRadius: 3, padding: "6px 14px", fontSize: 12, fontFamily: "inherit", border: "1px solid var(--color-border-default)", background: "transparent", color: "var(--color-text-primary)", cursor: "pointer" }}
-              className="hover:border-border-strong hover:bg-bg-hover transition-[color,background-color,border-color] duration-150"
-            >[ version history ]</button>
             <button onClick={handleExport} disabled={exporting}
               style={{ borderRadius: 3, padding: "6px 14px", fontSize: 12, fontFamily: "inherit", border: "1px solid var(--color-border-default)", background: "transparent", color: "var(--color-text-primary)", cursor: "pointer" }}
               className="hover:border-border-strong hover:bg-bg-hover transition-[color,background-color,border-color] duration-150 disabled:opacity-50"

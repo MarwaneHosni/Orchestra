@@ -586,22 +586,6 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
           [ view task graph ]
         </button>
         <button
-          onClick={() => router.push(`/projects/${sessionId}/versions`)}
-          style={{
-            borderRadius: 3,
-            padding: "8px 20px",
-            fontSize: 13,
-            fontFamily: "inherit",
-            border: "1px solid #333",
-            color: "var(--color-text-secondary)",
-            background: "transparent",
-            cursor: "pointer",
-          }}
-          className="hover:border-[#555] hover:text-text-primary transition-colors duration-150"
-        >
-          [ exports & versions ]
-        </button>
-        <button
           onClick={() => router.push(`/projects/${sessionId}/interview`)}
           style={{
             borderRadius: 3,

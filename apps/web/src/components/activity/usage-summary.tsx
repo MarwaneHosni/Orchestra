@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getProjectSummary, getSnapshots } from "@/lib/api";
-import type { ProjectSummary, SnapshotInfo } from "@/lib/api";
+import { getProjectSummary } from "@/lib/api";
+import type { ProjectSummary } from "@/lib/api";
 import { ThinkingLoader } from "@/components/ui/skeleton";
 
 interface UsageSummaryProps {
@@ -11,18 +11,13 @@ interface UsageSummaryProps {
 
 export function UsageSummary({ projectId }: UsageSummaryProps) {
   const [summary, setSummary] = useState<ProjectSummary | null>(null);
-  const [snapshots, setSnapshots] = useState<SnapshotInfo[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [summaryResult, snapshotsResult] = await Promise.all([
-          getProjectSummary(projectId).catch(() => null),
-          getSnapshots(projectId).catch(() => ({ data: [] as SnapshotInfo[] })),
-        ]);
-        setSummary(summaryResult);
-        setSnapshots(snapshotsResult.data ?? []);
+        const result = await getProjectSummary(projectId).catch(() => null);
+        setSummary(result);
       } finally {
         setLoading(false);
       }
@@ -38,18 +33,15 @@ export function UsageSummary({ projectId }: UsageSummaryProps) {
     );
   }
 
-  const fullSnapshotCount = snapshots.length;
-  const partialCount = snapshots.filter(
-    (s) => s.affectedPhaseTypes && s.affectedPhaseTypes.length > 0,
-  ).length;
   const exportCount = summary?.exportCount ?? 0;
   const compareCount = summary?.compareCount ?? 0;
   const failedCount = summary?.failedCount ?? 0;
+  const totalEvents = summary?.totalEvents ?? 0;
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <MetricCard label="Snapshots" value={fullSnapshotCount} sub={`${partialCount} partial`} />
+        <MetricCard label="Events" value={totalEvents} />
         <MetricCard label="Exports" value={exportCount} />
         <MetricCard label="Comparisons" value={compareCount} />
         <MetricCard label="Failed" value={failedCount} variant={failedCount > 0 ? "warning" : "default"} />
