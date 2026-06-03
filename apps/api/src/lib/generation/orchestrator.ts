@@ -565,6 +565,7 @@ export async function generateWithAI(
         getGraphStore().saveGraph(graph);
 
         for (const task of graph.tasks) {
+          if (task.type === "pending_input") continue;
           const phaseData = blueprint.phases.find((p) => p.phaseType === task.phaseType);
           const aiPrompt = phaseData?.executionPrompt;
 

@@ -125,6 +125,23 @@ export function TaskNodeView({ task, isSelected, onSelect, indent }: TaskNodePro
 }
 
 function TypePill({ type }: { type: string }) {
+  if (type === "pending_input") {
+    return (
+      <span
+        style={{
+          display: "inline-block",
+          border: "1px solid var(--color-accent-amber)",
+          borderRadius: 2,
+          padding: "0 5px",
+          fontSize: 10,
+          color: "var(--color-accent-amber)",
+          background: "var(--color-accent-amber-dim)",
+        }}
+      >
+        awaiting input
+      </span>
+    );
+  }
   return (
     <span
       style={{

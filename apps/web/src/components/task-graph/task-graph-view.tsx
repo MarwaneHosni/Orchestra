@@ -79,6 +79,16 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
     } catch (e) { console.error("Failed to update task status", e); }
   };
 
+  const handleResolve = useCallback(async () => {
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/api/v1/plans/plan-${sessionId}/tasks`);
+      if (!res.ok) throw new Error("Failed to reload task graph");
+      setGraph(await res.json());
+      setSelectedTask(null);
+      setPromptTaskId(null);
+    } catch (e) { console.error("Failed to refresh task graph", e); }
+  }, [sessionId]);
+
   // Flat list of all visible tasks for keyboard nav
   const flatTasks = useMemo(() => {
     if (!graph) return [];
@@ -320,10 +330,12 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
               onClose={() => { setPromptTaskId(null); }} />
           ) : (
             <TaskDetail task={selectedTask!} allTasks={graph.tasks}
+              planId={`plan-${sessionId}`}
               onClose={() => { setSelectedTask(null); setPromptTaskId(null); }}
               onShowPrompt={(id) => { setPromptTaskId(id); }}
               onStatusChange={handleStatusChange}
-              onSelectTask={(t) => { setSelectedTask(t); setPromptTaskId(null); }} />
+              onSelectTask={(t) => { setSelectedTask(t); setPromptTaskId(null); }}
+              onResolve={handleResolve} />
           )}
         </div>
       )}

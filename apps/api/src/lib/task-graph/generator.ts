@@ -6,6 +6,14 @@ export interface GraphStore {
   getGraph(planId: string, version: number): TaskGraph | undefined;
   getGraphsByPlan(planId: string): TaskGraph[];
   updateTaskStatus(planId: string, planVersion: number, taskId: string, newStatus: string): TaskNode | undefined;
+  replacePhaseTasks(
+    planId: string,
+    planVersion: number,
+    phaseType: string,
+    oldTaskIds: string[],
+    newTasks: TaskNode[],
+    newDeps: DependencyEdge[],
+  ): TaskGraph | undefined;
 }
 
 export function createInMemoryGraphStore(): GraphStore {
@@ -46,6 +54,18 @@ export function createInMemoryGraphStore(): GraphStore {
       if (!task) return undefined;
       task.status = newStatus as TaskNode["status"];
       return { ...task };
+    },
+    replacePhaseTasks(planId, planVersion, _phaseType, oldTaskIds, newTasks, newDeps) {
+      const key = planKey(planId, planVersion);
+      const graph = byKey.get(key);
+      if (!graph) return undefined;
+      const oldSet = new Set(oldTaskIds);
+      graph.tasks = graph.tasks.filter((t) => !oldSet.has(t.id)).concat(newTasks);
+      graph.tasks.sort((a, b) => a.order - b.order);
+      graph.dependencies = graph.dependencies.filter(
+        (d) => !oldSet.has(d.taskId) && !oldSet.has(d.dependsOnTaskId),
+      ).concat(newDeps);
+      return graph;
     },
   };
 }
@@ -315,7 +335,7 @@ function computeDependencies(tasks: TaskNode[], dependencies: DependencyEdge[]):
   }
 }
 
-function computeStatuses(tasks: TaskNode[], dependencies: DependencyEdge[]): void {
+export function computeStatuses(tasks: TaskNode[], dependencies: DependencyEdge[]): void {
   const depMap = new Map<string, string[]>();
   for (const dep of dependencies) {
     const list = depMap.get(dep.taskId) ?? [];

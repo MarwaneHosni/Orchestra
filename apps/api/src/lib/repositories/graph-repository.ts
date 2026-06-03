@@ -141,5 +141,47 @@ export function createSqliteGraphStore(): GraphStore {
         .run();
       return { ...task };
     },
+    replacePhaseTasks(planId, planVersion, _phaseType, oldTaskIds, newTasks, newDeps) {
+      for (const id of oldTaskIds) {
+        getDb().delete(schema.executionTasks).where(eq(schema.executionTasks.id, id)).run();
+        getDb().delete(schema.taskDependencies).where(eq(schema.taskDependencies.taskId, id)).run();
+        getDb().delete(schema.taskDependencies).where(eq(schema.taskDependencies.dependsOnTaskId, id)).run();
+      }
+
+      for (const t of newTasks) {
+        getDb()
+          .insert(schema.executionTasks)
+          .values({
+            id: t.id,
+            planId: t.planId,
+            phaseType: t.phaseType,
+            title: t.title,
+            description: `${t.type}:${t.priority}`,
+            type: t.type as any,
+            priority: t.priority as any,
+            status: t.status as any,
+            order: t.order,
+            version: 1,
+            createdAt: now(),
+            updatedAt: now(),
+          })
+          .run();
+      }
+
+      for (const d of newDeps) {
+        getDb()
+          .insert(schema.taskDependencies)
+          .values({
+            id: crypto.randomUUID(),
+            taskId: d.taskId,
+            dependsOnTaskId: d.dependsOnTaskId,
+            dependencyType: d.dependencyType as any,
+            createdAt: now(),
+          })
+          .run();
+      }
+
+      return this.getGraph(planId, planVersion);
+    },
   };
 }

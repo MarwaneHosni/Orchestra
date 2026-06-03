@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { TerminalTitle } from "@/components/ui/terminal-title";
+import { getApiBaseUrl } from "@/lib/api-config";
 import type { TaskData } from "./task-node";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -19,21 +21,47 @@ const STATUS_LABELS: Record<string, string> = {
 interface TaskDetailProps {
   task: TaskData;
   allTasks: TaskData[];
+  planId: string;
   onClose: () => void;
   onShowPrompt: (taskId: string) => void;
   onStatusChange: (taskId: string, newStatus: string) => void;
   onSelectTask?: (task: TaskData) => void;
+  onResolve?: () => void;
 }
 
 const S = {
   ff: "'JetBrains Mono', monospace",
 };
 
-export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChange, onSelectTask }: TaskDetailProps) {
+export function TaskDetail({ task, allTasks, planId, onClose, onShowPrompt, onStatusChange, onSelectTask, onResolve }: TaskDetailProps) {
   const depNames = task.dependencies.map((d) => allTasks.find((t) => t.id === d.taskId)).filter(Boolean);
   const st = STATUS_COLORS[task.status] ?? "var(--color-text-muted)";
   const stLabel = STATUS_LABELS[task.status] ?? task.status;
   const checked = task.status === "complete";
+  const isPendingInput = task.type === "pending_input";
+  const [inputText, setInputText] = useState("");
+  const [resolving, setResolving] = useState(false);
+  const [resolveError, setResolveError] = useState("");
+
+  async function handleResolve() {
+    if (inputText.trim().length < 10) { setResolveError("Please write at least 10 characters."); return; }
+    setResolving(true); setResolveError("");
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/api/v1/plans/${planId}/phases/${task.phaseType}/resolve-pending`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inputText: inputText.trim() }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error?.message ?? err?.message ?? `Failed (${res.status})`);
+      }
+      setInputText("");
+      onResolve?.();
+    } catch (e) {
+      setResolveError(e instanceof Error ? e.message : "Failed to resolve");
+    } finally { setResolving(false); }
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", fontFamily: S.ff }}>
@@ -73,6 +101,59 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChan
           <div style={{ margin: "0 20px 16px", borderRadius: 3, border: "1px solid var(--color-accent-amber-dim)", borderLeft: "3px solid var(--color-accent-amber)", background: "var(--color-accent-amber-dim)", padding: "10px 14px", fontSize: 13 }}>
             <p style={{ color: "var(--color-accent-amber)", fontWeight: 500 }}>▲ Needs Review</p>
             <p style={{ marginTop: 4, fontSize: 12, color: "var(--color-text-secondary)" }}>{task.failureReason}</p>
+          </div>
+        )}
+
+        {/* Resolve form for pending_input */}
+        {isPendingInput && !checked && (
+          <div style={{ margin: "0 20px 16px" }}>
+            <div style={{ fontSize: 10, letterSpacing: "0.08em", color: "var(--color-text-muted)", textTransform: "uppercase", marginBottom: 8 }}>
+              ── provide additional input (optional)
+            </div>
+            <textarea
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              disabled={resolving}
+              placeholder="Describe what's missing for this phase — technologies, requirements, constraints, or any detail that would help the AI generate better tasks..."
+              rows={5}
+              style={{
+                width: "100%",
+                borderRadius: 3,
+                border: "1px solid var(--color-border-default)",
+                background: "var(--color-bg-surface)",
+                color: "var(--color-text-primary)",
+                fontSize: 12,
+                fontFamily: S.ff,
+                padding: "10px 12px",
+                resize: "vertical",
+                boxSizing: "border-box",
+              }}
+              className="hover:border-border-strong focus:outline-none focus:border-accent-purple"
+            />
+            {resolveError && (
+              <p style={{ marginTop: 6, fontSize: 11, color: "var(--color-accent-red)" }}>{resolveError}</p>
+            )}
+            <button
+              onClick={handleResolve}
+              disabled={resolving}
+              style={{
+                marginTop: 8,
+                width: "100%",
+                borderRadius: 3,
+                padding: "10px",
+                fontSize: 13,
+                fontFamily: "inherit",
+                fontWeight: 500,
+                border: "1px solid var(--color-accent-purple)",
+                background: "transparent",
+                color: "var(--color-accent-purple)",
+                cursor: resolving ? "not-allowed" : "pointer",
+                opacity: resolving ? 0.6 : 1,
+              }}
+              className="hover:bg-accent-purple-dim transition-colors duration-150"
+            >
+              {resolving ? "[ generating... ]" : "[ resolve & regenerate tasks ]"}
+            </button>
           </div>
         )}
 
@@ -175,6 +256,7 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChan
       </div>
 
       {/* Footer */}
+      {!isPendingInput && (
       <div style={{ position: "sticky", bottom: 0, padding: "14px 20px", borderTop: "1px solid var(--color-border-default)", background: "var(--color-bg-surface)", flexShrink: 0 }}>
         <button onClick={() => onShowPrompt(task.id)}
           style={{ width: "100%", borderRadius: 3, padding: "10px", fontSize: 13, fontFamily: "inherit", fontWeight: 500, border: "none", background: "var(--color-accent-purple)", color: "#fff", cursor: "pointer" }}
@@ -183,6 +265,7 @@ export function TaskDetail({ task, allTasks, onClose, onShowPrompt, onStatusChan
           → view execution prompt
         </button>
       </div>
+      )}
     </div>
   );
 }

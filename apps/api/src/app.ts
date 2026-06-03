@@ -53,7 +53,7 @@ export async function buildApp() {
         "Found interrupted workflow runs from prior session — marking as failed",
       );
       for (const run of interrupted) {
-        const steps = ["synthesis", "analysis", "blueprint", "roadmap", "taskGraph", "promptGen"] as const;
+        const steps = ["synthesis", "analysis", "blueprint", "roadmap", "taskGraph", "promptGen", "summary"] as const;
         for (const step of steps) {
           repairIncompleteStep(run.id, step);
         }
