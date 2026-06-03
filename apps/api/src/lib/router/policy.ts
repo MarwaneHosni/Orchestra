@@ -44,6 +44,7 @@ export const POLICIES: RoutingPolicy[] = [
     taskType: "prompt_generation",
     minTier: "balanced",
     preferred: [
+      { provider: "opencode-go", model: "deepseek-v4-flash", tier: "cheap" },
       { provider: "openai", model: "gpt-4o", tier: "balanced" },
       { provider: "anthropic", model: "claude-sonnet-4-20250514", tier: "balanced" },
     ],
