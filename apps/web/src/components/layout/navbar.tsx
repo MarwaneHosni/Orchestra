@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
+import { useTheme } from "@/lib/use-theme";
 
 const navLinks = [
   { href: "/", label: "Dashboard" },
@@ -12,6 +13,31 @@ const navLinks = [
   { href: "/plans", label: "Plans" },
   { href: "/settings", label: "Settings" },
 ];
+
+function ThemeToggle() {
+  const { theme, toggle } = useTheme();
+  return (
+    <button
+      onClick={toggle}
+      title={`Theme: ${theme}. Click to cycle.`}
+      aria-label="Toggle theme"
+      style={{
+        border: "1px solid var(--color-border-default)",
+        borderRadius: 2,
+        padding: "2px 6px",
+        fontSize: 12,
+        fontFamily: "inherit",
+        color: "var(--color-text-secondary)",
+        background: "transparent",
+        cursor: "pointer",
+        lineHeight: 1.4,
+      }}
+      className="hover:border-border-strong hover:text-text-primary transition-colors duration-150"
+    >
+      {theme === "light" ? "☀" : theme === "dark" ? "☾" : "◐"}
+    </button>
+  );
+}
 
 export function Navbar() {
   const pathname = usePathname();
@@ -44,7 +70,7 @@ export function Navbar() {
           <span className="hidden sm:inline">orchestra</span>
         </Link>
 
-        <nav className="hidden md:flex md:items-center md:h-full" aria-label="Main navigation">
+        <nav className="hidden md:flex md:items-center md:h-full md:gap-1" aria-label="Main navigation">
           {navLinks.map((link) => {
             const isActive = pathname === link.href || (link.href !== "/" && pathname.startsWith(link.href));
             return (
@@ -64,18 +90,22 @@ export function Navbar() {
               </Link>
             );
           })}
+          <ThemeToggle />
         </nav>
 
-        <button
-          ref={toggleRef}
-          className="inline-flex md:hidden items-center justify-center p-2 text-text-secondary text-sm"
-          onClick={() => setMobileOpen(!mobileOpen)}
-          aria-expanded={mobileOpen}
-          aria-controls="mobile-nav"
-          aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
-        >
-          {mobileOpen ? "✗" : "☰"}
-        </button>
+        <div className="flex md:hidden items-center gap-2">
+          <ThemeToggle />
+          <button
+            ref={toggleRef}
+            className="inline-flex items-center justify-center p-2 text-text-secondary text-sm"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-nav"
+            aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
+          >
+            {mobileOpen ? "✗" : "☰"}
+          </button>
+        </div>
       </div>
 
       {mobileOpen && (
