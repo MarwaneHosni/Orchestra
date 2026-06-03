@@ -10,6 +10,27 @@ interface TerminalTitleProps {
   delay?: number;
 }
 
+// Module-level blink sync
+let _blinkOn = true;
+const _listeners = new Set<(v: boolean) => void>();
+let _blinkStarted = false;
+
+function startBlink() {
+  if (_blinkStarted) return;
+  _blinkStarted = true;
+  setInterval(() => {
+    _blinkOn = !_blinkOn;
+    _listeners.forEach((fn) => fn(_blinkOn));
+  }, 500);
+}
+
+function subscribe(fn: (v: boolean) => void) {
+  _listeners.add(fn);
+  fn(_blinkOn);
+  startBlink();
+  return () => { _listeners.delete(fn); };
+}
+
 function useReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false);
   useEffect(() => {
@@ -26,10 +47,14 @@ export function TerminalTitle({ children, as: Tag = "h1", className, style, dela
   const reduced = useReducedMotion();
   const text = children;
   const [revealed, setRevealed] = useState(0);
-  const [cursorOn, setCursorOn] = useState(true);
-  const [spinning, setSpinning] = useState(false);
-  const done = revealed >= text.length;
+  const [blinkOn, setBlinkOn] = useState(true);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Subscribe to shared blink
+  useEffect(() => {
+    if (reduced) return;
+    return subscribe(setBlinkOn);
+  }, [reduced]);
 
   // Reveal animation
   useEffect(() => {
@@ -53,25 +78,6 @@ export function TerminalTitle({ children, as: Tag = "h1", className, style, dela
     };
   }, [text, reduced, delay]);
 
-  // Always blink cursor (both during and after typing)
-  useEffect(() => {
-    if (reduced) return;
-    const blink = setInterval(() => setCursorOn((v) => !v), 500);
-    return () => clearInterval(blink);
-  }, [reduced]);
-
-  // After done: occasional spin
-  useEffect(() => {
-    if (reduced) return;
-    if (!done) { setSpinning(false); return; }
-    const spin = setInterval(() => {
-      setSpinning(true);
-      setTimeout(() => setSpinning(false), 700);
-    }, 8000);
-    setCursorOn(true);
-    return () => clearInterval(spin);
-  }, [done, reduced]);
-
   return (
     <Tag className={className} style={{ ...style, visibility: "visible" }} aria-label={text}>
       <span style={{ visibility: "hidden", display: "block", height: 0, overflow: "hidden" }} aria-hidden="true">
@@ -86,9 +92,7 @@ export function TerminalTitle({ children, as: Tag = "h1", className, style, dela
           fontSize: "0.85em",
           lineHeight: 1,
           color: "var(--color-accent-purple)",
-          visibility: cursorOn ? "visible" : "hidden",
-          transition: spinning ? "transform 0.7s ease-in-out" : "none",
-          transform: spinning ? "rotate(360deg)" : "rotate(0deg)",
+          visibility: blinkOn ? "visible" : "hidden",
         }}
         aria-hidden="true"
       >
