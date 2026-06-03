@@ -1,12 +1,16 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { getCredentialStore, encryptKey } from "../lib/credentials/store.js";
+import { getCredentialStore, encryptKey, decryptKey } from "../lib/credentials/store.js";
 import { ValidationError, NotFoundError, RateLimitedError } from "../lib/errors.js";
 import { GuardrailService } from "../lib/budget/guardrail.js";
 import { createInMemoryBudgetStore } from "../lib/budget/budget.js";
 import { logAudit } from "../lib/audit/logger.js";
 import { instrumentProviderValidation } from "../lib/metrics/index.js";
 import { paginatedResponse } from "../schemas/index.js";
+import { OpenAIProvider } from "../lib/provider/openai.js";
+import { AnthropicProvider } from "../lib/provider/anthropic.js";
+import { OpenRouterProvider } from "../lib/provider/openrouter.js";
+import { OpencodeGoProvider } from "../lib/provider/opencode-go.js";
 
 const guardrail = new GuardrailService(createInMemoryBudgetStore(), {
   rateLimitProviderValidation: { maxRequests: 20, windowMs: 60_000 },
@@ -187,10 +191,45 @@ export async function registerProviderCredentialRoutes(app: FastifyInstance) {
       );
     }
 
+    // Decrypt the stored API key
+    const raw = store.getRaw(id);
+    if (!raw?.encryptedApiKey) throw new Error("No API key stored for credential");
+
+    const apiKey = decryptKey(raw.encryptedApiKey);
+
+    // Create the right provider and test the key with a real API call
+    let result: import("../lib/provider/types.js").ValidationResult;
+    switch (cred.provider) {
+      case "opencode-go":
+        result = await new OpencodeGoProvider(apiKey).validate();
+        break;
+      case "openai":
+        result = await new OpenAIProvider(apiKey).validate();
+        break;
+      case "anthropic":
+        result = await new AnthropicProvider(apiKey).validate();
+        break;
+      case "openrouter":
+        result = await new OpenRouterProvider(apiKey).validate();
+        break;
+      default:
+        result = { valid: false, error: `Validation not supported for provider: ${cred.provider}` };
+    }
+
     const now = new Date().toISOString();
-    store.update(id, { status: "valid", lastVerifiedAt: now, errorMessage: null });
-    instrumentProviderValidation(cred.provider, "valid");
-    logAudit("credential.validated", cred.userId, id, { provider: cred.provider, status: "valid" });
+    store.update(id, {
+      status: result.valid ? "valid" : "invalid",
+      lastVerifiedAt: now,
+      errorMessage: result.error ?? null,
+      modelsAvailable: result.models ? result.models.map((m) => m.id).join(",") : null,
+    });
+
+    instrumentProviderValidation(cred.provider, result.valid ? "valid" : "invalid");
+    logAudit("credential.validated", cred.userId, id, {
+      provider: cred.provider,
+      status: result.valid ? "valid" : "invalid",
+      error: result.error,
+    });
 
     const updated = store.get(id)!;
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
