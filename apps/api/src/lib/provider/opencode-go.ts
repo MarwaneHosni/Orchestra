@@ -77,20 +77,36 @@ export class OpencodeGoProvider implements AIProvider {
     const apiModel = input.model;
     log.debug({ model: input.model, hasApiKey: this.apiKey.length > 0, url: `${BASE_URL}/chat/completions` }, "sending_request");
 
+    const bodyPayload = {
+      model: apiModel,
+      messages,
+      temperature: input.temperature ?? 0.7,
+      stream: false,
+    };
+    console.log("[DEBUG OPENCODE-GO] Request:", JSON.stringify({
+      url: `${BASE_URL}/chat/completions`,
+      model: apiModel,
+      messagesCount: messages.length,
+      messagesPreview: messages.map((m) => ({ role: m.role, content: m.content.slice(0, 120) })),
+      totalChars: JSON.stringify(bodyPayload).length,
+      apiKeyPrefix: this.apiKey.slice(0, 8) + "...",
+    }));
+
     const res = await this.apiFetch("/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       timeout: GENERATE_TIMEOUT_MS,
-      body: JSON.stringify({
-        model: apiModel,
-        messages,
-        temperature: input.temperature ?? 0.7,
-        stream: false,
-      }),
+      body: JSON.stringify(bodyPayload),
     });
 
     if (!res.ok) {
       const bodyText = await res.text().catch(() => "(could not read body)");
+      console.log("[DEBUG OPENCODE-GO] Error response:", JSON.stringify({
+        status: res.status,
+        statusText: res.statusText,
+        bodyText: bodyText.slice(0, 1000),
+        headers: Object.fromEntries(res.headers.entries()),
+      }));
       let parsedError: unknown;
       try {
         parsedError = JSON.parse(bodyText);
@@ -115,6 +131,11 @@ export class OpencodeGoProvider implements AIProvider {
     }
 
     const rawText = await res.text();
+    console.log("[DEBUG OPENCODE-GO] Success response:", JSON.stringify({
+      status: res.status,
+      rawLength: rawText.length,
+      rawPreview: rawText.slice(0, 500),
+    }));
     log.debug({ model: input.model, status: res.status, rawLength: rawText.length, contentType: res.headers.get("content-type") }, "response_body");
 
     const body = JSON.parse(rawText) as {

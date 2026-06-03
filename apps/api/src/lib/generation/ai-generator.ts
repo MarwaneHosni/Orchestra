@@ -130,6 +130,11 @@ export class AIBlueprintGenerator {
 
       const provider = this.createProvider(selection);
       if (!provider) {
+        console.log("[DEBUG GENERATOR] createProvider returned undefined:", {
+          attempt: attemptCount,
+          provider: selection.provider,
+          model: selection.model,
+        });
         const attempt = this.recordAttempt(
           selection.provider, selection.model,
           { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
@@ -217,8 +222,21 @@ export class AIBlueprintGenerator {
 
         const next = this.advanceFallback(currentDecision, errorMsg);
         if (!next) {
+          console.log("[DEBUG GENERATOR] No fallback available, failing:", {
+            attemptCount,
+            error: errorMsg,
+            lastProvider: selection.provider,
+            lastModel: selection.model,
+          });
           return this.failureResult(errorMsg, currentDecision, overallStartTime, attempts);
         }
+        console.log("[DEBUG GENERATOR] Fallback:", JSON.stringify({
+          attempt: attemptCount,
+          from: `${selection.provider}/${selection.model}`,
+          to: `${next.selection.provider}/${next.selection.model}`,
+          reason: errorMsg,
+          remainingFallbacks: next.fallbackChain.length,
+        }));
         currentDecision = next;
       }
     }

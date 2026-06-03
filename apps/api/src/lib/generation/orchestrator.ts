@@ -548,7 +548,6 @@ export async function generateWithAI(
           if (fix) {
             promptFixes.set(task.id, fix);
           } else {
-            // First retry failed — try again with a more forceful instruction
             log.warn({ taskId: task.id, phaseType: task.phaseType }, "prompt_retry_attempt_2");
             const fix2 = await retryPromptWithAI(aiPrompt, validation.errors, context, router, true);
             promptFixes.set(task.id, fix2);
@@ -595,7 +594,6 @@ export async function generateWithAI(
               };
               getPromptStore().save(artifact);
             } else {
-              // Validation failed — use pre-computed AI retry, then repair fallback
               const context = buildTaskContext(task, phaseData, blueprint, projectName, graph, taskMap);
               log.warn({ taskId: task.id, phaseType: task.phaseType, errors: validation.errors }, "execution_prompt_validation_failed");
 
@@ -636,7 +634,6 @@ export async function generateWithAI(
             if (aiPrompt) {
               log.warn({ taskId: task.id, phaseType: task.phaseType, promptLength: aiPrompt.length }, "ai_execution_prompt_too_short");
             }
-            // Generate from phase data instead of hardcoded templates
             const context = buildTaskContext(task, phaseData, blueprint, projectName, graph, taskMap);
             const generated = generatePromptFromContext(context);
             if (generated) {
@@ -709,6 +706,14 @@ export async function generateWithAI(
   }
 
   // AI failed
+  console.log("[DEBUG ORCHESTRATOR] AI generation failed:", JSON.stringify({
+    success: result.success,
+    error: result.error,
+    provider: result.provider,
+    model: result.model,
+    attempts: result.attempts?.map((a) => `${a.provider}/${a.model}: ${a.success ? "ok" : a.error}`),
+    durationMs: result.durationMs,
+  }));
   updateWorkflowStep(workflowId, "blueprint", "failed");
   completeWorkflowRun(workflowId, "failed", result.provider, result.model, result.error);
   return { output: null as any, mode: "ai_fallback_deterministic" };
