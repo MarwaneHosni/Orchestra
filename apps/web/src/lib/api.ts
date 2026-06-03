@@ -47,6 +47,14 @@ export interface BlueprintResult {
   risks: { description: string; source: string }[];
   overallConfidence: number;
   ambiguityFlags: { type: string; message: string; severity: string }[];
+  projectSummary?: {
+    projectOverview: string;
+    keyFeatures: string[];
+    technicalConstraints: string[];
+    businessConditions: string[];
+    architectureHighlights: string[];
+    riskSummary: string;
+  };
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {

@@ -9,6 +9,7 @@ export const STAGE_ORDER = [
   "roadmap",
   "taskGraph",
   "promptGen",
+  "summary",
   "complete",
 ] as const;
 
@@ -27,6 +28,7 @@ export const STAGE_DEFINITIONS: Record<StageName, StageDefinition> = {
   roadmap: { name: "roadmap", label: "Creating roadmap", description: "Generating phase roadmap from blueprint" },
   taskGraph: { name: "taskGraph", label: "Decomposing into tasks", description: "Breaking phases into executable tasks" },
   promptGen: { name: "promptGen", label: "Assembling execution prompts", description: "Building per-task execution prompts" },
+  summary: { name: "summary", label: "Generating project summary", description: "Synthesizing project overview and key decisions" },
   complete: { name: "complete", label: "Done", description: "Generation complete" },
 };
 

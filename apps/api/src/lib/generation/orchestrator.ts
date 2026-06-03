@@ -666,6 +666,19 @@ export async function generateWithAI(
       log.info({ totalTasks: graph.tasks.length, withAiPrompt, aiPromptUsed, fallbackUsed }, "prompt_assembly_summary");
       emitProgress(createEvent(workflowId, "stage_completed", "promptGen", { stageLabel: "Assembling execution prompts", attempt: 1, durationMs: 0 }));
       updateWorkflowStep(workflowId, "promptGen", "completed");
+
+      // 8. Generate project summary
+      updateWorkflowStep(workflowId, "summary", "running");
+      emitProgress(createEvent(workflowId, "stage_started", "summary", { stageLabel: "Generating project summary", attempt: 1 }));
+      const projectSummary = await aiGen.generateProjectSummary(blueprint);
+      if (projectSummary) {
+        (blueprint as Record<string, unknown>).projectSummary = projectSummary;
+        log.info({}, "project_summary_generated");
+      } else {
+        log.warn({}, "project_summary_failed_continuing");
+      }
+      emitProgress(createEvent(workflowId, "stage_completed", "summary", { stageLabel: "Generating project summary", attempt: 1, durationMs: 0 }));
+      updateWorkflowStep(workflowId, "summary", "completed");
     } catch {
       completeWorkflowRun(workflowId, "failed", result.provider, result.model, "Prompt generation failed");
       return { output: null as any, mode: "ai_fallback_deterministic" };

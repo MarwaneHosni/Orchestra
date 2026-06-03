@@ -219,6 +219,100 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
         </span>
       </div>
 
+      {/* ── Project Summary ── */}
+      {blueprint.projectSummary && (
+        <section style={{ marginTop: 32 }}>
+          <div className="flex items-center gap-3" style={{ fontSize: 13, color: "#666", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            <span>── project summary</span>
+            <span style={{ flex: 1, borderTop: "1px solid #222", display: "inline-block" }} />
+          </div>
+
+          <div style={{ marginTop: 12, fontSize: 13, lineHeight: 1.7, color: "var(--color-text-primary)" }}>
+            <p style={{ color: "var(--color-text-secondary)", marginBottom: 16 }}>
+              {blueprint.projectSummary.projectOverview}
+            </p>
+
+            {blueprint.projectSummary.keyFeatures.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div className="flex items-center gap-2" style={{ fontSize: 12, color: "#666", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+                  <span>◆</span> <span>key features</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {blueprint.projectSummary.keyFeatures.map((f, i) => (
+                    <div key={i} style={{ display: "flex", gap: 8, padding: "4px 0" }}>
+                      <span style={{ color: "var(--color-accent-purple)", flexShrink: 0 }}>▸</span>
+                      <span>{f}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {blueprint.projectSummary.technicalConstraints.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div className="flex items-center gap-2" style={{ fontSize: 12, color: "#666", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+                  <span>◆</span> <span>technical constraints</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {blueprint.projectSummary.technicalConstraints.map((c, i) => (
+                    <div key={i} style={{ display: "flex", gap: 8, padding: "4px 0" }}>
+                      <span style={{ color: "var(--color-accent-amber)", flexShrink: 0 }}>▸</span>
+                      <span>{c}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {blueprint.projectSummary.businessConditions.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div className="flex items-center gap-2" style={{ fontSize: 12, color: "#666", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+                  <span>◆</span> <span>business conditions</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {blueprint.projectSummary.businessConditions.map((b, i) => (
+                    <div key={i} style={{ display: "flex", gap: 8, padding: "4px 0" }}>
+                      <span style={{ color: "#666", flexShrink: 0 }}>▸</span>
+                      <span>{b}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {blueprint.projectSummary.architectureHighlights.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div className="flex items-center gap-2" style={{ fontSize: 12, color: "#666", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+                  <span>◆</span> <span>architecture highlights</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {blueprint.projectSummary.architectureHighlights.map((a, i) => (
+                    <div key={i} style={{ display: "flex", gap: 8, padding: "4px 0" }}>
+                      <span style={{ color: "var(--color-accent-green)", flexShrink: 0 }}>▸</span>
+                      <span>{a}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {blueprint.projectSummary.riskSummary && (
+              <div style={{
+                borderLeft: "2px solid #c0392b",
+                padding: "8px 12px",
+                background: "color-mix(in srgb, #c0392b 5%, transparent)",
+                borderRadius: 3,
+                fontSize: 12,
+                color: "var(--color-text-secondary)",
+              }}>
+                <span style={{ color: "#c0392b", marginRight: 6 }}>⚠</span>
+                {blueprint.projectSummary.riskSummary}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* ── Phase Progress ── */}
       <section style={{ marginTop: 32 }}>
         <div className="flex items-center gap-3" style={{ fontSize: 13, color: "#666", textTransform: "uppercase", letterSpacing: "0.08em" }}>

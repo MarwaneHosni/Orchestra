@@ -2,6 +2,7 @@ import type { AIProvider, Message } from "../provider/types.js";
 import type { RouterDecision } from "../router/types.js";
 import type { AnalysisPack } from "../analysis/types.js";
 import type { UsageAttempt } from "../accounting/streaming.js";
+import type { BlueprintOutput } from "../contract/output-schema.js";
 
 export type ModelTier = "cheap" | "balanced" | "strong";
 
@@ -102,6 +103,56 @@ export function buildAnalysisMessage(analysis: AnalysisPack, projectDescription:
     }
     lines.push("");
   }
+
+  return [{ role: "user" as const, content: lines.join("\n") }];
+}
+
+export function buildProjectSummarySystemPrompt(): string {
+  return `You are an expert project analyst. Given a complete project plan (blueprint) with phases, assumptions, constraints, risks, and overall summary, produce a concise project summary.
+
+Output ONLY valid JSON with no extra text, no markdown fences.
+
+Top-level fields required:
+- "projectOverview": 2-3 sentence summary of what the project does
+- "keyFeatures": array of strings — 5-10 main features extracted from the plan
+- "technicalConstraints": array of strings — 3-6 key technical constraints from the plan
+- "businessConditions": array of strings — 2-4 business conditions or operational requirements
+- "architectureHighlights": array of strings — 3-6 notable architectural decisions or approaches
+- "riskSummary": 1-2 sentence summary of the most significant risks
+
+Base your summary entirely on the provided blueprint data. Do not invent details not present in the input.`;
+}
+
+export function buildProjectSummaryMessage(blueprint: BlueprintOutput): Message[] {
+  const lines: string[] = [
+    `Project: ${blueprint.projectId}`,
+    `Version: ${blueprint.planVersion}`,
+    "",
+    "=== BLUEPRINT DATA ===",
+    "",
+    "Overall Summary:",
+    blueprint.overallSummary,
+    "",
+    "Phases:",
+    ...blueprint.phases.map((p) =>
+      `  - ${p.phaseName} (${p.phaseType}): ${p.summary} [confidence: ${p.confidence}, status: ${p.status}]`
+    ),
+    "",
+    "Assumptions:",
+    ...(blueprint.assumptions.length > 0
+      ? blueprint.assumptions.map((a) => `  - ${a.description}`)
+      : ["  (none)"]),
+    "",
+    "Constraints:",
+    ...(blueprint.constraints.length > 0
+      ? blueprint.constraints.map((c) => `  - ${c.description}`)
+      : ["  (none)"]),
+    "",
+    "Risks:",
+    ...(blueprint.risks.length > 0
+      ? blueprint.risks.map((r) => `  - ${r.description}`)
+      : ["  (none)"]),
+  ];
 
   return [{ role: "user" as const, content: lines.join("\n") }];
 }

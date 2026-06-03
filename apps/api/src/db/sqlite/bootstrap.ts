@@ -212,6 +212,7 @@ CREATE TABLE IF NOT EXISTS workflow_runs (
   roadmap_status TEXT NOT NULL DEFAULT 'pending',
   task_graph_status TEXT NOT NULL DEFAULT 'pending',
   prompt_gen_status TEXT NOT NULL DEFAULT 'pending',
+  summary_status TEXT NOT NULL DEFAULT 'pending',
   provider TEXT,
   model TEXT,
   error_message TEXT,

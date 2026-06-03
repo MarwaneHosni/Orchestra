@@ -728,7 +728,7 @@ describe("SQLite Persistence Layer", () => {
       expect(before!.status).toBe("running");
 
       // Now simulate startup recovery
-      const steps = ["synthesis", "analysis", "blueprint", "roadmap", "taskGraph", "promptGen"] as const;
+      const steps = ["synthesis", "analysis", "blueprint", "roadmap", "taskGraph", "promptGen", "summary"] as const;
       for (const step of steps) {
         mod.repairIncompleteStep("wf-crash-2", step);
       }

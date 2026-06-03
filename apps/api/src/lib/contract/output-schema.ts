@@ -231,6 +231,21 @@ export const PromptBundleOutputSchema = ArtifactBaseSchema.extend({
 export type PromptBundleOutput = z.infer<typeof PromptBundleOutputSchema>;
 
 // ─────────────────────────────────────────────────────────────
+// Project Summary — AI-generated synthesis after all artifacts
+// ─────────────────────────────────────────────────────────────
+
+export const ProjectSummarySchema = z.object({
+  projectOverview: z.string().min(1),
+  keyFeatures: z.array(z.string()).default([]),
+  technicalConstraints: z.array(z.string()).default([]),
+  businessConditions: z.array(z.string()).default([]),
+  architectureHighlights: z.array(z.string()).default([]),
+  riskSummary: z.string().default(""),
+});
+
+export type ProjectSummary = z.infer<typeof ProjectSummarySchema>;
+
+// ─────────────────────────────────────────────────────────────
 // Full Plan — all artifacts bundled together
 // ─────────────────────────────────────────────────────────────
 

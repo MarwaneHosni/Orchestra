@@ -7,13 +7,13 @@ import { OpencodeGoProvider } from "../provider/opencode-go.js";
 import type { RouterService } from "../router/router.js";
 import type { RouterDecision, ModelSelection } from "../router/types.js";
 import type { AnalysisPack } from "../analysis/types.js";
-import type { BlueprintOutput, RoadmapOutput, PhaseType } from "../contract/output-schema.js";
-import { BlueprintOutputSchema, RoadmapOutputSchema, PHASE_ORDER } from "../contract/output-schema.js";
+import type { BlueprintOutput, RoadmapOutput, PhaseType, ProjectSummary } from "../contract/output-schema.js";
+import { BlueprintOutputSchema, RoadmapOutputSchema, ProjectSummarySchema, PHASE_ORDER } from "../contract/output-schema.js";
 import { PHASE_LABELS } from "../interview/questions.js";
 import { instrumentProviderCall, instrumentTokenUsage } from "../metrics/index.js";
 import { calculateActualCost } from "../accounting/index.js";
 import type { AIGenerationResult } from "./prompts.js";
-import { buildSystemPrompt, buildAnalysisMessage } from "./prompts.js";
+import { buildSystemPrompt, buildAnalysisMessage, buildProjectSummarySystemPrompt, buildProjectSummaryMessage } from "./prompts.js";
 import type { UsageAttempt } from "../accounting/streaming.js";
 import { globalCache } from "../cache/cache-service.js";
 import { buildCacheKey } from "../cache/key-builder.js";
@@ -61,6 +61,52 @@ export class AIBlueprintGenerator {
         durationMs: 0,
         error: err instanceof Error ? err.message : "Router selection failed",
       };
+    }
+  }
+
+  async generateProjectSummary(blueprint: BlueprintOutput): Promise<ProjectSummary | null> {
+    try {
+      const decision = this.router.select("summary", {});
+      const provider = this.createProvider(decision.selection);
+      if (!provider) {
+        log.warn({ provider: decision.selection.provider }, "summary_no_provider");
+        return null;
+      }
+
+      const systemPrompt = buildProjectSummarySystemPrompt();
+      const messages = buildProjectSummaryMessage(blueprint);
+
+      const input: GenerationInput = {
+        model: decision.selection.model,
+        systemPrompt,
+        messages,
+        temperature: 0.3,
+      };
+
+      const result = await instrumentProviderCall(decision.selection.provider, decision.selection.model, () =>
+        provider.generate(input),
+      );
+
+      // Extract JSON from response
+      const content = result.content.trim();
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        log.warn({ preview: content.slice(0, 200) }, "summary_no_json");
+        return null;
+      }
+
+      const parsed = JSON.parse(jsonMatch[0]);
+      const validated = ProjectSummarySchema.safeParse(parsed);
+      if (!validated.success) {
+        log.warn({ issues: validated.error.issues }, "summary_zod_error");
+        return null;
+      }
+
+      log.info({ model: result.model, provider: decision.selection.provider }, "summary_generated");
+      return validated.data;
+    } catch (err) {
+      log.warn({ err: err instanceof Error ? err.message : err }, "summary_generation_failed");
+      return null;
     }
   }
 

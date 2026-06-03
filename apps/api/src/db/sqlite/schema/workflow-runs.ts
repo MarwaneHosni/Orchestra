@@ -18,6 +18,7 @@ export const workflowRuns = sqliteTable(
     roadmapStatus: text("roadmap_status", { enum: workflowStepStatuses }).default("pending").notNull(),
     taskGraphStatus: text("task_graph_status", { enum: workflowStepStatuses }).default("pending").notNull(),
     promptGenStatus: text("prompt_gen_status", { enum: workflowStepStatuses }).default("pending").notNull(),
+    summaryStatus: text("summary_status", { enum: workflowStepStatuses }).default("pending").notNull(),
     provider: text("provider"),
     model: text("model"),
     errorMessage: text("error_message"),

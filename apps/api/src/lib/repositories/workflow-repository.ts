@@ -14,6 +14,7 @@ export interface WorkflowRunRecord {
     roadmap: string;
     taskGraph: string;
     promptGen: string;
+    summary: string;
   };
   provider?: string;
   model?: string;
@@ -29,6 +30,7 @@ const STEP_KEYS: (keyof WorkflowRunRecord["stepStatuses"])[] = [
   "roadmap",
   "taskGraph",
   "promptGen",
+  "summary",
 ];
 
 function rowToRecord(row: typeof schema.workflowRuns.$inferSelect): WorkflowRunRecord {
@@ -43,6 +45,7 @@ function rowToRecord(row: typeof schema.workflowRuns.$inferSelect): WorkflowRunR
       roadmap: row.roadmapStatus,
       taskGraph: row.taskGraphStatus,
       promptGen: row.promptGenStatus,
+      summary: row.summaryStatus,
     },
     provider: row.provider ?? undefined,
     model: row.model ?? undefined,
@@ -67,6 +70,7 @@ export function createWorkflowRun(id: string, planId: string): WorkflowRunRecord
       roadmapStatus: "pending",
       taskGraphStatus: "pending",
       promptGenStatus: "pending",
+      summaryStatus: "pending",
       startedAt: now,
       createdAt: now,
       updatedAt: now,
@@ -92,15 +96,16 @@ export function updateWorkflowStep(
   validateStepTransition(step as string, currentStatus, newStatus);
 
   const now = new Date().toISOString();
-  const columnMap: Record<string, string> = {
-    synthesis: "synthesisStatus",
-    analysis: "analysisStatus",
-    blueprint: "blueprintStatus",
-    roadmap: "roadmapStatus",
-    taskGraph: "taskGraphStatus",
-    promptGen: "promptGenStatus",
-  };
-  const col = columnMap[step as string];
+    const columnMap: Record<string, string> = {
+      synthesis: "synthesisStatus",
+      analysis: "analysisStatus",
+      blueprint: "blueprintStatus",
+      roadmap: "roadmapStatus",
+      taskGraph: "taskGraphStatus",
+      promptGen: "promptGenStatus",
+      summary: "summaryStatus",
+    };
+    const col = columnMap[step as string];
   if (!col) return;
 
   getDb()
@@ -166,6 +171,7 @@ export function repairIncompleteStep(id: string, step: keyof WorkflowRunRecord["
       roadmap: "roadmapStatus",
       taskGraph: "taskGraphStatus",
       promptGen: "promptGenStatus",
+      summary: "summaryStatus",
     };
     const col = columnMap[step as string];
     if (col) {
