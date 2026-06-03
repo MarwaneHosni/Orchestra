@@ -186,7 +186,32 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
   const needsReviewCount = graph.tasks.filter((t) => t.status === "needs_review").length;
   const activePhases = PHASES.filter((p) => graph.tasks.some((t) => t.phaseType === p));
   const showRightPanel = selectedTask !== null;
-  const ff = { fontFamily: "'JetBrains Mono', monospace" };
+
+  // Phase completion status derived from tasks
+  const phaseStatus = useMemo(() => {
+    const result = new Map<string, "complete" | "in_progress" | "pending">();
+    for (const phase of activePhases) {
+      const tasks = graph.tasks.filter((t) => t.phaseType === phase);
+      const allComplete = tasks.every((t) => t.status === "complete");
+      const anyComplete = tasks.some((t) => t.status === "complete");
+      result.set(phase, allComplete ? "complete" : anyComplete ? "in_progress" : "pending");
+    }
+    return result;
+  }, [graph, activePhases]);
+
+  const phaseDotColor = (s: string) =>
+    s === "complete" ? "var(--color-accent-green)" :
+    s === "in_progress" ? "var(--color-accent-purple)" :
+    "var(--color-text-muted)";
+
+  const phaseDotGlyph = (s: string) =>
+    s === "complete" ? "✓" : s === "in_progress" ? "●" : "○";
+
+  const phaseLineColor = (current: string, next: string) => {
+    if (current === "complete") return "var(--color-accent-green)";
+    if (current === "in_progress") return "var(--color-accent-purple)";
+    return "var(--color-border-subtle)";
+  };
 
   return (
     <div style={{ fontFamily: "'JetBrains Mono', monospace", minWidth: 0 }}>
@@ -223,29 +248,69 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
         </div>
       )}
 
-      {/* Task list — always full width */}
-      <div ref={listRef} style={{ marginTop: 8 }}>
-        {activePhases.map((phase) => {
+      {/* Task list — with timeline rail */}
+      <div ref={listRef} style={{ marginTop: 8, position: "relative" }}>
+        {activePhases.map((phase, phaseIdx) => {
           const phaseTasks = graph.tasks.filter((t) => t.phaseType === phase).sort((a, b) => a.order - b.order);
           const isCollapsed = collapsedPhases.has(phase);
+          const status = phaseStatus.get(phase) ?? "pending";
+          const dotColor = phaseDotColor(status);
+          const dotGlyph = phaseDotGlyph(status);
+          const nextPhase = activePhases[phaseIdx + 1];
+          const lineColor = nextPhase ? phaseLineColor(status, phaseStatus.get(nextPhase) ?? "pending") : "transparent";
+
           return (
-            <div key={phase} style={{ marginBottom: 8 }}>
-              <button onClick={() => togglePhase(phase)}
-                style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: "transparent", border: "none", cursor: "pointer", padding: "24px 0 8px", fontFamily: "inherit", color: "var(--color-text-muted)", fontSize: 11, letterSpacing: "0.10em", textTransform: "uppercase", fontWeight: 500 }}
-                className="graph-phase-header"
-              >
-                <span style={{ color: "var(--color-border-strong)", width: "2ch", flexShrink: 0 }}>{isCollapsed ? "▸ " : "▾ "}</span>
-                <span style={{ color: "var(--color-text-muted)", flexShrink: 0 }}>{PHASE_LABELS[phase] ?? phase}</span>
-                <span style={{ color: "var(--color-text-muted)", flexShrink: 0 }}>({phaseTasks.length})</span>
-                <span style={{ flex: 1, borderTop: "1px solid var(--color-border-subtle)", alignSelf: "center" }} />
-              </button>
-              {!isCollapsed && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                  {phaseTasks.map((task) => (
-                    <TaskNodeView key={task.id} task={task} isSelected={selectedTask?.id === task.id} onSelect={(t) => { setSelectedTask(t); setPromptTaskId(null); }} indent={false} />
-                  ))}
-                </div>
-              )}
+            <div key={phase} style={{ display: "flex", gap: 0, position: "relative" }}>
+              {/* Timeline rail */}
+              <div style={{ width: 32, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                {/* Line from dot to this phase (if not first) */}
+                {phaseIdx > 0 && (
+                  <div style={{ width: 2, height: 32, flexShrink: 0, background: lineColor, transition: "background 300ms" }} />
+                )}
+                {/* Phase dot */}
+                <span style={{
+                  width: 22, height: 22, flexShrink: 0,
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  borderRadius: "50%",
+                  background: status === "complete" ? "var(--color-accent-green)" :
+                              status === "in_progress" ? "var(--color-accent-purple)" : "transparent",
+                  border: `2px solid ${dotColor}`,
+                  color: status === "complete" || status === "in_progress" ? "#fff" : dotColor,
+                  fontSize: 11, fontWeight: 700, lineHeight: 1,
+                  boxShadow: status === "in_progress" ? "0 0 0 3px var(--color-accent-purple-dim)" : "none",
+                  transition: "all 300ms",
+                }}>
+                  {dotGlyph}
+                </span>
+                {/* Line from dot to next phase */}
+                {nextPhase && (
+                  <div style={{ flex: 1, width: 2, minHeight: 8, background: lineColor, transition: "background 300ms" }} />
+                )}
+              </div>
+
+              {/* Phase content */}
+              <div style={{ flex: 1, minWidth: 0, paddingLeft: 8 }}>
+                <button onClick={() => togglePhase(phase)}
+                  style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: "transparent", border: "none", cursor: "pointer", padding: "16px 0 8px", fontFamily: "inherit", color: status === "complete" ? "var(--color-accent-green)" : status === "in_progress" ? "var(--color-accent-purple)" : "var(--color-text-muted)", fontSize: 11, letterSpacing: "0.10em", textTransform: "uppercase", fontWeight: 600 }}
+                  className="graph-phase-header"
+                >
+                  <span style={{ color: "var(--color-border-strong)", width: "2ch", flexShrink: 0 }}>{isCollapsed ? "▸ " : "▾ "}</span>
+                  <span style={{ flexShrink: 0 }}>{PHASE_LABELS[phase] ?? phase}</span>
+                  <span style={{ color: "var(--color-text-muted)", flexShrink: 0, fontWeight: 400 }}>({phaseTasks.length})</span>
+                  <span style={{ flex: 1, borderTop: "1px solid var(--color-border-subtle)", alignSelf: "center" }} />
+                  <span style={{ fontSize: 10, color: dotColor, fontWeight: 400, marginLeft: 8 }}>
+                    {status === "complete" ? "complete" : status === "in_progress" ? "in progress" : "pending"}
+                  </span>
+                </button>
+
+                {!isCollapsed && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                    {phaseTasks.map((task) => (
+                      <TaskNodeView key={task.id} task={task} isSelected={selectedTask?.id === task.id} onSelect={(t) => { setSelectedTask(t); setPromptTaskId(null); }} indent={false} />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
