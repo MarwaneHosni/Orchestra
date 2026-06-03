@@ -65,20 +65,24 @@ export function TerminalTitle({ children, as: Tag = "h1", className, style, dela
         {text}
       </span>
       {text.slice(0, revealed)}
-      {!done && (
-        <span
-          style={{
-            display: "inline-block",
-            width: "0.45em",
-            height: "1em",
-            verticalAlign: "text-bottom",
-            marginLeft: 1,
-            background: "currentColor",
-            animation: "blink 1s step-end infinite",
-          }}
-          aria-hidden="true"
-        />
-      )}
+      <span
+        style={{
+          display: "inline-block",
+          width: "0.45em",
+          height: "1em",
+          verticalAlign: "text-bottom",
+          marginLeft: 1,
+          background: "currentColor",
+          animation: done
+            ? reduced
+              ? "none"
+              : "cursor-rotate 3s ease-in-out infinite"
+            : reduced
+              ? "none"
+              : "blink 1s step-end infinite",
+        }}
+        aria-hidden="true"
+      />
     </Tag>
   );
 }
