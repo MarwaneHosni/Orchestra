@@ -143,9 +143,9 @@ export function createSqliteGraphStore(): GraphStore {
     },
     replacePhaseTasks(planId, planVersion, _phaseType, oldTaskIds, newTasks, newDeps) {
       for (const id of oldTaskIds) {
-        getDb().delete(schema.executionTasks).where(eq(schema.executionTasks.id, id)).run();
         getDb().delete(schema.taskDependencies).where(eq(schema.taskDependencies.taskId, id)).run();
         getDb().delete(schema.taskDependencies).where(eq(schema.taskDependencies.dependsOnTaskId, id)).run();
+        getDb().delete(schema.executionTasks).where(eq(schema.executionTasks.id, id)).run();
       }
 
       for (const t of newTasks) {
