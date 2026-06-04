@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { TerminalTitle } from "@/components/ui/terminal-title";
-import { listProjects } from "@/lib/api";
+import { listProjects, deleteProject } from "@/lib/api";
 import type { ProjectRecord } from "@/lib/api";
 
 function BtnLink({ href, children }: { href: string; children: React.ReactNode }) {
@@ -44,6 +44,7 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     listProjects()
@@ -51,6 +52,19 @@ export default function ProjectsPage() {
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load projects"))
       .finally(() => setLoading(false));
   }, []);
+
+  async function handleDelete(id: string, name: string) {
+    if (!window.confirm(`Delete project "${name}"? This will permanently remove all associated data.\n\nThis cannot be undone.`)) return;
+    setDeleting(id);
+    try {
+      await deleteProject(id);
+      setProjects((prev) => prev.filter((p) => p.id !== id));
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to delete project");
+    } finally {
+      setDeleting(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -141,6 +155,15 @@ export default function ProjectsPage() {
                 <span className={`rounded px-2.5 py-0.5 text-xs font-medium ${badge.color}`}>
                   {badge.label}
                 </span>
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(project.id, project.name); }}
+                  disabled={deleting === project.id}
+                  style={{ borderRadius: 2, padding: "2px 8px", fontSize: 11, fontFamily: "inherit", border: "1px solid var(--color-border-default)", color: "var(--color-text-muted)", background: "transparent", cursor: "pointer" }}
+                  className="hover:border-accent-red-dim hover:text-accent-red"
+                  aria-label={`Delete ${project.name}`}
+                >
+                  [ delete ]
+                </button>
                 <span className="text-sm text-accent-purple" aria-hidden="true">
                   {project.status === "draft" ? "Start interview" : "Continue"}
                   &nbsp;→

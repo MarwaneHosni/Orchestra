@@ -26,6 +26,7 @@ export interface SessionStore {
   insertBlueprint(b: BlueprintRecord): void;
   getBlueprintsByProject(projectId: string): BlueprintRecord[];
   markBlueprintsStaleBySession(sessionId: string): void;
+  deleteProject(id: string): void;
 }
 
 export function createInMemoryStore(): SessionStore {
@@ -158,6 +159,9 @@ export function createInMemoryStore(): SessionStore {
       for (const bp of list) {
         if (!bp.staleAt) bp.staleAt = now;
       }
+    },
+    deleteProject(_id: string) {
+      // No-op for in-memory store — only the SQLite store is used in production.
     },
   };
 }

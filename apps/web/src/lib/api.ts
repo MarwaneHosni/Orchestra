@@ -100,6 +100,10 @@ export async function createProject(ideaText: string, projectName?: string): Pro
   });
 }
 
+export async function deleteProject(projectId: string): Promise<void> {
+  await fetch(`${getApiBaseUrl()}/api/v1/projects/${projectId}`, { method: "DELETE" });
+}
+
 export async function createOrResumeSession(
   projectId: string,
 ): Promise<{ sessionId: string; status: string }> {

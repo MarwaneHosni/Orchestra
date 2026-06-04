@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS projects (
 
 CREATE TABLE IF NOT EXISTS ideas (
   id TEXT PRIMARY KEY,
-  project_id TEXT NOT NULL REFERENCES projects(id),
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   raw_description TEXT NOT NULL,
   refined_description TEXT,
   status TEXT NOT NULL DEFAULT 'raw',
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS ideas (
 
 CREATE TABLE IF NOT EXISTS interview_sessions (
   id TEXT PRIMARY KEY,
-  project_id TEXT NOT NULL REFERENCES projects(id),
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   status TEXT NOT NULL DEFAULT 'draft',
   current_phase_index INTEGER NOT NULL DEFAULT 0,
   current_question_index INTEGER NOT NULL DEFAULT 0,
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS questions (
 CREATE TABLE IF NOT EXISTS answers (
   id TEXT PRIMARY KEY,
   question_id TEXT NOT NULL,
-  session_id TEXT NOT NULL REFERENCES interview_sessions(id),
+  session_id TEXT NOT NULL REFERENCES interview_sessions(id) ON DELETE CASCADE,
   value TEXT NOT NULL,
   confidence TEXT NOT NULL DEFAULT 'medium',
   provenance TEXT NOT NULL DEFAULT 'user',
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS answers (
 
 CREATE TABLE IF NOT EXISTS plans (
   id TEXT PRIMARY KEY,
-  project_id TEXT NOT NULL REFERENCES projects(id),
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   version INTEGER NOT NULL,
   status TEXT NOT NULL DEFAULT 'generating',
   stale_at TEXT,
@@ -76,8 +76,8 @@ CREATE TABLE IF NOT EXISTS plans (
 
 CREATE TABLE IF NOT EXISTS blueprints (
   id TEXT PRIMARY KEY,
-  plan_id TEXT NOT NULL REFERENCES plans(id),
-  project_id TEXT NOT NULL REFERENCES projects(id),
+  plan_id TEXT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   content TEXT NOT NULL,
   format TEXT NOT NULL DEFAULT 'json',
   version INTEGER NOT NULL DEFAULT 1,
@@ -104,8 +104,8 @@ CREATE TABLE IF NOT EXISTS provider_credentials (
 
 CREATE TABLE IF NOT EXISTS task_graphs (
   id TEXT PRIMARY KEY,
-  plan_id TEXT NOT NULL REFERENCES plans(id),
-  project_id TEXT NOT NULL REFERENCES projects(id),
+  plan_id TEXT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   plan_version INTEGER NOT NULL,
   graph_version INTEGER NOT NULL DEFAULT 1,
   derived_from_graph_id TEXT,
@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS task_graphs (
 
 CREATE TABLE IF NOT EXISTS execution_tasks (
   id TEXT PRIMARY KEY,
-  plan_id TEXT NOT NULL REFERENCES plans(id),
+  plan_id TEXT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
   phase_type TEXT,
   title TEXT NOT NULL,
   description TEXT,
@@ -135,8 +135,8 @@ CREATE TABLE IF NOT EXISTS execution_tasks (
 
 CREATE TABLE IF NOT EXISTS task_dependencies (
   id TEXT PRIMARY KEY,
-  task_id TEXT NOT NULL REFERENCES execution_tasks(id),
-  depends_on_task_id TEXT NOT NULL REFERENCES execution_tasks(id),
+  task_id TEXT NOT NULL REFERENCES execution_tasks(id) ON DELETE CASCADE,
+  depends_on_task_id TEXT NOT NULL REFERENCES execution_tasks(id) ON DELETE CASCADE,
   dependency_type TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
@@ -158,7 +158,7 @@ CREATE TABLE IF NOT EXISTS prompt_artifacts (
 
 CREATE TABLE IF NOT EXISTS usage_records (
   id TEXT PRIMARY KEY,
-  project_id TEXT NOT NULL REFERENCES projects(id),
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   task_type TEXT,
   provider TEXT,
   model TEXT,
@@ -175,7 +175,7 @@ CREATE TABLE IF NOT EXISTS usage_records (
 
 CREATE TABLE IF NOT EXISTS activity_log (
   id TEXT PRIMARY KEY,
-  project_id TEXT NOT NULL REFERENCES projects(id),
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   event_type TEXT NOT NULL,
   actor_id TEXT,
   resource_id TEXT,
@@ -186,7 +186,7 @@ CREATE TABLE IF NOT EXISTS activity_log (
 
 CREATE TABLE IF NOT EXISTS analysis_results (
   id TEXT PRIMARY KEY,
-  plan_id TEXT NOT NULL REFERENCES plans(id),
+  plan_id TEXT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
   phase_type TEXT NOT NULL,
   input_status TEXT NOT NULL,
   answer_count INTEGER NOT NULL DEFAULT 0,
@@ -204,7 +204,7 @@ CREATE TABLE IF NOT EXISTS analysis_results (
 
 CREATE TABLE IF NOT EXISTS workflow_runs (
   id TEXT PRIMARY KEY,
-  plan_id TEXT NOT NULL REFERENCES plans(id),
+  plan_id TEXT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
   status TEXT NOT NULL DEFAULT 'running',
   synthesis_status TEXT NOT NULL DEFAULT 'pending',
   analysis_status TEXT NOT NULL DEFAULT 'pending',

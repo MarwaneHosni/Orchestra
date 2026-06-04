@@ -63,4 +63,14 @@ export async function registerProjectRoutes(app: FastifyInstance) {
     reply.status(201);
     return { projectId: result.projectId, sessionId: result.sessionId };
   });
+
+  app.delete("/api/v1/projects/:id", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const project = getStore().getProject(id);
+    if (!project) throw new NotFoundError("Project", id);
+    getStore().deleteProject(id);
+    await queueSyncDb();
+    reply.status(204);
+    return;
+  });
 }

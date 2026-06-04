@@ -1,5 +1,5 @@
-import { eq, and, sql } from "drizzle-orm";
-import { getDb } from "../../db/sqlite/index.js";
+import { eq, and, or, sql } from "drizzle-orm";
+import { getDb, runTransaction } from "../../db/sqlite/index.js";
 import * as schema from "../../db/sqlite/schema/index.js";
 import type { SessionStore } from "../orchestration/store.js";
 import type { SessionRecord, AnswerRecord, BlueprintRecord } from "../orchestration/types.js";
@@ -203,6 +203,64 @@ export function createSqliteSessionStore(): SessionStore {
           and(eq(schema.blueprints.projectId, sess.projectId), sql`${schema.blueprints.staleAt} IS NULL`),
         )
         .run();
+    },
+    deleteProject(projectId) {
+      // Collect plan and session IDs for this project
+      const planRows = getDb().select({ id: schema.plans.id })
+        .from(schema.plans).where(eq(schema.plans.projectId, projectId)).all();
+      const sessionRows = getDb().select({ id: schema.interviewSessions.id })
+        .from(schema.interviewSessions).where(eq(schema.interviewSessions.projectId, projectId)).all();
+
+      // Wrap all deletions in a transaction for atomicity
+      runTransaction(() => {
+        // prompt_artifacts has no FK — delete by planId
+        for (const p of planRows) {
+          getDb().delete(schema.promptArtifacts).where(eq(schema.promptArtifacts.planId, p.id)).run();
+        }
+
+        // execution_tasks → task_dependencies
+        for (const p of planRows) {
+          const taskRows = getDb().select({ id: schema.executionTasks.id })
+            .from(schema.executionTasks).where(eq(schema.executionTasks.planId, p.id)).all();
+          for (const t of taskRows) {
+            getDb().delete(schema.taskDependencies)
+              .where(or(eq(schema.taskDependencies.taskId, t.id),
+                        eq(schema.taskDependencies.dependsOnTaskId, t.id)))
+              .run();
+          }
+          for (const t of taskRows) {
+            getDb().delete(schema.executionTasks).where(eq(schema.executionTasks.id, t.id)).run();
+          }
+        }
+
+        // Tables with FK → plans
+        for (const p of planRows) {
+          getDb().delete(schema.taskGraphs).where(eq(schema.taskGraphs.planId, p.id)).run();
+          getDb().delete(schema.workflowRuns).where(eq(schema.workflowRuns.planId, p.id)).run();
+          getDb().delete(schema.analysisResults).where(eq(schema.analysisResults.planId, p.id)).run();
+          getDb().delete(schema.blueprints).where(eq(schema.blueprints.planId, p.id)).run();
+        }
+        for (const p of planRows) {
+          getDb().delete(schema.plans).where(eq(schema.plans.id, p.id)).run();
+        }
+
+        // Tables with FK → interview_sessions
+        for (const s of sessionRows) {
+          getDb().delete(schema.answers).where(eq(schema.answers.sessionId, s.id)).run();
+        }
+        for (const s of sessionRows) {
+          getDb().delete(schema.interviewSessions).where(eq(schema.interviewSessions.id, s.id)).run();
+        }
+
+        // Tables with FK → projects
+        getDb().delete(schema.ideas).where(eq(schema.ideas.projectId, projectId)).run();
+        getDb().delete(schema.usageRecords).where(eq(schema.usageRecords.projectId, projectId)).run();
+        getDb().delete(schema.activityLog).where(eq(schema.activityLog.projectId, projectId)).run();
+
+        // Project itself — cascade handles the rest if available, but explicit
+        // deletes above handle it for databases created before CASCADE was added
+        getDb().delete(schema.projects).where(eq(schema.projects.id, projectId)).run();
+      });
     },
   };
 }
