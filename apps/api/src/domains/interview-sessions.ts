@@ -335,7 +335,7 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
 
     const existingRaw = JSON.parse(bp.content) as Record<string, unknown>;
     const newVersion = latestPlan.version + 1;
-    const planId = latestPlan.id;
+    const planId = crypto.randomUUID();
 
     // Build router and preferences
     const allCreds = getCredentialStore().list();
