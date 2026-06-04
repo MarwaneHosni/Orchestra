@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/sql-js";
 import { sql } from "drizzle-orm";
 import initSqlJs, { type Database } from "sql.js";
 import {
-  readFileSync, existsSync, mkdirSync,
+  readFileSync, writeFileSync, existsSync, mkdirSync,
   openSync, writeSync, closeSync, fsyncSync, renameSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -35,7 +35,10 @@ let _saveQueue = Promise.resolve();
 export function queueSyncDb(): Promise<void> {
   _saveQueue = _saveQueue
     .catch(() => {})
-    .then(() => atomicExport());
+    .then(() => atomicExport())
+    .catch((err) => {
+      log.warn({ err: err instanceof Error ? err.message : err }, "queue_sync_db_failed");
+    });
   return _saveQueue;
 }
 
@@ -54,8 +57,17 @@ function atomicExport(): void {
   fsyncSync(fd);
   closeSync(fd);
 
-  // Atomic replacement
-  renameSync(tmpPath, dbPath);
+  // Atomic replacement — fall back to direct write if rename fails (Windows lock)
+  try {
+    renameSync(tmpPath, dbPath);
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "EPERM" || code === "EBUSY") {
+      writeFileSync(dbPath, buffer);
+    } else {
+      throw err;
+    }
+  }
 }
 
 export function getDbPath(): string {
