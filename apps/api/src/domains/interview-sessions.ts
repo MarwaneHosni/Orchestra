@@ -372,10 +372,11 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
 
     const now = new Date().toISOString();
 
-    // Save rewritten prompts
+    // Save rewritten prompts — only save if text actually changed
+    let actualChangeCount = 0;
     for (const rp of result.rewrittenPrompts) {
       const existing = allPrompts.find((p) => p.taskId === rp.taskId);
-      if (existing) {
+      if (existing && rp.newText.trim() !== existing.promptText.trim()) {
         getPromptStore().save({
           id: crypto.randomUUID(),
           taskId: rp.taskId,
@@ -388,6 +389,7 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
           failureReason: null,
           createdAt: now,
         });
+        actualChangeCount++;
       }
     }
 
@@ -417,11 +419,11 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
 
     await queueSyncDb();
 
-    const changeSummary = result.rewrittenPrompts.length > 0
-      ? `Resolved ${riskIds.length} risk(s). Rewritten ${result.rewrittenPrompts.length} execution prompt(s).`
+    const changeSummary = actualChangeCount > 0
+      ? `Resolved ${riskIds.length} risk(s). Updated ${actualChangeCount} execution prompt(s).`
       : `Resolved ${riskIds.length} risk(s). No execution prompts were affected.`;
 
-    app.log.info({ sessionId, planId, newVersion, riskCount: riskIds.length, rewrittenCount: result.rewrittenPrompts.length }, "refine_complete");
+    app.log.info({ sessionId, planId, newVersion, riskCount: riskIds.length, rewrittenCount: actualChangeCount }, "refine_complete");
     return { planVersion: newVersion, changeSummary };
   });
 
