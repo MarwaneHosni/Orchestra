@@ -81,10 +81,84 @@ function extractJson(content: string): Record<string, unknown> | null {
   return best as Record<string, unknown> | null;
 }
 
+/**
+ * Map a risk description to the most likely lifecycle phase(s) it affects.
+ * Uses keyword matching against each phase's domain vocabulary.
+ */
+function riskToPhaseKeywords(text: string): string[] {
+  const map: Record<string, string[]> = {
+    security: ["auth", "authentication", "authorization", "encrypt", "vulnerability", "penetration", "compliance", "soc2", "gdpr", "hipaa", "access control", "permission", "secret leak", "api key", "oauth", "jwt"],
+    architecture: ["scalab", "perform", "latency", "throughput", "microservice", "monolith", "coupling", "technical debt", "design flaw", "single point"],
+    database: ["data loss", "backup", "recovery", "schema", "migration", "consistency", "integrity", "query", "storage"],
+    testing: ["test cover", "bug", "regression", "qa", "quality", "manual test", "automated test"],
+    deployment: ["ci/cd", "deploy", "rollback", "environ", "release", "pipeline", "staging", "production"],
+    monitoring: ["monitor", "observability", "alert", "log", "trace", "metric", "dashboard", "incident"],
+    backend: ["api", "endpoint", "server", "rate limit", "throttl", "middleware"],
+    frontend: ["ui", "ux", "accessib", "responsive", "browser"],
+    requirements: ["requirement", "scope creep", "ambigu", "stakeholder"],
+    ideation: ["goal", "vision", "user need"],
+    "core-features": ["feature", "functional", "mvp", "priority"],
+    "ai-systems": ["ai", "ml", "model", "training", "inference"],
+  };
+  const lower = text.toLowerCase();
+  const matched: string[] = [];
+  for (const [phase, keywords] of Object.entries(map)) {
+    if (keywords.some((kw) => lower.includes(kw))) {
+      matched.push(phase);
+    }
+  }
+  return matched.length > 0 ? matched : ["architecture"]; // default fallback
+}
+
+/**
+ * Deterministic fallback: if the AI didn't update phase content for the
+ * affected phases, append mitigation context directly to phase summaries.
+ */
+function repairPhaseContent(
+  json: Record<string, unknown>,
+  riskIds: string[],
+  existingRisks: Record<string, unknown>[],
+): void {
+  const phases = json.phases as Record<string, unknown>[];
+  if (!Array.isArray(phases)) return;
+
+  const riskTexts = riskIds
+    .map((id) => {
+      const r = existingRisks.find((r) => r.id === id);
+      return r?.description as string ?? "";
+    })
+    .filter(Boolean);
+  if (riskTexts.length === 0) return;
+
+  const affected = new Set<string>();
+  for (const text of riskTexts) {
+    for (const p of riskToPhaseKeywords(text)) {
+      affected.add(p);
+    }
+  }
+
+  for (const phase of phases) {
+    const pt = phase.phaseType as string;
+    if (!affected.has(pt)) continue;
+    const summary = phase.summary as string;
+    const mitigations = riskTexts.map((d) => {
+      const m = d.match(/m\w+ by (.+)$/i);
+      return m ? m[1]!.trim() : d;
+    }).filter(Boolean);
+    if (mitigations.length === 0) continue;
+    const tag = `[Mitigated: ${mitigations.join("; ")}]`;
+    if (!summary.includes("[Mitigated:")) {
+      phase.summary = summary + (summary.endsWith(".") ? " " : ". ") + tag;
+      log.info({ phaseType: pt, tag }, "phase_summary_repaired");
+    }
+  }
+}
+
 function computeChangeSummary(
   oldBlueprint: BlueprintOutput,
   newBlueprint: BlueprintOutput,
   riskIds: string[],
+  relevantPhases: Set<string>,
 ): string {
   const changes: string[] = [];
 
@@ -96,8 +170,8 @@ function computeChangeSummary(
     const oldR = oldRiskMap.get(id);
     const newR = newRiskMap.get(id);
     if (!oldR) return false;
-    if (!newR) return true; // risk was removed
-    return oldR.description !== newR.description; // risk description changed
+    if (!newR) return true;
+    return oldR.description !== newR.description;
   });
   if (addressed.length > 0) {
     changes.push(`Addressed ${addressed.length} selected risk(s)`);
@@ -117,6 +191,19 @@ function computeChangeSummary(
   const confDiff = newBlueprint.overallConfidence - oldBlueprint.overallConfidence;
   if (Math.abs(confDiff) >= 0.05) {
     changes.push(`${confDiff > 0 ? "Increased" : "Decreased"} overall confidence by ${Math.abs(Math.round(confDiff * 100))}%`);
+  }
+
+  // Check which phases were updated
+  const updatedPhases: string[] = [];
+  for (const pt of relevantPhases) {
+    const oldP = oldBlueprint.phases.find((p) => p.phaseType === pt);
+    const newP = newBlueprint.phases.find((p) => p.phaseType === pt);
+    if (oldP && newP && (oldP.summary !== newP.summary || oldP.narrative !== newP.narrative)) {
+      updatedPhases.push(pt);
+    }
+  }
+  if (updatedPhases.length > 0) {
+    changes.push(`Updated ${updatedPhases.length} phase(s): ${updatedPhases.join(", ")}`);
   }
 
   if (changes.length === 0) {
@@ -146,7 +233,7 @@ export async function refineBlueprint(
     }
   }
 
-  // Build prompt
+  // Build prompt — structured to force AI to update BOTH risks AND phase content
   const systemPrompt = [
     `You are an AI planning assistant. The user has reviewed a plan and wants certain risks mitigated.`,
     `Revise the plan to reduce or mitigate the selected risks while preserving the original goals, scope, and intent as much as possible.`,
@@ -165,12 +252,40 @@ export async function refineBlueprint(
     `- "overallSummary": string (min 20 chars)`,
     `- "roadmapPhases": ARRAY of 12 { phaseType, phaseName, order, effort, prerequisites }`,
     `- "totalEffort": "small"|"medium"|"large"`,
+    ``,
+    `CRITICAL — You MUST update BOTH arrays below, not just one:`,
+    `  1. The "risks" array — update the selected risk descriptions with mitigations`,
+    `  2. The "phases" array — update the phase(s) affected by each risk`,
+    ``,
+    `For each risk being mitigated, identify which lifecycle phase it belongs to, then:`,
+    `  a) Rewrite that phase's "summary" to describe the post-mitigation state`,
+    `     (e.g., "JWT authentication with RBAC" not "No auth implemented")`,
+    `  b) Rewrite that phase's "narrative" to explain how the mitigation works`,
+    `  c) Add mitigation-related items to that phase's "keyDecisions" array`,
+    `  d) Rewrite that phase's "executionPrompt" (>1000 chars) as a detailed`,
+    `     implementation guide that describes building the solution WITH mitigations`,
+    `     - The executionPrompt describes what to CODE, not what to avoid`,
+    `     - If the risk was "no auth", the prompt must say "implement JWT auth middleware"`,
+    `     - NOT "consider adding auth" — tell the next AI what to build`,
+    ``,
+    `EXAMPLE:`,
+    `  Risk: "No user authentication" → belongs to "security" phase`,
+    `  BEFORE: summary="Basic security checklist", narrative="Consider auth options"`,
+    `  AFTER:  summary="JWT authentication with RBAC, API key rotation, and audit logging"`,
+    `          narrative="Authentication uses JWT tokens with role-based access control..."`,
+    `          executionPrompt="## Objective\nImplement JWT authentication middleware..."`,
+    ``,
+    `FAILURE TO UPDATE PHASE CONTENT WILL CAUSE THE OUTPUT TO BE REJECTED.`,
+    `The phase summaries, narratives, and executionPrompts MUST reflect the post-mitigation state.`,
   ].join("\n");
 
   const riskDetails = riskIds
     .map((id) => {
       const r = existingRisks.find((r) => r.id === id);
-      return r ? `  - ${r.id}: ${r.description}` : `  - ${id}`;
+      if (!r) return `  - ${id} (not found)`;
+      const desc = (r.description as string) ?? "";
+      const phases = riskToPhaseKeywords(desc).join(", ");
+      return `  - ${r.id}: ${desc} (affects: ${phases})`;
     })
     .join("\n");
 
@@ -181,7 +296,19 @@ export async function refineBlueprint(
     `=== RISKS TO MITIGATE ===`,
     riskDetails,
     ``,
-    `Revise the blueprint to mitigate these risks while preserving original goals.`,
+    `=== INSTRUCTIONS ===`,
+    `For EACH risk listed above:`,
+    `  1. Update its description in the "risks" array to include mitigation strategy`,
+    `  2. Find the phase it affects (listed in parentheses)`,
+    `  3. Rewrite that phase's summary, narrative, keyDecisions, and executionPrompt`,
+    `     to describe the solution WITH the mitigation in place`,
+    `  4. If a phase's executionPrompt already exists, REPLACE it with the new version`,
+    ``,
+    `The executionPrompt is the most important field. It tells another AI what to code.`,
+    `If the risk says "no auth", the executionPrompt must describe implementing auth.`,
+    `If the risk says "slow queries", the executionPrompt must describe query optimization.`,
+    ``,
+    `DO NOT just update the risks array. Output the COMPLETE updated blueprint JSON.`,
   ].join("\n");
 
   const messages: Message[] = [{ role: "user" as const, content: userContent }];
@@ -235,6 +362,34 @@ export async function refineBlueprint(
 
       // Extract changeSummary from AI output if present (before Zod validation strips it)
       const changeSummary = (json.changeSummary as string) ?? null;
+
+      // ── Layer 2: Post-processing validation + Layer 3: Deterministic repair ──
+      // Determine which phases the selected risks map to
+      const relevantPhases = new Set<string>();
+      for (const riskId of riskIds) {
+        const r = existingRisks.find((er) => er.id === riskId);
+        if (r) {
+          riskToPhaseKeywords((r.description as string) ?? "").forEach((p) => relevantPhases.add(p));
+        }
+      }
+
+      // Check if the AI actually updated those phases
+      const newPhasesArr = (json.phases ?? []) as Record<string, unknown>[];
+      const existingPhasesArr = (existingRaw.phases ?? []) as Record<string, unknown>[];
+      let phasesUpdated = false;
+      for (const pt of relevantPhases) {
+        const oldP = existingPhasesArr.find((p) => p.phaseType === pt);
+        const newP = newPhasesArr.find((p) => p.phaseType === pt);
+        if (oldP && newP && ((oldP.summary as string) !== (newP.summary as string) || (oldP.narrative as string) !== (newP.narrative as string))) {
+          phasesUpdated = true;
+          break;
+        }
+      }
+
+      if (!phasesUpdated && relevantPhases.size > 0) {
+        log.warn({ relevantPhases: [...relevantPhases], riskIds }, "refine_phases_not_updated_applying_repair");
+        repairPhaseContent(json, riskIds, existingRisks);
+      }
 
       // Clean phases: ensure array order matches PHASE_ORDER
       let phases = json.phases;
@@ -341,7 +496,7 @@ export async function refineBlueprint(
         schemaVersion: "orchestra-generated-v1", artifactType: "blueprint",
         generationMetadata: genMetadata,
       });
-      const summary = changeSummary ?? computeChangeSummary(oldBp, bpResult.data, riskIds);
+      const summary = changeSummary ?? computeChangeSummary(oldBp, bpResult.data, riskIds, relevantPhases);
 
       log.info({ model: result.model, provider: sel.provider }, "refine_success");
       return {
