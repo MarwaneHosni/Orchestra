@@ -400,7 +400,8 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
     }
 
     // Remove resolved risks from blueprint JSON and save as new version
-    const riskFiltered = existingRisks.filter((r) => !riskIdSet.has(r.id as string));
+    const selectedSet = new Set(riskIds);
+    const riskFiltered = existingRisks.filter((r) => !selectedSet.has(r.id as string));
     blueprintJson.risks = riskFiltered;
 
     getStore().insertBlueprint({
