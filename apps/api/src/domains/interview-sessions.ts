@@ -367,10 +367,16 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
       ? { preferredProvider: userCred.provider, preferredModel: userCred.defaultModel }
       : undefined;
 
-    // Resolve risks — find matching prompts and rewrite them
-    const result = await resolveRisks(resolutions, allPrompts, router, preferences);
-
     const now = new Date().toISOString();
+
+    // Resolve risks — find matching prompts, rewrite prompts and summary
+    const projectSummary = blueprintJson.projectSummary as Record<string, unknown> | undefined;
+    const result = await resolveRisks(resolutions, allPrompts, router, preferences, projectSummary);
+
+    // Apply updated project summary if returned
+    if (result.updatedSummary) {
+      blueprintJson.projectSummary = result.updatedSummary;
+    }
 
     // Save rewritten prompts — only save if text actually changed
     let actualChangeCount = 0;
@@ -419,11 +425,16 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
 
     await queueSyncDb();
 
-    const changeSummary = actualChangeCount > 0
-      ? `Resolved ${riskIds.length} risk(s). Updated ${actualChangeCount} execution prompt(s).`
-      : `Resolved ${riskIds.length} risk(s). No execution prompts were affected.`;
+    const summaryChanged = result.updatedSummary !== null;
+    const changeSummary = actualChangeCount > 0 && summaryChanged
+      ? `Resolved ${riskIds.length} risk(s). Updated ${actualChangeCount} execution prompt(s) and project summary.`
+      : actualChangeCount > 0
+        ? `Resolved ${riskIds.length} risk(s). Updated ${actualChangeCount} execution prompt(s).`
+        : summaryChanged
+          ? `Resolved ${riskIds.length} risk(s). Updated project summary.`
+          : `Resolved ${riskIds.length} risk(s). No execution prompts were affected.`;
 
-    app.log.info({ sessionId, planId, newVersion, riskCount: riskIds.length, rewrittenCount: actualChangeCount }, "refine_complete");
+    app.log.info({ sessionId, planId, newVersion, riskCount: riskIds.length, rewrittenCount: actualChangeCount, summaryChanged }, "refine_complete");
     return { planVersion: newVersion, changeSummary };
   });
 

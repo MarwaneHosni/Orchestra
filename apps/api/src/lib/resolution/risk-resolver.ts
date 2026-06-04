@@ -20,6 +20,7 @@ export interface RiskResolution {
 export interface ResolveResult {
   rewrittenPrompts: { taskId: string; newText: string }[];
   failedPrompts: string[];
+  updatedSummary: Record<string, unknown> | null;
 }
 
 const STOP_WORDS = new Set([
@@ -198,11 +199,141 @@ async function rewriteSinglePrompt(
   return null;
 }
 
+async function rewriteProjectSummary(
+  summary: Record<string, unknown>,
+  resolutions: RiskResolution[],
+  router: RouterService,
+  preferences?: UserPreferences,
+): Promise<Record<string, unknown> | null> {
+  const resolutionLines = resolutions
+    .map((r) => `  - ${r.id}: ${r.description}`)
+    .join("\n");
+
+  const systemPrompt = [
+    `You are editing a project summary. One or more risks have been RESOLVED.`,
+    `The summary on the plan page must reflect the new state.`,
+    ``,
+    `Resolved risk(s):`,
+    resolutionLines,
+    ``,
+    `Current summary:`,
+    JSON.stringify(summary, null, 2),
+    ``,
+    `For EACH of the 6 fields below, decide if it needs updating:`,
+    ``,
+    `1. projectOverview (string):`,
+    `   A 2-3 sentence paragraph describing what the project does.`,
+    `   Does the resolved risk affect the overall description?`,
+    `   YES → rewrite the affected sentence. Keep unaffected sentences.`,
+    `   NO  → return the string EXACTLY as-is, character-for-character.`,
+    ``,
+    `2. keyFeatures (array of strings):`,
+    `   Does the mitigation introduce or modify a feature?`,
+    `   Example: "no auth" resolved → add "JWT authentication" to features.`,
+    `   YES → add or update the relevant item. Do NOT remove existing items.`,
+    `   NO  → return the array EXACTLY as-is with the SAME items.`,
+    ``,
+    `3. technicalConstraints (array of strings):`,
+    `   Does the mitigation lift or add a constraint?`,
+    `   YES → update the relevant item(s) only.`,
+    `   NO  → return the array EXACTLY as-is.`,
+    ``,
+    `4. businessConditions (array of strings):`,
+    `   Does the mitigation affect any business condition?`,
+    `   YES → update the relevant item(s) only.`,
+    `   NO  → return the array EXACTLY as-is.`,
+    ``,
+    `5. architectureHighlights (array of strings):`,
+    `   Does the mitigation affect the architecture?`,
+    `   Example: "no auth" resolved → add "JWT auth middleware" to highlights.`,
+    `   YES → add or update the relevant item. Do NOT remove existing items.`,
+    `   NO  → return the array EXACTLY as-is.`,
+    ``,
+    `6. riskSummary (string):`,
+    `   Does the resolved risk appear in this summary?`,
+    `   YES → remove that sentence. Keep sentences about UNRESOLVED risks.`,
+    `         If this was the ONLY risk mentioned, rewrite to say`,
+    `         "Key risks have been addressed" or remove it entirely.`,
+    `   NO  → return the string EXACTLY as-is.`,
+    ``,
+    `CRITICAL RULES:`,
+    `1. NEVER change a field unrelated to the resolved risk(s).`,
+    `2. NEVER add generic claims — only add specific mitigations.`,
+    `3. NEVER remove content that is still valid and unrelated.`,
+    `4. For arrays: return items in the SAME ORDER, with relevant changes only.`,
+    `5. If NO field needs updating, return the EXACT input JSON unchanged.`,
+    `6. Output ONLY the JSON with the 6 fields. No markdown fences, no explanations.`,
+  ].join("\n");
+
+  const userContent = [
+    `Update the project summary above to reflect the resolved risk(s).`,
+    `Return ONLY the updated JSON.`,
+  ].join("\n");
+
+  const messages: Message[] = [{ role: "user" as const, content: userContent }];
+
+  let currentDecision: RouterDecision;
+  try {
+    currentDecision = router.select("blueprint", preferences);
+  } catch {
+    return null;
+  }
+
+  const MAX_ATTEMPTS = 2;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const sel = currentDecision.selection;
+    const provider = createProvider(sel);
+    if (!provider) {
+      if (currentDecision.fallbackChain.length === 0) break;
+      currentDecision = {
+        ...currentDecision,
+        selection: currentDecision.fallbackChain[0]!,
+        fallbackChain: currentDecision.fallbackChain.slice(1),
+        usedFallback: true,
+      };
+      continue;
+    }
+
+    const input: GenerationInput = {
+      model: sel.model,
+      systemPrompt,
+      messages,
+      temperature: 0.3,
+    };
+
+    try {
+      const result = await generateWithRetry(() => createProvider(sel), input);
+      const raw = result.content.trim();
+      const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+      const clean = fenceMatch ? fenceMatch[1]!.trim() : raw;
+      const parsed = JSON.parse(clean);
+
+      if (!parsed || typeof parsed !== "object") return null;
+      const requiredFields = ["projectOverview", "keyFeatures", "technicalConstraints", "businessConditions", "architectureHighlights", "riskSummary"];
+      if (!requiredFields.every((f) => f in parsed)) return null;
+
+      return parsed as Record<string, unknown>;
+    } catch (err) {
+      log.warn({ err: err instanceof Error ? err.message : err }, "summary_rewrite_error");
+      if (currentDecision.fallbackChain.length === 0) break;
+      currentDecision = {
+        ...currentDecision,
+        selection: currentDecision.fallbackChain[0]!,
+        fallbackChain: currentDecision.fallbackChain.slice(1),
+        usedFallback: true,
+      };
+    }
+  }
+
+  return null;
+}
+
 export async function resolveRisks(
   resolutions: RiskResolution[],
   allPrompts: PromptArtifact[],
   router: RouterService,
   preferences?: UserPreferences,
+  projectSummary?: Record<string, unknown> | null,
 ): Promise<ResolveResult> {
   // Step 1: Extract keywords from ALL selected risks
   const allKeywords = new Set<string>();
@@ -212,32 +343,43 @@ export async function resolveRisks(
     }
   }
 
-  if (allKeywords.size === 0) {
-    return { rewrittenPrompts: [], failedPrompts: [] };
-  }
-
-  // Step 2: Find matching prompts
-  const matchingPrompts = findMatchingPrompts(allPrompts, [...allKeywords]);
-  log.info({ keywordCount: allKeywords.size, matchingCount: matchingPrompts.length, totalPrompts: allPrompts.length }, "risk_resolve_search");
-
-  if (matchingPrompts.length === 0) {
-    return { rewrittenPrompts: [], failedPrompts: [] };
-  }
-
-  // Step 3: Rewrite each matching prompt
-  const rewrittenPrompts: { taskId: string; newText: string }[] = [];
+  let rewrittenPrompts: { taskId: string; newText: string }[] = [];
   const failedPrompts: string[] = [];
+  let updatedSummary: Record<string, unknown> | null = null;
 
-  for (const prompt of matchingPrompts) {
-    const rewritten = await rewriteSinglePrompt(prompt, resolutions, router, preferences);
-    if (rewritten) {
-      rewrittenPrompts.push({ taskId: prompt.taskId, newText: rewritten });
-      log.info({ taskId: prompt.taskId, riskCount: resolutions.length }, "prompt_rewritten");
-    } else {
-      failedPrompts.push(prompt.taskId);
-      log.warn({ taskId: prompt.taskId }, "prompt_rewrite_failed_skipping");
+  // Rewrite project summary if present
+  if (projectSummary) {
+    const result = await rewriteProjectSummary(projectSummary, resolutions, router, preferences);
+    if (result) {
+      // Only use the updated summary if at least one field actually changed
+      const summaryStr = JSON.stringify(result);
+      const originalStr = JSON.stringify(projectSummary);
+      if (summaryStr !== originalStr) {
+        updatedSummary = result;
+        log.info({}, "project_summary_rewritten");
+      }
     }
   }
 
-  return { rewrittenPrompts, failedPrompts };
+  // Step 2-3: Find and rewrite matching prompts (skip if no keywords)
+  if (allKeywords.size > 0) {
+    const matchingPrompts = findMatchingPrompts(allPrompts, [...allKeywords]);
+    log.info({ keywordCount: allKeywords.size, matchingCount: matchingPrompts.length, totalPrompts: allPrompts.length }, "risk_resolve_search");
+
+    if (matchingPrompts.length > 0) {
+      rewrittenPrompts = [];
+      for (const prompt of matchingPrompts) {
+        const rewritten = await rewriteSinglePrompt(prompt, resolutions, router, preferences);
+        if (rewritten) {
+          rewrittenPrompts.push({ taskId: prompt.taskId, newText: rewritten });
+          log.info({ taskId: prompt.taskId, riskCount: resolutions.length }, "prompt_rewritten");
+        } else {
+          failedPrompts.push(prompt.taskId);
+          log.warn({ taskId: prompt.taskId }, "prompt_rewrite_failed_skipping");
+        }
+      }
+    }
+  }
+
+  return { rewrittenPrompts, failedPrompts, updatedSummary };
 }
