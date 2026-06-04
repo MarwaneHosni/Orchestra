@@ -38,6 +38,16 @@ export async function buildApp() {
     },
   });
 
+  // Benchmark persistent store speed
+  try {
+    const { getSqliteDb } = await import("./db/sqlite/index.js");
+    const db = getSqliteDb();
+    const benchStart = performance.now();
+    const buf = Buffer.from(db.export());
+    const ms = (performance.now() - benchStart).toFixed(1);
+    app.log.info({ dbExportSizeBytes: buf.length, dbExportMs: ms }, "db_export_benchmark");
+  } catch { /* non-critical */ }
+
   app.setErrorHandler(errorHandler);
 
   await app.register(cors, { origin: true, methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"] });

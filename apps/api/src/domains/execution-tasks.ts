@@ -7,6 +7,7 @@ import { GuardrailService } from "../lib/budget/guardrail.js";
 import { createInMemoryBudgetStore } from "../lib/budget/budget.js";
 import { getTracer } from "../lib/metrics/index.js";
 import type { PhaseInput } from "../lib/task-graph/types.js";
+import { queueSyncDb } from "../db/sqlite/index.js";
 
 const exportGuardrail = new GuardrailService(createInMemoryBudgetStore(), {
   rateLimitExport: { maxRequests: 30, windowMs: 60_000 },
@@ -170,6 +171,7 @@ export async function registerExecutionTaskRoutes(app: FastifyInstance) {
           }
 
           getGraphStore().saveGraph(graph);
+          await queueSyncDb();
         }
       }
 
@@ -203,6 +205,7 @@ export async function registerExecutionTaskRoutes(app: FastifyInstance) {
 
     const graph = getGraphStore().updateTaskStatus(planId, 1, taskId, body.status);
     if (!graph) throw new NotFoundError("Task", taskId);
+    await queueSyncDb();
     return graph;
   });
 

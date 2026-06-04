@@ -1,6 +1,6 @@
 import { buildApp } from "./app.js";
 import { loadConfig } from "./lib/config.js";
-import { closeDb } from "./db/sqlite/index.js";
+import { queueSyncDb } from "./db/sqlite/index.js";
 
 async function main() {
   const config = loadConfig();
@@ -9,10 +9,15 @@ async function main() {
   const signals: NodeJS.Signals[] = ["SIGTERM", "SIGINT", "SIGBREAK"];
   for (const signal of signals) {
     process.on(signal, async () => {
-      app.log.info(`Received ${signal}, shutting down...`);
-      await app.close();
-      closeDb();
-      process.exit(0);
+      try {
+        app.log.info(`Received ${signal}, shutting down...`);
+        await app.close();
+        await queueSyncDb();
+      } catch (err) {
+        app.log.error({ err }, "Shutdown error");
+      } finally {
+        process.exit(0);
+      }
     });
   }
 

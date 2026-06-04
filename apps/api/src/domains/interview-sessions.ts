@@ -8,7 +8,7 @@ import { GuardrailService } from "../lib/budget/guardrail.js";
 import { createInMemoryBudgetStore } from "../lib/budget/budget.js";
 import { generateWithAI } from "../lib/generation/orchestrator.js";
 import { estimatePromptTokens, estimateCost } from "../lib/accounting/index.js";
-import { getDb } from "../db/sqlite/index.js";
+import { getDb, queueSyncDb } from "../db/sqlite/index.js";
 import * as schema from "../db/sqlite/schema/index.js";
 
 export async function registerInterviewSessionRoutes(app: FastifyInstance) {
@@ -48,6 +48,7 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
       createdAt: now,
       updatedAt: now,
     });
+    await queueSyncDb();
 
     reply.status(201);
     return { sessionId, status: "draft", mode };
@@ -60,6 +61,7 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
     },
     async (request) => {
       const session = orch.startSession((request.params as { id: string }).id);
+      await queueSyncDb();
       return { sessionId: session.id, status: session.status };
     },
   );
@@ -110,6 +112,7 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
     }
     const { questionId, value, confidence } = parsed.data;
     const result = orch.submitAnswer((request.params as { id: string }).id, questionId, value, confidence);
+    await queueSyncDb();
     return result;
   });
 
@@ -276,6 +279,7 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
         guardrail.budget.recordOutcome(session.projectId, costEstimate.estimatedCost, actualTokens, "completed");
         guardrail.getCircuitBreaker("provider")?.recordSuccess();
         guardrail.abuseDetector.clear(session.projectId);
+        await queueSyncDb();
         app.log.info({ sessionId, totalElapsedMs: Date.now() - generateStart }, "generate_handler_success");
         return output;
       } catch (err) {
@@ -287,6 +291,7 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
           .set({ status: "failed", updatedAt: failNow })
           .where(eq(schema.plans.id, planId))
           .run();
+        await queueSyncDb();
         guardrail.budget.recordOutcome(session.projectId, 0, 0, "failed");
         guardrail
           .ensureCircuitBreaker("provider", { failureThreshold: 5, openTimeoutMs: 30_000 })
@@ -303,6 +308,7 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
       throw new ValidationError("Invalid transition data");
     }
     const session = orch.transitionSession((request.params as { id: string }).id, parsed.data.toStatus);
+    await queueSyncDb();
     return { sessionId: session.id, status: session.status };
   });
 }

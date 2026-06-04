@@ -11,6 +11,7 @@ import { OpenAIProvider } from "../lib/provider/openai.js";
 import { AnthropicProvider } from "../lib/provider/anthropic.js";
 import { OpenRouterProvider } from "../lib/provider/openrouter.js";
 import { OpencodeGoProvider } from "../lib/provider/opencode-go.js";
+import { queueSyncDb } from "../db/sqlite/index.js";
 
 const guardrail = new GuardrailService(createInMemoryBudgetStore(), {
   rateLimitProviderValidation: { maxRequests: 20, windowMs: 60_000 },
@@ -131,6 +132,7 @@ export async function registerProviderCredentialRoutes(app: FastifyInstance) {
     };
 
     store.insert(record);
+    await queueSyncDb();
     logAudit("credential.created", parsed.data.userId, record.id, { provider: record.provider });
     reply.status(201);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -155,6 +157,7 @@ export async function registerProviderCredentialRoutes(app: FastifyInstance) {
     if (parsed.data.apiKey) updates.status = "unverified";
 
     store.update(id, updates as any);
+    await queueSyncDb();
     logAudit("credential.updated", existing.userId, id, {
       provider: existing.provider,
       hasNewKey: !!parsed.data.apiKey,
@@ -172,6 +175,7 @@ export async function registerProviderCredentialRoutes(app: FastifyInstance) {
     if (!cred) throw new NotFoundError("Provider credential", id);
     logAudit("credential.deleted", cred.userId, id, { provider: cred.provider });
     store.remove(id);
+    await queueSyncDb();
     reply.status(204);
     return;
   });
@@ -223,6 +227,7 @@ export async function registerProviderCredentialRoutes(app: FastifyInstance) {
       errorMessage: result.error ?? null,
       modelsAvailable: result.models ? result.models.map((m) => m.id).join(",") : null,
     });
+    await queueSyncDb();
 
     instrumentProviderValidation(cred.provider, result.valid ? "valid" : "invalid");
     logAudit("credential.validated", cred.userId, id, {

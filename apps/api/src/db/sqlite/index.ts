@@ -1,7 +1,10 @@
 import { drizzle } from "drizzle-orm/sql-js";
 import { sql } from "drizzle-orm";
 import initSqlJs, { type Database } from "sql.js";
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import {
+  readFileSync, existsSync, mkdirSync,
+  openSync, writeSync, closeSync, fsyncSync, renameSync,
+} from "node:fs";
 import { dirname, resolve } from "node:path";
 import { loadConfig } from "../../lib/config.js";
 import { createModuleLogger } from "../../lib/logging/logger.js";
@@ -12,6 +15,48 @@ import * as schema from "./schema/index.js";
 let _db: ReturnType<typeof drizzle> | null = null;
 let _sqliteDb: Database | null = null;
 let _initialized = false;
+
+// ── Durable snapshot persistence ───────────────────────────────────
+// Persistence model:
+// - sql.js is the authoritative in-memory database.
+// - Durable storage is a snapshot written via _sqliteDb.export().
+// - Mutating use-cases must call await queueSyncDb() before reporting success.
+// - Repository methods do not perform persistence.
+// - The shutdown handler is a safety net, not the primary sync mechanism.
+//
+// The save queue serializes concurrent sync requests and survives a
+// failed export so that subsequent writes are not silently dropped.
+// Atomic file replacement (temp file + fsync + rename) prevents
+// corruption if the process crashes mid-write.
+// ────────────────────────────────────────────────────────────────────
+
+let _saveQueue = Promise.resolve();
+
+export function queueSyncDb(): Promise<void> {
+  _saveQueue = _saveQueue
+    .catch(() => {})
+    .then(() => atomicExport());
+  return _saveQueue;
+}
+
+function atomicExport(): void {
+  if (!_sqliteDb) return;
+  const dbPath = getDbPath();
+  const tmpPath = dbPath + ".tmp";
+  const dir = dirname(dbPath);
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+
+  const buffer = Buffer.from(_sqliteDb.export());
+
+  // Write to temp file with full fsync chain
+  const fd = openSync(tmpPath, "w");
+  writeSync(fd, buffer);
+  fsyncSync(fd);
+  closeSync(fd);
+
+  // Atomic replacement
+  renameSync(tmpPath, dbPath);
+}
 
 export function getDbPath(): string {
   const config = loadConfig();
@@ -121,15 +166,7 @@ export function rawAll<T = Record<string, unknown>>(sql: string, ...params: unkn
 }
 
 export function exportDb(): void {
-  if (!_sqliteDb) return;
-  const dbPath = getDbPath();
-  const data = _sqliteDb.export();
-  const buffer = Buffer.from(data);
-  const dbDir = dirname(dbPath);
-  if (!existsSync(dbDir)) {
-    mkdirSync(dbDir, { recursive: true });
-  }
-  writeFileSync(dbPath, buffer);
+  atomicExport();
 }
 
 export function closeDb(): void {

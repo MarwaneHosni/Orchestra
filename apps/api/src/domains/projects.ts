@@ -5,6 +5,7 @@ import { paginatedResponse, paginationSchema } from "../schemas/index.js";
 import { OrchestrationService } from "../lib/orchestration/orchestration.service.js";
 import { getStore } from "../lib/orchestration/store.js";
 import { CreateProjectSchema } from "../lib/orchestration/orchestration.service.js";
+import { queueSyncDb } from "../db/sqlite/index.js";
 
 export const ProjectSchema = z.object({
   id: z.string().uuid(),
@@ -58,6 +59,7 @@ export async function registerProjectRoutes(app: FastifyInstance) {
       throw new ValidationError("Invalid project data");
     }
     const result = orch.createProject(parsed.data as { ideaText: string; projectName?: string });
+    await queueSyncDb();
     reply.status(201);
     return { projectId: result.projectId, sessionId: result.sessionId };
   });

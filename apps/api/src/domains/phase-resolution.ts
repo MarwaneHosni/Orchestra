@@ -8,6 +8,7 @@ import { getCredentialStore } from "../lib/credentials/store.js";
 import { resolvePendingPhase } from "../lib/resolution/phase-resolver.js";
 import { assemblePrompt } from "../lib/prompt/assembler.js";
 import { createModuleLogger } from "../lib/logging/logger.js";
+import { queueSyncDb } from "../db/sqlite/index.js";
 
 const log = createModuleLogger("phase-resolution");
 
@@ -93,6 +94,8 @@ export async function registerPhaseResolutionRoutes(app: FastifyInstance) {
     if (!updatedGraph) {
       throw new Error("Failed to store updated tasks.");
     }
+
+    await queueSyncDb();
 
     // Generate execution prompts for new tasks
     const toDesc = (arr: unknown[] | undefined): { description: string }[] =>
