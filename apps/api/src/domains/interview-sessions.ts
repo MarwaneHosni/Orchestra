@@ -320,17 +320,17 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
     const project = getStore().getProject(session.projectId);
     if (!project) throw new NotFoundError("Project", session.projectId);
 
+    const planId = `plan-${sessionId}`;
     const plans = getStore().getPlansByProject(session.projectId);
     const latestPlan = plans
-      .filter((p) => p.status === "complete" && !p.staleAt)
+      .filter((p) => p.id === planId && p.status === "complete" && !p.staleAt)
       .sort((a, b) => b.version - a.version)[0];
     if (!latestPlan) throw new NotFoundError("Plan", sessionId);
 
     const blueprints = getStore().getBlueprintsByProject(session.projectId);
-    const bp = blueprints.find((b) => b.planId === latestPlan.id && b.status === "complete");
+    const bp = blueprints.find((b) => b.planId === planId && b.status === "complete");
     if (!bp) throw new NotFoundError("Blueprint", sessionId);
 
-    const planId = latestPlan.id;
     const newVersion = latestPlan.version + 1;
     const blueprintJson = JSON.parse(bp.content) as Record<string, unknown>;
 
