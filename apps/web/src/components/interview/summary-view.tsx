@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { getLatestBlueprint } from "@/lib/api";
+import { getLatestBlueprint, refineBlueprint } from "@/lib/api";
 import type { BlueprintResult } from "@/lib/api";
 import { ThinkingLoader } from "@/components/ui/skeleton";
 
@@ -48,7 +48,34 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
   const [blueprint, setBlueprint] = useState<BlueprintResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedRiskIds, setSelectedRiskIds] = useState<Set<string>>(new Set());
+  const [refining, setRefining] = useState(false);
+  const [refineError, setRefineError] = useState("");
+  const [changeSummary, setChangeSummary] = useState<string | null>(null);
   const pollRef = useRef(0);
+
+  function toggleRisk(id: string) {
+    setSelectedRiskIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleRefine() {
+    if (selectedRiskIds.size === 0) return;
+    setRefining(true); setRefineError("");
+    try {
+      const result = await refineBlueprint(sessionId, [...selectedRiskIds]);
+      setChangeSummary(result.changeSummary);
+      setSelectedRiskIds(new Set());
+      // Re-fetch the latest blueprint to get the updated data
+      const updated = await getLatestBlueprint(sessionId);
+      if (updated) setBlueprint(updated);
+    } catch (e) {
+      setRefineError(e instanceof Error ? e.message : "Refinement failed");
+    } finally { setRefining(false); }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -181,6 +208,27 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
             needs_review
           </code>{" "}
           markers will appear in the task graph for these areas. you can revisit the interview to add more detail.
+        </div>
+      )}
+
+      {/* ── Change summary after refinement ── */}
+      {changeSummary && (
+        <div
+          style={{
+            borderLeft: "3px solid var(--color-accent-green)",
+            background: "color-mix(in srgb, var(--color-accent-green) 8%, transparent)",
+            padding: "12px 16px",
+            marginTop: 16,
+            fontSize: 13,
+            color: "var(--color-text-secondary)",
+            lineHeight: 1.6,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <span style={{ color: "var(--color-accent-green)", fontSize: 14 }}>✓</span>
+            <span style={{ color: "var(--color-accent-green)", fontWeight: 500, fontSize: 12, letterSpacing: "0.06em", textTransform: "uppercase" }}>Plan Refined</span>
+          </div>
+          <p style={{ fontSize: 12, color: "var(--color-text-primary)" }}>{changeSummary}</p>
         </div>
       )}
 
@@ -475,35 +523,72 @@ export function SummaryView({ sessionId }: SummaryViewProps) {
             <span style={{ flex: 1, borderTop: "1px solid #222", display: "inline-block" }} />
           </div>
           <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
-            {blueprint.risks.map((r, i) => (
-              <div
-                key={i}
-                className="hover:bg-[#161616]"
-                style={{
-                  borderLeft: "2px solid #c0392b",
-                  borderRight: "1px solid #1a1a1a",
-                  borderTop: "1px solid #1a1a1a",
-                  borderBottom: "1px solid #1a1a1a",
-                  borderRadius: 3,
-                  padding: "10px 14px",
-                  fontSize: 13,
-                  color: "var(--color-text-primary)",
-                  lineHeight: 1.6,
-                  display: "flex",
-                  gap: 10,
-                  transition: "background 150ms",
-                }}
-              >
-                <span style={{ color: "#c0392b", fontSize: 11, flexShrink: 0, marginTop: 2 }}>⚠</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p>{r.description}</p>
-                  <p style={{ fontSize: 11, color: "#666", marginTop: 6, fontFamily: "'JetBrains Mono', monospace" }}>
-                    <span style={{ color: "#c0392b" }}>◆</span> source: {r.source}
-                  </p>
+            {blueprint.risks.map((r, i) => {
+              const isSelected = selectedRiskIds.has(r.id);
+              return (
+                <div
+                  key={r.id ?? i}
+                  className="hover:bg-[#161616]"
+                  style={{
+                    borderLeft: `2px solid ${isSelected ? "var(--color-accent-purple)" : "#c0392b"}`,
+                    borderRight: "1px solid #1a1a1a",
+                    borderTop: "1px solid #1a1a1a",
+                    borderBottom: "1px solid #1a1a1a",
+                    borderRadius: 3,
+                    padding: "10px 14px",
+                    fontSize: 13,
+                    color: "var(--color-text-primary)",
+                    lineHeight: 1.6,
+                    display: "flex",
+                    gap: 10,
+                    alignItems: "flex-start",
+                    transition: "background 150ms, border-color 150ms",
+                  }}
+                >
+                  <label style={{ display: "flex", alignItems: "center", marginTop: 2, cursor: refining ? "not-allowed" : "pointer", opacity: refining ? 0.5 : 1 }}>
+                    <input type="checkbox" checked={isSelected}
+                      onChange={() => toggleRisk(r.id)}
+                      disabled={refining}
+                      style={{ accentColor: "var(--color-accent-purple)", width: 14, height: 14, cursor: "inherit" }} />
+                  </label>
+                  <span style={{ color: "#c0392b", fontSize: 11, flexShrink: 0, marginTop: 2 }}>⚠</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p>{r.description}</p>
+                    <p style={{ fontSize: 11, color: "#666", marginTop: 6, fontFamily: "'JetBrains Mono', monospace" }}>
+                      <span style={{ color: "#c0392b" }}>◆</span> source: {r.source}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
+
+          {/* Mitigate button */}
+          {selectedRiskIds.size > 0 && (
+            <div style={{ marginTop: 14 }}>
+              {refineError && (
+                <p style={{ marginBottom: 8, fontSize: 12, color: "var(--color-accent-red)" }}>{refineError}</p>
+              )}
+              <button
+                onClick={handleRefine}
+                disabled={refining}
+                style={{
+                  borderRadius: 3,
+                  padding: "8px 20px",
+                  fontSize: 13,
+                  fontFamily: "inherit",
+                  border: "1px solid var(--color-accent-purple)",
+                  background: refining ? "var(--color-accent-purple-dim)" : "transparent",
+                  color: "var(--color-accent-purple)",
+                  cursor: refining ? "not-allowed" : "pointer",
+                  opacity: refining ? 0.6 : 1,
+                }}
+                className="hover:bg-accent-purple-dim transition-colors duration-150"
+              >
+                {refining ? "[ refining... ]" : `[ mitigate selected risks (${selectedRiskIds.size}) ]`}
+              </button>
+            </div>
+          )}
         </section>
       )}
 

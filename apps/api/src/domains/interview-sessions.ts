@@ -7,9 +7,16 @@ import { NotFoundError, ValidationError, RateLimitedError, OverBudgetError } fro
 import { GuardrailService } from "../lib/budget/guardrail.js";
 import { createInMemoryBudgetStore } from "../lib/budget/budget.js";
 import { generateWithAI } from "../lib/generation/orchestrator.js";
+import { refineBlueprint } from "../lib/generation/refiner.js";
 import { estimatePromptTokens, estimateCost } from "../lib/accounting/index.js";
 import { getDb, queueSyncDb } from "../db/sqlite/index.js";
 import * as schema from "../db/sqlite/schema/index.js";
+import { RouterService } from "../lib/router/router.js";
+import { getCredentialStore } from "../lib/credentials/store.js";
+import { getGraphStore, getPromptStore } from "../lib/shared-stores.js";
+import { generateTasks } from "../lib/task-graph/generator.js";
+import { assemblePrompt } from "../lib/prompt/assembler.js";
+import type { PhaseInput } from "../lib/task-graph/types.js";
 
 export async function registerInterviewSessionRoutes(app: FastifyInstance) {
   const orch = new OrchestrationService(getStore());
@@ -301,6 +308,133 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
       }
     },
   );
+
+  app.post("/api/v1/interviews/:id/refine", async (request) => {
+    const sessionId = (request.params as { id: string }).id;
+    const body = (request.body ?? {}) as { riskIds?: string[] };
+    const riskIds = body.riskIds ?? [];
+    if (riskIds.length === 0) {
+      throw new ValidationError("At least one risk ID is required");
+    }
+
+    const session = getStore().getSession(sessionId);
+    if (!session) throw new NotFoundError("Session", sessionId);
+
+    const project = getStore().getProject(session.projectId);
+    if (!project) throw new NotFoundError("Project", session.projectId);
+
+    const plans = getStore().getPlansByProject(session.projectId);
+    const latestPlan = plans
+      .filter((p) => p.status === "complete" && !p.staleAt)
+      .sort((a, b) => b.version - a.version)[0];
+    if (!latestPlan) throw new NotFoundError("Plan", sessionId);
+
+    const blueprints = getStore().getBlueprintsByProject(session.projectId);
+    const bp = blueprints.find((b) => b.planId === latestPlan.id && b.status === "complete");
+    if (!bp) throw new NotFoundError("Blueprint", sessionId);
+
+    const existingRaw = JSON.parse(bp.content) as Record<string, unknown>;
+    const newVersion = latestPlan.version + 1;
+    const planId = latestPlan.id;
+
+    // Build router and preferences
+    const allCreds = getCredentialStore().list();
+    const router = new RouterService((provider: string) => {
+      const cred = allCreds.find((c) => c.provider === provider);
+      return {
+        provider,
+        available: cred?.status === "valid" || cred?.status === "unverified",
+        validatedAt: cred?.lastVerifiedAt ?? null,
+      };
+    });
+    const userCred = allCreds.find((c) => c.status === "valid" || c.status === "unverified");
+    const preferences = userCred?.defaultModel
+      ? { preferredProvider: userCred.provider, preferredModel: userCred.defaultModel }
+      : undefined;
+
+    const result = await refineBlueprint(
+      existingRaw, riskIds, planId, newVersion,
+      session.projectId, sessionId, router, preferences,
+    );
+
+    if (!result) {
+      throw new Error("Failed to refine the blueprint. The AI was unable to produce a revised plan.");
+    }
+
+    // Save new plan version
+    const now = new Date().toISOString();
+    getStore().insertPlan({
+      id: planId,
+      projectId: project.id,
+      version: newVersion,
+      status: "complete",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Save new blueprint
+    getStore().insertBlueprint({
+      id: crypto.randomUUID(),
+      planId,
+      projectId: project.id,
+      content: JSON.stringify(result.blueprint),
+      format: "json",
+      version: newVersion,
+      status: "complete",
+      staleAt: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Generate task graph from revised phases
+    const phases: PhaseInput[] = result.blueprint.phases.map((p) => ({
+      phaseType: p.phaseType,
+      phaseName: p.phaseName,
+      status: p.status as "sufficient" | "insufficient" | "missing",
+      confidence: p.confidence,
+      summary: p.summary,
+      narrative: p.narrative,
+      keyDecisions: p.keyDecisions,
+      executionPrompt: p.executionPrompt,
+    }));
+    const graph = generateTasks(planId, newVersion, phases);
+    getGraphStore().saveGraph(graph);
+
+    // Generate execution prompts for each task
+    const toDesc = (arr: unknown[] | undefined): { description: string }[] =>
+      (arr ?? []).map((a) => {
+        const o = a as Record<string, unknown>;
+        return { description: (o.description as string) ?? "" };
+      });
+
+    for (const task of graph.tasks) {
+      if (task.type === "pending_input") continue;
+      const ctx = {
+        task,
+        planName: project.name,
+        allTasks: graph.tasks,
+        predecessorOutputs: [] as string[],
+        phaseSummary: "",
+        aiPhaseSummary: "",
+        aiPhaseNarrative: "",
+        aiPhaseStatus: "sufficient",
+        aiKeyDecisions: [] as string[],
+        aiAssumptions: toDesc(result.blueprint.assumptions as unknown[]),
+        aiConstraints: toDesc(result.blueprint.constraints as unknown[]),
+        aiRisks: toDesc(result.blueprint.risks as unknown[]),
+        aiOverallSummary: result.blueprint.overallSummary ?? "",
+      };
+      assemblePrompt(ctx as any, getPromptStore(), newVersion);
+    }
+
+    await queueSyncDb();
+
+    app.log.info({ sessionId, planId, newVersion, riskCount: riskIds.length }, "refine_complete");
+    return {
+      planVersion: newVersion,
+      changeSummary: result.changeSummary,
+    };
+  });
 
   app.post("/api/v1/interviews/:id/transition", async (request) => {
     const parsed = TransitionSchema.safeParse(request.body);

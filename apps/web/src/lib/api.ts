@@ -44,7 +44,7 @@ export interface BlueprintResult {
   }[];
   assumptions: { description: string; source: string }[];
   constraints: { description: string; source: string }[];
-  risks: { description: string; source: string }[];
+  risks: { id: string; description: string; source: string }[];
   overallConfidence: number;
   ambiguityFlags: { type: string; message: string; severity: string }[];
   projectSummary?: {
@@ -182,6 +182,16 @@ export async function updateTaskStatus(
 
 export async function cancelGeneration(workflowId: string): Promise<void> {
   await request(`/api/v1/progress/${workflowId}/cancel`, { method: "POST" });
+}
+
+export async function refineBlueprint(
+  sessionId: string,
+  riskIds: string[],
+): Promise<{ planVersion: number; changeSummary: string }> {
+  return request(`/api/v1/interviews/${sessionId}/refine`, {
+    method: "POST",
+    body: JSON.stringify({ riskIds }),
+  });
 }
 
 // ── Activity / Timeline ───────────────────────────────────────────────
