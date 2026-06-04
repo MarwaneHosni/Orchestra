@@ -29,6 +29,33 @@ export interface SummaryResult {
   error?: string;
 }
 
+/**
+ * Call a provider's generate() with automatic retries on transient errors.
+ * Each retry creates a fresh provider instance (new HTTP client) so that
+ * stale connection pools are not reused. Delays between attempts give the
+ * network time to recover.
+ *
+ * Throws if all attempts fail — the caller handles fallback logic.
+ */
+export async function generateWithRetry(
+  providerFactory: () => AIProvider | undefined,
+  input: GenerationInput,
+): Promise<GenerationResult> {
+  const delays = [3000, 8000];
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    if (attempt > 0) await new Promise(r => setTimeout(r, delays[attempt - 1]));
+    const provider = providerFactory();
+    if (!provider) break;
+    try {
+      return await provider.generate(input);
+    } catch (err) {
+      if (attempt < delays.length) continue;
+      throw err;
+    }
+  }
+  throw new Error("Provider unavailable or all retries exhausted");
+}
+
 export class AIBlueprintGenerator {
   private projectDescription: string = "";
 
@@ -105,7 +132,7 @@ export class AIBlueprintGenerator {
 
       try {
         const result = await instrumentProviderCall(selection.provider, selection.model, () =>
-          provider.generate(input),
+          generateWithRetry(() => this.createProvider(selection), input),
         );
 
         const content = result.content.trim();
@@ -293,7 +320,7 @@ export class AIBlueprintGenerator {
       // Live provider call
       try {
         const result = await instrumentProviderCall(selection.provider, selection.model, () =>
-          provider.generate(input),
+          generateWithRetry(() => this.createProvider(selection), input),
         );
 
         instrumentTokenUsage(selection.provider, result.model, result.usage.promptTokens, result.usage.completionTokens);

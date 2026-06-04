@@ -9,6 +9,7 @@ import type { TaskNode, DependencyEdge, DepType } from "../task-graph/types.js";
 import { getCredentialStore, decryptKey } from "../credentials/store.js";
 import { getGraphStore } from "../shared-stores.js";
 import { computeStatuses } from "../task-graph/generator.js";
+import { generateWithRetry } from "../generation/ai-generator.js";
 import { createModuleLogger } from "../logging/logger.js";
 
 const log = createModuleLogger("phase-resolver");
@@ -118,7 +119,7 @@ async function callAIDirectly(
         messages,
         temperature: 0.3,
       };
-      const result = await provider.generate(input);
+      const result = await generateWithRetry(() => createProvider(sel), input);
       return result.content.trim();
     } catch {
       if (currentDecision.fallbackChain.length === 0) break;

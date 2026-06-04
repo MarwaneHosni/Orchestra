@@ -58,7 +58,7 @@ export const POLICIES: RoutingPolicy[] = [
     minTier: "cheap",
     preferred: [
       { provider: "opencode-go", model: "deepseek-v4-flash", tier: "cheap" },
-      { provider: "opencode-go", model: "kimi-k2.6", tier: "balanced" },
+      { provider: "opencode-go", model: "mimo-v2.5", tier: "cheap" },
       { provider: "openrouter", model: "deepseek/deepseek-v4-flash:free", tier: "cheap" },
       { provider: "openrouter", model: "openai/gpt-4o-mini", tier: "cheap" },
       { provider: "openai", model: "gpt-4o-mini", tier: "cheap" },
@@ -78,7 +78,7 @@ export const POLICIES: RoutingPolicy[] = [
     preferred: [
       { provider: "openrouter", model: "deepseek/deepseek-v4-flash:free", tier: "cheap" },
       { provider: "opencode-go", model: "deepseek-v4-flash", tier: "cheap" },
-      { provider: "opencode-go", model: "kimi-k2.6", tier: "balanced" },
+      { provider: "opencode-go", model: "mimo-v2.5", tier: "cheap" },
       { provider: "openai", model: "gpt-4o-mini", tier: "cheap" },
     ],
     fallback: [

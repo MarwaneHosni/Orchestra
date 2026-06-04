@@ -31,10 +31,13 @@ export class RouterService {
     const selection = this.findAvailable(candidateChain, reasoning);
     if (selection) {
       reasoning.push(`Selected primary: ${selection.provider}/${selection.model} (${selection.tier})`);
+      // Include remaining unused preferred models before dedicated fallbacks
+      const idx = candidateChain.indexOf(selection);
+      const remaining = idx >= 0 ? candidateChain.slice(idx + 1) : [];
       return {
         taskType,
         selection,
-        fallbackChain: policy.fallback,
+        fallbackChain: [...remaining, ...policy.fallback],
         usedFallback: false,
         reasoning,
         timestamp: new Date().toISOString(),
@@ -47,10 +50,12 @@ export class RouterService {
       reasoning.push(
         `Selected fallback: ${fallbackSelection.provider}/${fallbackSelection.model} (${fallbackSelection.tier})`,
       );
+      const fbIdx = policy.fallback.indexOf(fallbackSelection);
+      const remaining = fbIdx >= 0 ? policy.fallback.slice(fbIdx + 1) : [];
       return {
         taskType,
         selection: fallbackSelection,
-        fallbackChain: policy.fallback,
+        fallbackChain: remaining,
         usedFallback: true,
         reasoning,
         timestamp: new Date().toISOString(),
