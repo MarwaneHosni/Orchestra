@@ -45,6 +45,7 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     listProjects()
@@ -53,9 +54,11 @@ export default function ProjectsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  async function handleDelete(id: string, name: string) {
-    if (!window.confirm(`Delete project "${name}"? This will permanently remove all associated data.\n\nThis cannot be undone.`)) return;
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    const { id } = pendingDelete;
     setDeleting(id);
+    setPendingDelete(null);
     try {
       await deleteProject(id);
       setProjects((prev) => prev.filter((p) => p.id !== id));
@@ -64,6 +67,10 @@ export default function ProjectsPage() {
     } finally {
       setDeleting(null);
     }
+  }
+
+  function handleDeleteClick(id: string, name: string) {
+    setPendingDelete({ id, name });
   }
 
   if (loading) {
@@ -156,7 +163,7 @@ export default function ProjectsPage() {
                   {badge.label}
                 </span>
                 <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(project.id, project.name); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteClick(project.id, project.name); }}
                   disabled={deleting === project.id}
                   style={{ borderRadius: 2, padding: "2px 8px", fontSize: 11, fontFamily: "inherit", border: "1px solid var(--color-border-default)", color: "var(--color-text-muted)", background: "transparent", cursor: "pointer" }}
                   className="hover:border-accent-red-dim hover:text-accent-red"
@@ -173,6 +180,61 @@ export default function ProjectsPage() {
           );
         })}
       </ul>
+
+      {/* Delete confirmation modal */}
+      {pendingDelete && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 100,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          background: "rgba(0,0,0,0.6)",
+          fontFamily: "'JetBrains Mono', monospace",
+        }}>
+          <div style={{
+            border: "1px solid var(--color-border-default)",
+            borderRadius: 3,
+            background: "var(--color-bg-elevated)",
+            padding: "24px 28px",
+            maxWidth: 420,
+            width: "90%",
+          }}>
+            <p style={{ fontSize: 14, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 10 }}>
+              Delete project?
+            </p>
+            <p style={{ fontSize: 13, color: "var(--color-text-secondary)", lineHeight: 1.5, marginBottom: 6 }}>
+              <span style={{ color: "var(--color-accent-red)" }}>"{pendingDelete.name}"</span> will be permanently removed along with all associated data.
+            </p>
+            <p style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 20 }}>
+              This cannot be undone.
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setPendingDelete(null)}
+                style={{
+                  borderRadius: 3, padding: "8px 16px", fontSize: 13, fontFamily: "inherit",
+                  border: "1px solid var(--color-border-default)", background: "transparent",
+                  color: "var(--color-text-secondary)", cursor: "pointer",
+                }}
+                className="hover:border-border-strong hover:text-text-primary transition-colors duration-150"
+              >
+                [ cancel ]
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleting === pendingDelete.id}
+                style={{
+                  borderRadius: 3, padding: "8px 16px", fontSize: 13, fontFamily: "inherit",
+                  border: "1px solid var(--color-accent-red)", background: "transparent",
+                  color: "var(--color-accent-red)", cursor: deleting === pendingDelete.id ? "not-allowed" : "pointer",
+                  opacity: deleting === pendingDelete.id ? 0.6 : 1,
+                }}
+                className="hover:bg-accent-red-dim transition-colors duration-150"
+              >
+                {deleting === pendingDelete.id ? "[ deleting... ]" : "[ delete ]"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
