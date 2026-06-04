@@ -7,18 +7,13 @@ import { NotFoundError, ValidationError, RateLimitedError, OverBudgetError } fro
 import { GuardrailService } from "../lib/budget/guardrail.js";
 import { createInMemoryBudgetStore } from "../lib/budget/budget.js";
 import { generateWithAI } from "../lib/generation/orchestrator.js";
-import { refineBlueprint } from "../lib/generation/refiner.js";
 import { estimatePromptTokens, estimateCost } from "../lib/accounting/index.js";
 import { getDb, queueSyncDb } from "../db/sqlite/index.js";
 import * as schema from "../db/sqlite/schema/index.js";
 import { RouterService } from "../lib/router/router.js";
 import { getCredentialStore } from "../lib/credentials/store.js";
-import { getGraphStore, getPromptStore } from "../lib/shared-stores.js";
-import { generateTasks } from "../lib/task-graph/generator.js";
-import { assemblePrompt } from "../lib/prompt/assembler.js";
-import { validateExecutionPrompt, extractSectionContent, PROMPT_SCHEMA_VERSION } from "../lib/prompt/structural-validator.js";
-import type { PhaseInput } from "../lib/task-graph/types.js";
-import type { PromptArtifact } from "../lib/prompt/types.js";
+import { getPromptStore } from "../lib/shared-stores.js";
+import { resolveRisks } from "../lib/resolution/risk-resolver.js";
 
 export async function registerInterviewSessionRoutes(app: FastifyInstance) {
   const orch = new OrchestrationService(getStore());
@@ -335,9 +330,27 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
     const bp = blueprints.find((b) => b.planId === latestPlan.id && b.status === "complete");
     if (!bp) throw new NotFoundError("Blueprint", sessionId);
 
-    const existingRaw = JSON.parse(bp.content) as Record<string, unknown>;
+    const planId = latestPlan.id;
     const newVersion = latestPlan.version + 1;
-    const planId = crypto.randomUUID();
+    const blueprintJson = JSON.parse(bp.content) as Record<string, unknown>;
+
+    // Validate risk IDs exist
+    const existingRisks = (blueprintJson.risks ?? []) as Record<string, unknown>[];
+    const riskIdSet = new Set(existingRisks.map((r) => r.id as string));
+    for (const id of riskIds) {
+      if (!riskIdSet.has(id)) {
+        throw new ValidationError(`Risk ID "${id}" not found in the current blueprint`);
+      }
+    }
+
+    // Load all prompts for the current plan version
+    const allPrompts = getPromptStore().getByPlan(planId, latestPlan.version);
+
+    // Build risk resolutions with descriptions
+    const resolutions = riskIds.map((id) => {
+      const r = existingRisks.find((er) => er.id === id);
+      return { id, description: (r?.description as string) ?? "" };
+    });
 
     // Build router and preferences
     const allCreds = getCredentialStore().list();
@@ -354,32 +367,39 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
       ? { preferredProvider: userCred.provider, preferredModel: userCred.defaultModel }
       : undefined;
 
-    const result = await refineBlueprint(
-      existingRaw, riskIds, planId, newVersion,
-      session.projectId, sessionId, router, preferences,
-    );
+    // Resolve risks — find matching prompts and rewrite them
+    const result = await resolveRisks(resolutions, allPrompts, router, preferences);
 
-    if (!result) {
-      throw new Error("Failed to refine the blueprint. The AI was unable to produce a revised plan.");
+    const now = new Date().toISOString();
+
+    // Save rewritten prompts
+    for (const rp of result.rewrittenPrompts) {
+      const existing = allPrompts.find((p) => p.taskId === rp.taskId);
+      if (existing) {
+        getPromptStore().save({
+          id: crypto.randomUUID(),
+          taskId: rp.taskId,
+          planId,
+          planVersion: newVersion,
+          promptText: rp.newText,
+          sections: existing.sections,
+          version: existing.version,
+          status: "complete" as const,
+          failureReason: null,
+          createdAt: now,
+        });
+      }
     }
 
-    // Save new plan version
-    const now = new Date().toISOString();
-    getStore().insertPlan({
-      id: planId,
-      projectId: project.id,
-      version: newVersion,
-      status: "complete",
-      createdAt: now,
-      updatedAt: now,
-    });
+    // Remove resolved risks from blueprint JSON and save as new version
+    const riskFiltered = existingRisks.filter((r) => !riskIdSet.has(r.id as string));
+    blueprintJson.risks = riskFiltered;
 
-    // Save new blueprint
     getStore().insertBlueprint({
       id: crypto.randomUUID(),
       planId,
       projectId: project.id,
-      content: JSON.stringify(result.blueprint),
+      content: JSON.stringify(blueprintJson),
       format: "json",
       version: newVersion,
       status: "complete",
@@ -388,101 +408,21 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
       updatedAt: now,
     });
 
-    // Generate task graph from revised phases
-    const phases: PhaseInput[] = result.blueprint.phases.map((p) => ({
-      phaseType: p.phaseType,
-      phaseName: p.phaseName,
-      status: p.status as "sufficient" | "insufficient" | "missing",
-      confidence: p.confidence,
-      summary: p.summary,
-      narrative: p.narrative,
-      keyDecisions: p.keyDecisions,
-      executionPrompt: p.executionPrompt,
-    }));
-    const graph = generateTasks(planId, newVersion, phases);
-    getGraphStore().saveGraph(graph);
-
-    // Generate execution prompts for each task
-    for (const task of graph.tasks) {
-      if (task.type === "pending_input") continue;
-
-      const phaseData = result.blueprint.phases.find((p) => p.phaseType === task.phaseType);
-      const aiPrompt = phaseData?.executionPrompt;
-
-      // Use AI-provided execution prompt directly if valid
-      if (aiPrompt && aiPrompt.length >= 500) {
-        const validation = validateExecutionPrompt(aiPrompt);
-        if (validation.valid) {
-          const getSec = (heading: string): string => extractSectionContent(aiPrompt, heading) ?? "";
-          const getLines = (heading: string): string[] => {
-            const c = extractSectionContent(aiPrompt, heading);
-            if (!c) return [];
-            return c.split("\n").map((l) => l.replace(/^[-*]\s*/, "").trim()).filter((l) => l.length > 0);
-          };
-          const sections = {
-            objective: getSec("Objective"),
-            context: getSec("Context"),
-            constraints: getLines("Constraints"),
-            expectedOutput: getSec("Expected Output"),
-            validationCriteria: getLines("Validation Criteria"),
-            architecturalAlignment: getSec("Architectural Alignment"),
-            agentTips: {
-              security: getLines("Security"),
-              edgeCases: getLines("Edge Cases"),
-              dependencyWarnings: getLines("Dependency Warnings"),
-              commonBugs: getLines("Common Bugs"),
-            },
-          };
-          getPromptStore().save({
-            id: crypto.randomUUID(),
-            taskId: task.id,
-            planId,
-            planVersion: newVersion,
-            promptText: aiPrompt,
-            sections,
-            version: PROMPT_SCHEMA_VERSION,
-            status: "complete",
-            failureReason: null,
-            createdAt: now,
-          } as PromptArtifact);
-          continue;
-        }
-      }
-
-      // Fallback generate prompt from phase context
-      const predecessorOutputs = task.dependencies
-        .map((d) => {
-          const dt = graph.tasks.find((t) => t.id === d.taskId);
-          return dt ? `${dt.title} [${dt.phaseType}, ${dt.status}]` : "";
-        })
-        .filter(Boolean);
-
-      const ctx = {
-        task,
-        planName: project.name,
-        allTasks: graph.tasks,
-        predecessorOutputs,
-        phaseSummary: phaseData?.summary ?? task.phaseType,
-        ...(phaseData?.narrative ? { aiPhaseNarrative: phaseData.narrative } : {}),
-        ...(phaseData?.summary ? { aiPhaseSummary: phaseData.summary } : {}),
-        ...(phaseData?.status ? { aiPhaseStatus: phaseData.status } : {}),
-        ...(phaseData?.confidence !== undefined ? { aiPhaseConfidence: phaseData.confidence } : {}),
-        ...(phaseData?.keyDecisions?.length ? { aiKeyDecisions: phaseData.keyDecisions } : {}),
-        aiAssumptions: result.blueprint.assumptions.map((a) => ({ description: a.description })),
-        aiConstraints: result.blueprint.constraints.map((c) => ({ description: c.description })),
-        aiRisks: result.blueprint.risks.map((r) => ({ description: r.description })),
-        aiOverallSummary: result.blueprint.overallSummary ?? "",
-      };
-      assemblePrompt(ctx as any, getPromptStore(), newVersion);
-    }
+    // Update plan version in-place
+    getDb()
+      .update(schema.plans)
+      .set({ version: newVersion, updatedAt: now } as any)
+      .where(eq(schema.plans.id, planId))
+      .run();
 
     await queueSyncDb();
 
-    app.log.info({ sessionId, planId, newVersion, riskCount: riskIds.length }, "refine_complete");
-    return {
-      planVersion: newVersion,
-      changeSummary: result.changeSummary,
-    };
+    const changeSummary = result.rewrittenPrompts.length > 0
+      ? `Resolved ${riskIds.length} risk(s). Rewritten ${result.rewrittenPrompts.length} execution prompt(s).`
+      : `Resolved ${riskIds.length} risk(s). No execution prompts were affected.`;
+
+    app.log.info({ sessionId, planId, newVersion, riskCount: riskIds.length, rewrittenCount: result.rewrittenPrompts.length }, "refine_complete");
+    return { planVersion: newVersion, changeSummary };
   });
 
   app.post("/api/v1/interviews/:id/transition", async (request) => {
