@@ -16,7 +16,9 @@ import { getCredentialStore } from "../lib/credentials/store.js";
 import { getGraphStore, getPromptStore } from "../lib/shared-stores.js";
 import { generateTasks } from "../lib/task-graph/generator.js";
 import { assemblePrompt } from "../lib/prompt/assembler.js";
+import { validateExecutionPrompt, extractSectionContent, PROMPT_SCHEMA_VERSION } from "../lib/prompt/structural-validator.js";
 import type { PhaseInput } from "../lib/task-graph/types.js";
+import type { PromptArtifact } from "../lib/prompt/types.js";
 
 export async function registerInterviewSessionRoutes(app: FastifyInstance) {
   const orch = new OrchestrationService(getStore());
@@ -401,27 +403,74 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
     getGraphStore().saveGraph(graph);
 
     // Generate execution prompts for each task
-    const toDesc = (arr: unknown[] | undefined): { description: string }[] =>
-      (arr ?? []).map((a) => {
-        const o = a as Record<string, unknown>;
-        return { description: (o.description as string) ?? "" };
-      });
-
     for (const task of graph.tasks) {
       if (task.type === "pending_input") continue;
+
+      const phaseData = result.blueprint.phases.find((p) => p.phaseType === task.phaseType);
+      const aiPrompt = phaseData?.executionPrompt;
+
+      // Use AI-provided execution prompt directly if valid
+      if (aiPrompt && aiPrompt.length >= 500) {
+        const validation = validateExecutionPrompt(aiPrompt);
+        if (validation.valid) {
+          const getSec = (heading: string): string => extractSectionContent(aiPrompt, heading) ?? "";
+          const getLines = (heading: string): string[] => {
+            const c = extractSectionContent(aiPrompt, heading);
+            if (!c) return [];
+            return c.split("\n").map((l) => l.replace(/^[-*]\s*/, "").trim()).filter((l) => l.length > 0);
+          };
+          const sections = {
+            objective: getSec("Objective"),
+            context: getSec("Context"),
+            constraints: getLines("Constraints"),
+            expectedOutput: getSec("Expected Output"),
+            validationCriteria: getLines("Validation Criteria"),
+            architecturalAlignment: getSec("Architectural Alignment"),
+            agentTips: {
+              security: getLines("Security"),
+              edgeCases: getLines("Edge Cases"),
+              dependencyWarnings: getLines("Dependency Warnings"),
+              commonBugs: getLines("Common Bugs"),
+            },
+          };
+          getPromptStore().save({
+            id: crypto.randomUUID(),
+            taskId: task.id,
+            planId,
+            planVersion: newVersion,
+            promptText: aiPrompt,
+            sections,
+            version: PROMPT_SCHEMA_VERSION,
+            status: "complete",
+            failureReason: null,
+            createdAt: now,
+          } as PromptArtifact);
+          continue;
+        }
+      }
+
+      // Fallback generate prompt from phase context
+      const predecessorOutputs = task.dependencies
+        .map((d) => {
+          const dt = graph.tasks.find((t) => t.id === d.taskId);
+          return dt ? `${dt.title} [${dt.phaseType}, ${dt.status}]` : "";
+        })
+        .filter(Boolean);
+
       const ctx = {
         task,
         planName: project.name,
         allTasks: graph.tasks,
-        predecessorOutputs: [] as string[],
-        phaseSummary: "",
-        aiPhaseSummary: "",
-        aiPhaseNarrative: "",
-        aiPhaseStatus: "sufficient",
-        aiKeyDecisions: [] as string[],
-        aiAssumptions: toDesc(result.blueprint.assumptions as unknown[]),
-        aiConstraints: toDesc(result.blueprint.constraints as unknown[]),
-        aiRisks: toDesc(result.blueprint.risks as unknown[]),
+        predecessorOutputs,
+        phaseSummary: phaseData?.summary ?? task.phaseType,
+        ...(phaseData?.narrative ? { aiPhaseNarrative: phaseData.narrative } : {}),
+        ...(phaseData?.summary ? { aiPhaseSummary: phaseData.summary } : {}),
+        ...(phaseData?.status ? { aiPhaseStatus: phaseData.status } : {}),
+        ...(phaseData?.confidence !== undefined ? { aiPhaseConfidence: phaseData.confidence } : {}),
+        ...(phaseData?.keyDecisions?.length ? { aiKeyDecisions: phaseData.keyDecisions } : {}),
+        aiAssumptions: result.blueprint.assumptions.map((a) => ({ description: a.description })),
+        aiConstraints: result.blueprint.constraints.map((c) => ({ description: c.description })),
+        aiRisks: result.blueprint.risks.map((r) => ({ description: r.description })),
         aiOverallSummary: result.blueprint.overallSummary ?? "",
       };
       assemblePrompt(ctx as any, getPromptStore(), newVersion);
