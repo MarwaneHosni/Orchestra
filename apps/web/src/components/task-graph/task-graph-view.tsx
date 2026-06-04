@@ -215,12 +215,23 @@ export function TaskGraphView({ sessionId }: { sessionId: string }) {
 
   return (
     <div style={{ fontFamily: "'JetBrains Mono', monospace", minWidth: 0 }}>
-      <Breadcrumb items={[{ label: "Projects", href: "/projects" }, { label: "Task Graph" }]} />
+      <Breadcrumb items={[
+        { label: "Projects", href: "/projects" },
+        { label: "Plan", href: `/projects/${sessionId}/summary` },
+        { label: "Task Graph" },
+      ]} />
 
       {/* Top bar */}
       <div style={{ borderBottom: "1px solid var(--color-border-subtle)", padding: "20px 0 16px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <TerminalTitle style={{ fontSize: 18, fontWeight: 500, color: "var(--color-text-primary)" }}>Task Graph</TerminalTitle>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button onClick={() => router.push(`/projects/${sessionId}/summary`)}
+              aria-label="Back to plan"
+              style={{ borderRadius: 3, padding: "2px 8px", fontSize: 15, fontFamily: "inherit", border: "1px solid var(--color-border-default)", background: "transparent", color: "var(--color-text-secondary)", cursor: "pointer", lineHeight: "22px" }}
+              className="hover:border-border-strong hover:text-text-primary transition-[color,border-color] duration-150"
+            >←</button>
+            <TerminalTitle style={{ fontSize: 18, fontWeight: 500, color: "var(--color-text-primary)" }}>Task Graph</TerminalTitle>
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }} className="graph-header-btns">
             <button onClick={handleExport} disabled={exporting}
               style={{ borderRadius: 3, padding: "6px 14px", fontSize: 12, fontFamily: "inherit", border: "1px solid var(--color-border-default)", background: "transparent", color: "var(--color-text-primary)", cursor: "pointer" }}
