@@ -490,7 +490,7 @@ export async function generateWithAI(
       // 5. Call AI
       updateWorkflowStep(workflowId, "blueprint", "running");
       emitProgress(createEvent(workflowId, "stage_started", "blueprint", { stageLabel: "Generating project plan with AI", attempt: 1 }));
-      emitProgress(createEvent(workflowId, "progress", "blueprint", { detail: "Selecting AI provider...", elapsed: 0 }));
+      emitProgress(createEvent(workflowId, "progress", "blueprint", { detail: "Generating project plan with AI...", elapsed: 0 }));
       const blueprintStart = Date.now();
       const result = await aiGen.generate(analysis, planId, planVersion, projectDescription);
 

@@ -122,7 +122,7 @@ export function GenerationProgress({ workflowId, onCancel }: GenerationProgressP
       <p style={{ fontSize: 14 }} className="text-text-secondary">{statusMessage}</p>
 
       {/* Live activity card */}
-      {showActivity && status === "running" && (
+      {showActivity && (status === "running" || status === "starting") && (
         <div style={{ padding: "12px 0", borderTop: "1px solid var(--color-border-subtle)" }}>
           {detail && (
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
