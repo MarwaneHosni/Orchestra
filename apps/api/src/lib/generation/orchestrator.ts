@@ -492,7 +492,14 @@ export async function generateWithAI(
       emitProgress(createEvent(workflowId, "stage_started", "blueprint", { stageLabel: "Generating project plan with AI", attempt: 1 }));
       emitProgress(createEvent(workflowId, "progress", "blueprint", { detail: "Generating project plan with AI...", elapsed: 0 }));
       const blueprintStart = Date.now();
+      const heartbeatInterval = setInterval(() => {
+        emitProgress(createEvent(workflowId, "progress", "blueprint", {
+          detail: "Generating project plan with AI...",
+          elapsed: Math.round((Date.now() - blueprintStart) / 1000),
+        }));
+      }, 15000);
       const result = await aiGen.generate(analysis, planId, planVersion, projectDescription);
+      clearInterval(heartbeatInterval);
 
       if (result.success && result.data) {
         emitProgress(createEvent(workflowId, "progress", "blueprint", { detail: "Validating blueprint structure...", elapsed: Math.round((Date.now() - blueprintStart) / 1000) }));

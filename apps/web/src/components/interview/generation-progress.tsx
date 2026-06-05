@@ -35,22 +35,6 @@ function formatElapsed(seconds: number): string {
   return m > 0 ? `${m}m ${s}s` : `${s}s`;
 }
 
-function StatusIndicator({ status }: { status: GenerationStatus }) {
-  return (
-    <span className="flex items-center gap-3" style={{ fontSize: 14 }}>
-      <span style={{ width: 8, height: 8, borderRadius: "50%", background: STATUS_DOT[status], display: "inline-block", flexShrink: 0 }} />
-      <span style={{
-        color: status === "failed" ? "var(--color-accent-red)" :
-               status === "completed" ? "var(--color-accent-green)" :
-               status === "retrying" || status === "warning" ? "var(--color-accent-amber)" :
-               "var(--color-text-secondary)"
-      }}>
-        {STATUS_LABELS[status]}
-      </span>
-    </span>
-  );
-}
-
 function IndeterminateBar() {
   return (
     <div style={{ height: 4, borderRadius: 2, background: "var(--color-border-subtle)", overflow: "hidden", position: "relative" }}>
@@ -104,58 +88,97 @@ export function GenerationProgress({ workflowId, onCancel }: GenerationProgressP
     onCancel?.();
   };
 
-  const showActivity = detail || subtask !== undefined || progressValue !== undefined;
+  // Only show stages that have been reached (not pending)
+  const visibleStages = stages.filter((s) => s.status !== "pending");
+  const hasDetail = detail || subtask !== undefined || progressValue !== undefined;
+  // The active stage is the last non-done, non-failed stage in the filtered list
+  const activeStage = [...visibleStages].reverse().find((s) => s.status !== "done" && s.status !== "failed");
 
   return (
-    <div style={{ borderRadius: 3, padding: "18px 20px" }} className="space-y-4 border border-border-subtle bg-bg-elevated">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <StatusIndicator status={status} />
-          {status === "running" && (
-            <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
-              {Math.round(progressFraction * 100)}%
-            </span>
-          )}
-        </div>
-      </div>
+    <div style={{ borderRadius: 3, padding: "18px 20px" }} className="space-y-2 border border-border-subtle bg-bg-elevated">
+      {/* Animated stages — only show reached stages */}
+      {visibleStages.length > 0 && (
+        <div className="space-y-1">
+          {visibleStages.map((s, i) => {
+            const isActive = s.status === "active";
+            const isDone = s.status === "done";
+            const isFailed = s.status === "failed";
 
-      <p style={{ fontSize: 14 }} className="text-text-secondary">{statusMessage}</p>
+            return (
+              <div key={s.stage} className="stage-reveal" style={{ animationDelay: `${Math.min(i * 0.15, 1)}s` }}>
+                <div
+                  style={{
+                    borderRadius: 2,
+                    padding: "8px 10px",
+                    fontSize: 14,
+                  }}
+                  className={cn(
+                    "flex items-center gap-3 transition-colors",
+                    isActive && "bg-accent-purple-dim text-accent-purple",
+                    isDone && "text-text-muted",
+                    isFailed && "bg-accent-red-dim/30 text-accent-red",
+                  )}
+                >
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      flexShrink: 0,
+                      display: "inline-block",
+                      background: isActive ? "var(--color-accent-purple)" :
+                                  isDone ? "var(--color-accent-green)" :
+                                  isFailed ? "var(--color-accent-red)" :
+                                  "var(--color-text-muted)",
+                      boxShadow: isActive ? "0 0 0 4px var(--color-accent-purple-dim)" : "none",
+                    }}
+                  />
+                  <span style={{ fontWeight: isActive ? 500 : 400 }} className="flex-1">{s.label}</span>
+                  {s.attempt > 1 && (
+                    <span style={{ borderRadius: 2, padding: "1px 5px", fontSize: 12 }} className="bg-accent-amber-dim text-accent-amber">
+                      attempt {s.attempt}
+                    </span>
+                  )}
+                  {isDone && <span className="text-accent-green text-xs" style={{ fontWeight: 600 }}>✓</span>}
+                  {isFailed && <span className="text-accent-red text-xs">✗</span>}
+                </div>
 
-      {/* Live activity card */}
-      {showActivity && (status === "running" || status === "starting") && (
-        <div style={{ padding: "12px 0", borderTop: "1px solid var(--color-border-subtle)" }}>
-          {detail && (
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <span style={{ fontSize: 13, color: "var(--color-text-primary)", fontWeight: 500 }}>
-                {detail}
-              </span>
-              <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
-                {formatElapsed(displayElapsed)} elapsed
-              </span>
-            </div>
-          )}
-
-          {progressValue !== undefined ? (
-            <FilledBar value={progressValue} />
-          ) : detail ? (
-            <IndeterminateBar />
-          ) : null}
-
-          {subtask && (
-            <div style={{ marginTop: 6, fontSize: 12, color: "var(--color-text-secondary)" }}>
-              {subtask}
-              {progressValue !== undefined && (
-                <span style={{ color: "var(--color-text-muted)", marginLeft: 8 }}>
-                  {progressValue}%
-                </span>
-              )}
-            </div>
-          )}
+                {/* Activity detail nested under the active stage */}
+                {isActive && hasDetail && (
+                  <div style={{ padding: "6px 0 6px 26px" }}>
+                    {detail && (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                        <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+                          {detail}
+                        </span>
+                        <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+                          {formatElapsed(displayElapsed)} elapsed
+                        </span>
+                      </div>
+                    )}
+                    {progressValue !== undefined ? (
+                      <FilledBar value={progressValue} />
+                    ) : detail ? (
+                      <IndeterminateBar />
+                    ) : null}
+                    {subtask && (
+                      <div style={{ marginTop: 6, fontSize: 12, color: "var(--color-text-secondary)" }}>
+                        {subtask}
+                        {progressValue !== undefined && (
+                          <span style={{ color: "var(--color-text-muted)", marginLeft: 8 }}>{progressValue}%</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
       {canCancel && onCancel && (
-        <div className="flex justify-end">
+        <div className="flex justify-end" style={{ paddingTop: 4 }}>
           <button
             onClick={handleCancel}
             style={{ borderRadius: 3, padding: "6px 12px", fontSize: 12 }}
@@ -181,59 +204,14 @@ export function GenerationProgress({ workflowId, onCancel }: GenerationProgressP
         .progress-indeterminate {
           animation: progress-indeterminate 2s ease-in-out infinite;
         }
+        @keyframes stage-slide-in {
+          0% { opacity: 0; transform: translateX(-10px); }
+          100% { opacity: 1; transform: translateX(0); }
+        }
+        .stage-reveal {
+          animation: stage-slide-in 0.4s ease-out both;
+        }
       `}</style>
-
-      <div className="space-y-1.5">
-        {stages.map((s) => {
-          const isActive = s.status === "active";
-          const isDone = s.status === "done";
-          const isFailed = s.status === "failed";
-          const isPending = s.status === "pending";
-
-          return (
-            <div
-              key={s.stage}
-              style={{
-                borderRadius: 2,
-                padding: "4px 10px",
-                fontSize: 14,
-              }}
-              className={cn(
-                "flex items-center gap-3 transition-colors",
-                isActive && "bg-accent-purple-dim text-accent-purple",
-                isDone && "text-text-muted",
-                isFailed && "bg-accent-red-dim/30 text-accent-red",
-                isPending && "text-text-muted",
-              )}
-            >
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  flexShrink: 0,
-                  display: "inline-block",
-                  background: isActive ? "var(--color-accent-purple)" :
-                              isDone ? "var(--color-accent-green)" :
-                              isFailed ? "var(--color-accent-red)" :
-                              "var(--color-text-muted)",
-                }}
-              />
-              <span className="flex-1">{s.label}</span>
-              {s.attempt > 1 && (
-                <span
-                  style={{ borderRadius: 2, padding: "1px 5px", fontSize: 12 }}
-                  className="bg-accent-amber-dim text-accent-amber"
-                >
-                  attempt {s.attempt}
-                </span>
-              )}
-              {isDone && <span className="text-accent-green text-xs">✓</span>}
-              {isFailed && <span className="text-accent-red text-xs">✗</span>}
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }
