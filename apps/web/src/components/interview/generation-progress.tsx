@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useProgress, type GenerationStatus } from "@/lib/use-progress";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,12 @@ const STATUS_LABELS: Record<GenerationStatus, string> = {
   completed: "Complete",
 };
 
+function formatElapsed(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
 function StatusIndicator({ status }: { status: GenerationStatus }) {
   return (
     <span className="flex items-center gap-3" style={{ fontSize: 14 }}>
@@ -44,8 +51,49 @@ function StatusIndicator({ status }: { status: GenerationStatus }) {
   );
 }
 
+function IndeterminateBar() {
+  return (
+    <div style={{ height: 4, borderRadius: 2, background: "var(--color-border-subtle)", overflow: "hidden", position: "relative" }}>
+      <div className="progress-indeterminate" style={{
+        height: "100%",
+        width: "40%",
+        borderRadius: 2,
+        background: "var(--color-accent-purple)",
+        position: "absolute",
+        left: 0,
+        top: 0,
+      }} />
+    </div>
+  );
+}
+
+function FilledBar({ value }: { value: number }) {
+  return (
+    <div style={{ height: 4, borderRadius: 2, background: "var(--color-border-subtle)", overflow: "hidden" }}>
+      <div style={{
+        height: "100%",
+        width: `${Math.min(100, Math.max(0, value))}%`,
+        borderRadius: 2,
+        background: "var(--color-accent-purple)",
+        transition: "width 0.5s ease-in-out",
+      }} />
+    </div>
+  );
+}
+
 export function GenerationProgress({ workflowId, onCancel }: GenerationProgressProps) {
-  const { stages, status, progressFraction, statusMessage, cancel } = useProgress(workflowId);
+  const { stages, status, progressFraction, statusMessage, detail, elapsed, subtask, progressValue, cancel } = useProgress(workflowId);
+  const [displayElapsed, setDisplayElapsed] = useState(0);
+
+  // Smoothly increment elapsed locally every second
+  useEffect(() => {
+    if (!detail && !progressValue) return;
+    setDisplayElapsed(elapsed);
+    const interval = setInterval(() => {
+      setDisplayElapsed((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [detail, progressValue, elapsed]);
 
   if (!workflowId) return null;
 
@@ -55,6 +103,8 @@ export function GenerationProgress({ workflowId, onCancel }: GenerationProgressP
     await cancel();
     onCancel?.();
   };
+
+  const showActivity = detail || subtask !== undefined || progressValue !== undefined;
 
   return (
     <div style={{ borderRadius: 3, padding: "18px 20px" }} className="space-y-4 border border-border-subtle bg-bg-elevated">
@@ -70,6 +120,39 @@ export function GenerationProgress({ workflowId, onCancel }: GenerationProgressP
       </div>
 
       <p style={{ fontSize: 14 }} className="text-text-secondary">{statusMessage}</p>
+
+      {/* Live activity card */}
+      {showActivity && status === "running" && (
+        <div style={{ padding: "12px 0", borderTop: "1px solid var(--color-border-subtle)" }}>
+          {detail && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 13, color: "var(--color-text-primary)", fontWeight: 500 }}>
+                {detail}
+              </span>
+              <span style={{ fontSize: 11, color: "var(--color-text-muted)" }}>
+                {formatElapsed(displayElapsed)} elapsed
+              </span>
+            </div>
+          )}
+
+          {progressValue !== undefined ? (
+            <FilledBar value={progressValue} />
+          ) : detail ? (
+            <IndeterminateBar />
+          ) : null}
+
+          {subtask && (
+            <div style={{ marginTop: 6, fontSize: 12, color: "var(--color-text-secondary)" }}>
+              {subtask}
+              {progressValue !== undefined && (
+                <span style={{ color: "var(--color-text-muted)", marginLeft: 8 }}>
+                  {progressValue}%
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {canCancel && onCancel && (
         <div className="flex justify-end">
@@ -89,6 +172,16 @@ export function GenerationProgress({ workflowId, onCancel }: GenerationProgressP
       {status === "failed" && (
         <p style={{ fontSize: 14, color: "var(--color-accent-red)" }}>Generation failed. You can try again when ready.</p>
       )}
+
+      <style>{`
+        @keyframes progress-indeterminate {
+          0% { left: -40%; }
+          100% { left: 100%; }
+        }
+        .progress-indeterminate {
+          animation: progress-indeterminate 2s ease-in-out infinite;
+        }
+      `}</style>
 
       <div className="space-y-1.5">
         {stages.map((s) => {

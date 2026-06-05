@@ -487,12 +487,15 @@ export async function generateWithAI(
     return undefined;
   });
 
-  // 5. Call AI
-  updateWorkflowStep(workflowId, "blueprint", "running");
-  emitProgress(createEvent(workflowId, "stage_started", "blueprint", { stageLabel: "Generating project plan with AI", attempt: 1 }));
-  const result = await aiGen.generate(analysis, planId, planVersion, projectDescription);
+      // 5. Call AI
+      updateWorkflowStep(workflowId, "blueprint", "running");
+      emitProgress(createEvent(workflowId, "stage_started", "blueprint", { stageLabel: "Generating project plan with AI", attempt: 1 }));
+      emitProgress(createEvent(workflowId, "progress", "blueprint", { detail: "Selecting AI provider...", elapsed: 0 }));
+      const blueprintStart = Date.now();
+      const result = await aiGen.generate(analysis, planId, planVersion, projectDescription);
 
-  if (result.success && result.data) {
+      if (result.success && result.data) {
+        emitProgress(createEvent(workflowId, "progress", "blueprint", { detail: "Validating blueprint structure...", elapsed: Math.round((Date.now() - blueprintStart) / 1000) }));
     emitProgress(createEvent(workflowId, "stage_completed", "blueprint", { stageLabel: "Generating project plan with AI", attempt: 1, durationMs: result.durationMs, model: result.model, provider: result.provider }));
     updateWorkflowStep(workflowId, "blueprint", "completed");
     const { blueprint } = result.data;
@@ -536,19 +539,42 @@ export async function generateWithAI(
     const taskMap = new Map(graph.tasks.map((t) => [t.id, t]));
 
     // Pre-compute AI retry fixes for failed prompts (before transaction, since AI calls are async)
+    const totalPreTasks = graph.tasks.filter((t) => t.type !== "pending_input").length;
+    let preTaskIndex = 0;
+    const promptGenStart = Date.now();
     const promptFixes = new Map<string, string | null>();
     for (const task of graph.tasks) {
+      if (task.type === "pending_input") continue;
+      preTaskIndex++;
       const phaseData = blueprint.phases.find((p) => p.phaseType === task.phaseType);
       const aiPrompt = phaseData?.executionPrompt;
+      emitProgress(createEvent(workflowId, "progress", "promptGen", {
+        detail: "Validating execution prompt...",
+        elapsed: Math.round((Date.now() - promptGenStart) / 1000),
+        subtask: `${preTaskIndex} of ${totalPreTasks}`,
+        progress: Math.round((preTaskIndex / totalPreTasks) * 100),
+      }));
       if (aiPrompt && aiPrompt.length >= 500) {
         const validation = validateExecutionPrompt(aiPrompt);
         if (!validation.valid) {
+          emitProgress(createEvent(workflowId, "progress", "promptGen", {
+            detail: "Fixing validation errors — attempt 1 of 2",
+            elapsed: Math.round((Date.now() - promptGenStart) / 1000),
+            subtask: `${preTaskIndex} of ${totalPreTasks}`,
+            progress: Math.round((preTaskIndex / totalPreTasks) * 100),
+          }));
           const context = buildTaskContext(task, phaseData, blueprint, projectName, graph, taskMap);
           const fix = await retryPromptWithAI(aiPrompt, validation.errors, context, router);
           if (fix) {
             promptFixes.set(task.id, fix);
           } else {
             log.warn({ taskId: task.id, phaseType: task.phaseType }, "prompt_retry_attempt_2");
+            emitProgress(createEvent(workflowId, "progress", "promptGen", {
+              detail: "Fixing validation errors — attempt 2 of 2",
+              elapsed: Math.round((Date.now() - promptGenStart) / 1000),
+              subtask: `${preTaskIndex} of ${totalPreTasks}`,
+              progress: Math.round((preTaskIndex / totalPreTasks) * 100),
+            }));
             const fix2 = await retryPromptWithAI(aiPrompt, validation.errors, context, router, true);
             promptFixes.set(task.id, fix2);
           }

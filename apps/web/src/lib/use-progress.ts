@@ -31,6 +31,10 @@ export interface ProgressState {
   statusMessage: string;
   completed: boolean;
   cancel: () => Promise<void>;
+  detail: string;
+  elapsed: number;
+  subtask?: string;
+  progressValue?: number;
 }
 
 const STAGE_LABELS: Record<string, string> = {
@@ -58,6 +62,10 @@ export function useProgress(workflowId: string | null): ProgressState {
   const [stages, setStages] = useState<StageSnapshot[]>(emptyStages);
   const [status, setStatus] = useState<GenerationStatus>("starting");
   const [statusMessage, setStatusMessage] = useState("Starting...");
+  const [detail, setDetail] = useState("");
+  const [elapsed, setElapsed] = useState(0);
+  const [subtask, setSubtask] = useState<string | undefined>(undefined);
+  const [progressValue, setProgressValue] = useState<number | undefined>(undefined);
   const eventSourceRef = useRef<EventSource | null>(null);
   const workflowIdRef = useRef<string | null>(null);
 
@@ -166,6 +174,13 @@ export function useProgress(workflowId: string | null): ProgressState {
             setStatusMessage(`Cancelled: ${(ev.payload?.reason as string) ?? ""}`);
             es.close();
             break;
+
+          case "progress":
+            setDetail((ev.payload?.detail as string) ?? "");
+            setElapsed((ev.payload?.elapsed as number) ?? 0);
+            if (ev.payload?.subtask) setSubtask(ev.payload.subtask as string);
+            if (ev.payload?.progress !== undefined) setProgressValue(ev.payload.progress as number);
+            break;
         }
       } catch {
         // ignore parse errors
@@ -173,7 +188,7 @@ export function useProgress(workflowId: string | null): ProgressState {
     };
 
     // Listen for all event types
-    for (const et of ["stage_started", "stage_completed", "stage_failed", "retrying", "warning", "completed", "cancelled"]) {
+    for (const et of ["stage_started", "stage_completed", "stage_failed", "retrying", "warning", "completed", "cancelled", "progress"]) {
       es.addEventListener(et, handleEvent);
     }
 
@@ -201,5 +216,9 @@ export function useProgress(workflowId: string | null): ProgressState {
     statusMessage,
     completed: status === "completed",
     cancel,
+    detail,
+    elapsed,
+    subtask,
+    progressValue,
   };
 }

@@ -41,7 +41,8 @@ export type EventType =
   | "retrying"
   | "warning"
   | "cancelled"
-  | "completed";
+  | "completed"
+  | "progress";
 
 // ── Event Envelope ────────────────────────────────────────────────
 export interface ProgressEventEnvelope {
@@ -63,7 +64,8 @@ export type ProgressEventPayload =
   | RetryingPayload
   | WarningPayload
   | CancelledPayload
-  | CompletedPayload;
+  | CompletedPayload
+  | ProgressPayload;
 
 // ── Payloads ──────────────────────────────────────────────────────
 export interface StartedPayload {
@@ -122,6 +124,13 @@ export interface CompletedPayload {
   model?: string;
   provider?: string;
   resultSummary?: string;
+}
+
+export interface ProgressPayload {
+  detail: string;
+  elapsed: number;
+  subtask?: string;
+  progress?: number;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────
