@@ -179,20 +179,117 @@ FIELD SPECIFICATIONS:
   status: one of "sufficient" | "insufficient" | "missing" | "ai_augmented"
   confidence: 0-1
   keyDecisions: array of 2-4 strings based on answers
-  executionPrompt: a VERY DETAILED markdown execution prompt (1000+ characters).
-    This raw markdown is sent DIRECTLY to another AI (e.g. ChatGPT, Claude, Copilot)
-    to implement the task. It must be self-contained and specific enough that the
-    receiving AI can execute without additional context.
-    Each section — you MUST meet the minimum length or the output will be REJECTED:
-      ## Objective (3-5 sentences, min 100 chars) — exact files, functions, or components to create
-      ## Context (5-8 sentences, min 200 chars) — project background, phase goal, specific tech/patterns
-      ## Constraints (8-15 items, min 1 char each) — ALL tech choices, patterns, interview-derived constraints
-      ## Expected Output (3-5 sentences, min 100 chars) — concrete deliverables with artifact names
-      ## Validation Criteria (5-10 items, min 1 char each) — specific, measurable, testable requirements
-      ## Architectural Alignment (3-5 sentences, min 80 chars) — interfaces, data flow, integration points
-      ## Agent Tips (5-10 per category, min 1 char each) — phase-specific security, edge cases, dependencies
-    FAILURE TO MEET MINIMUM LENGTHS WILL CAUSE THE PROMPT TO BE DISCARDED AND REGENERATED.
-    Write each section long enough to be useful — short sections waste a generation credit.
+  executionPrompt: a COMPREHENSIVE markdown execution prompt (target 1500+ characters, prioritize completeness and specificity over brevity).
+
+    This markdown is sent DIRECTLY to an advanced AI coding agent (e.g. OpenCode, Claude Code, Codex, Cursor Agent) responsible for implementing the task. The prompt must clearly describe WHAT capabilities, behaviors, outcomes, and user-facing functionality must be delivered. Do NOT focus on implementation mechanics unless they are explicitly required by the user's interview answers or project constraints.
+
+    The receiving AI is capable of making architecture, file structure, and implementation decisions independently. Your responsibility is to communicate the business intent, functional requirements, constraints, success criteria, and integration expectations with enough detail that the implementation can be completed without requiring additional clarification.
+
+    The prompt MUST be grounded in the user's interview answers, project goals, selected technologies, stated preferences, constraints, target users, and overall roadmap phase. Avoid generic recommendations. Tailor every section to the specific project.
+
+    IMPORTANT:
+    - Describe WHAT should be built, not HOW it should be coded.
+    - Focus on capabilities, workflows, user outcomes, business rules, and expected behavior.
+    - Do NOT spend prompt space listing files, classes, functions, folders, code patterns, abstractions, or implementation steps unless explicitly required by project constraints.
+    - Preserve alignment with the project's goals, scope, and intended user experience.
+    - Include all relevant interview-derived requirements and assumptions.
+    - Prefer specificity over generality.
+    - Avoid vague statements such as "implement best practices" without explaining the expected outcome.
+
+    Each section below is REQUIRED. Failure to satisfy the minimum content requirements will cause the prompt to be rejected and regenerated.
+
+    ## Objective
+    (minimum 150 characters)
+    Describe the specific capabilities, features, workflows, and user-facing functionality that must be implemented during this task.
+    Include:
+    - What users should be able to do.
+    - What business outcome this task enables.
+    - What problem this work solves.
+    - Any critical functionality that must be included.
+    Do NOT describe implementation details.
+    Example:
+    "Implement user authentication that allows users to register, sign in, manage active sessions, recover lost passwords, and use Google OAuth. The experience should support both new-user onboarding and returning-user access while protecting accounts from common abuse scenarios."
+
+    ## Context
+    (minimum 300 characters)
+    Provide detailed project context for the task.
+    Include:
+    - Overall project purpose.
+    - Current roadmap phase goals.
+    - Relevant interview answers.
+    - Target users.
+    - Business objectives.
+    - Relevant technology choices.
+    - Dependencies on previous phases or completed work.
+    Explain why this task matters and how it contributes to the larger project.
+    Do NOT describe code organization.
+
+    ## Constraints
+    (10–20 items minimum)
+    List ALL requirements, assumptions, limitations, technology choices, regulatory considerations, performance expectations, user preferences, platform requirements, and interview-derived constraints.
+    Each item should describe a condition that must be respected.
+    Good examples:
+    - Use PostgreSQL as the primary persistence layer.
+    - Support mobile and desktop usage.
+    - Authentication must support Google OAuth.
+    - The product must work offline after initial synchronization.
+    - Data must remain accessible after browser refreshes.
+    Avoid implementation instructions when possible.
+
+    ## Expected Output
+    (minimum 200 characters)
+    Describe the completed end state.
+    Focus on what should be true when the task is finished.
+    Include:
+    - What functionality exists.
+    - What users can accomplish.
+    - What workflows are operational.
+    - What outcomes are available.
+    - What business capabilities have been unlocked.
+    Describe observable behavior, not implementation artifacts.
+    Example:
+    "Users can create accounts, authenticate using email/password or Google OAuth, reset forgotten passwords, manage active sessions, and access protected areas of the application. Authentication-related workflows function reliably across supported devices and browsers."
+
+    ## Validation Criteria
+    (5–10 items minimum)
+    Provide specific, measurable, testable criteria that determine whether the task is complete.
+    Each item must describe an observable outcome.
+    Examples:
+    - Users can complete registration without manual intervention.
+    - Authentication persists correctly between sessions.
+    - Password reset workflow successfully restores account access.
+    - Invalid credentials are rejected with appropriate feedback.
+    - Protected features are inaccessible to unauthenticated users.
+    Every criterion should be objectively verifiable.
+
+    ## Architectural Alignment
+    (minimum 150 characters)
+    Describe how this capability fits into the overall system.
+    Include:
+    - Dependencies on existing features.
+    - Related workflows.
+    - Upstream and downstream interactions.
+    - External services or integrations.
+    - Data relationships.
+    - User journeys affected by this functionality.
+    Focus on system behavior and integration expectations rather than implementation structure.
+
+    ## Agent Tips
+    Provide practical guidance in the following categories.
+
+    ### Edge Cases
+    (5–10 items)
+    Identify uncommon situations, failure scenarios, unusual user behavior, incomplete data conditions, migration concerns, concurrency situations, or other edge cases that should be considered.
+
+    ### Security Considerations
+    (5–10 items)
+    Identify relevant security concerns, abuse scenarios, data protection requirements, authorization concerns, privacy expectations, validation needs, or compliance-related considerations.
+
+    ### Integration Notes
+    (5–10 items)
+    Describe interactions with existing workflows, external services, dependencies, user journeys, business processes, and system components that should remain compatible with this task.
+
+    The final prompt should be detailed, project-specific, grounded in interview answers, and sufficiently comprehensive that another AI agent can complete the task without requiring additional clarification.
 
 CRITICAL JSON RULES:
 - "phases" must be an ARRAY, not an object

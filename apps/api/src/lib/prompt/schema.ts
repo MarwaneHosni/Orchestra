@@ -15,7 +15,7 @@ export const EXECUTION_PROMPT_SECTIONS: PromptSectionDefinition[] = [
     heading: "Objective",
     headingLevel: 2,
     required: true,
-    minContentLength: 100,
+    minContentLength: 150,
     description: "What needs to be built",
   },
   {
@@ -23,7 +23,7 @@ export const EXECUTION_PROMPT_SECTIONS: PromptSectionDefinition[] = [
     heading: "Context",
     headingLevel: 2,
     required: true,
-    minContentLength: 200,
+    minContentLength: 300,
     description: "Project description, phase goal, key background",
   },
   {
@@ -39,7 +39,7 @@ export const EXECUTION_PROMPT_SECTIONS: PromptSectionDefinition[] = [
     heading: "Expected Output",
     headingLevel: 2,
     required: true,
-    minContentLength: 100,
+    minContentLength: 200,
     description: "What the execution should produce",
   },
   {
@@ -55,7 +55,7 @@ export const EXECUTION_PROMPT_SECTIONS: PromptSectionDefinition[] = [
     heading: "Architectural Alignment",
     headingLevel: 2,
     required: true,
-    minContentLength: 80,
+    minContentLength: 150,
     description: "How this fits the project architecture",
   },
   {
