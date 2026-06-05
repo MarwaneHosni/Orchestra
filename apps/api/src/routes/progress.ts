@@ -35,6 +35,22 @@ export async function registerProgressRoutes(app: FastifyInstance) {
       }
     }
 
+    // If no events exist yet (workflow just registered), send synthetic
+    // initial events so the frontend has something to show immediately
+    if (recent.length === 0) {
+      const initialProgress = {
+        schemaVersion: PROGRESS_SCHEMA_VERSION,
+        eventId: crypto.randomUUID(),
+        eventType: "progress",
+        workflowId,
+        stage: "synthesis",
+        sequence: 0,
+        createdAt: new Date().toISOString(),
+        payload: { detail: "Starting generation...", elapsed: 0 },
+      };
+      reply.raw.write(`event: progress\ndata: ${JSON.stringify(initialProgress)}\n\n`);
+    }
+
     // If the workflow is already in a terminal state, close
     const state = getWorkflowState(workflowId);
     if (!state || !state.abortController) {

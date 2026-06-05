@@ -102,13 +102,16 @@ export function useProgress(workflowId: string | null): ProgressState {
 
     let stallTimer: ReturnType<typeof setTimeout> | null = null;
     let lastEventTime = Date.now();
+    let receivedFirstEvent = false;
 
     const resetStallTimer = () => {
       lastEventTime = Date.now();
       if (stallTimer) clearTimeout(stallTimer);
       stallTimer = setTimeout(() => {
         const elapsed = Date.now() - lastEventTime;
-        if (elapsed >= 30000 && status !== "completed" && status !== "failed" && status !== "cancelled") {
+        // Only warn about stall if we were receiving events and they stopped.
+        // Never warn if no events arrived yet (initial connection race).
+        if (elapsed >= 30000 && receivedFirstEvent && status !== "completed" && status !== "failed" && status !== "cancelled") {
           setStatusMessage("Still working... (takes longer than usual)");
         }
       }, 30000);
@@ -121,6 +124,7 @@ export function useProgress(workflowId: string | null): ProgressState {
     };
 
     const handleEvent = (event: MessageEvent) => {
+      receivedFirstEvent = true;
       resetStallTimer();
       try {
         const ev: ProgressEvent = JSON.parse(event.data);
