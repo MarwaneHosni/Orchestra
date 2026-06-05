@@ -134,8 +134,9 @@ export function buildProjectSummaryMessage(blueprint: BlueprintOutput): Message[
     blueprint.overallSummary,
     "",
     "Phases:",
-    ...blueprint.phases.map((p) =>
-      `  - ${p.phaseName} (${p.phaseType}): ${p.summary} [confidence: ${p.confidence}, status: ${p.status}]`
+    ...blueprint.phases.map(
+      (p) =>
+        `  - ${p.phaseName} (${p.phaseType}): ${p.summary} [confidence: ${p.confidence}, status: ${p.status}]`,
     ),
     "",
     "Assumptions:",
@@ -149,9 +150,7 @@ export function buildProjectSummaryMessage(blueprint: BlueprintOutput): Message[
       : ["  (none)"]),
     "",
     "Risks:",
-    ...(blueprint.risks.length > 0
-      ? blueprint.risks.map((r) => `  - ${r.description}`)
-      : ["  (none)"]),
+    ...(blueprint.risks.length > 0 ? blueprint.risks.map((r) => `  - ${r.description}`) : ["  (none)"]),
   ];
 
   return [{ role: "user" as const, content: lines.join("\n") }];
@@ -237,7 +236,7 @@ FIELD SPECIFICATIONS:
     Avoid implementation instructions when possible.
 
     ## Expected Output
-    (minimum 200 characters)
+    (minimum 120 characters)
     Describe the completed end state.
     Focus on what should be true when the task is finished.
     Include:
@@ -263,7 +262,7 @@ FIELD SPECIFICATIONS:
     Every criterion should be objectively verifiable.
 
     ## Architectural Alignment
-    (minimum 150 characters)
+    (minimum 100 characters)
     Describe how this capability fits into the overall system.
     Include:
     - Dependencies on existing features.

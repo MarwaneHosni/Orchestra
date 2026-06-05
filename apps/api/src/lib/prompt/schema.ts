@@ -39,7 +39,7 @@ export const EXECUTION_PROMPT_SECTIONS: PromptSectionDefinition[] = [
     heading: "Expected Output",
     headingLevel: 2,
     required: true,
-    minContentLength: 200,
+    minContentLength: 120,
     description: "What the execution should produce",
   },
   {
@@ -55,7 +55,7 @@ export const EXECUTION_PROMPT_SECTIONS: PromptSectionDefinition[] = [
     heading: "Architectural Alignment",
     headingLevel: 2,
     required: true,
-    minContentLength: 150,
+    minContentLength: 100,
     description: "How this fits the project architecture",
   },
   {
