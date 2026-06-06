@@ -15,7 +15,7 @@ export const EXECUTION_PROMPT_SECTIONS: PromptSectionDefinition[] = [
     heading: "Objective",
     headingLevel: 2,
     required: true,
-    minContentLength: 150,
+    minContentLength: 100,
     description: "What needs to be built",
   },
   {
@@ -23,7 +23,7 @@ export const EXECUTION_PROMPT_SECTIONS: PromptSectionDefinition[] = [
     heading: "Context",
     headingLevel: 2,
     required: true,
-    minContentLength: 300,
+    minContentLength: 200,
     description: "Project description, phase goal, key background",
   },
   {
