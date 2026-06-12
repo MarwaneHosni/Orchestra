@@ -1,0 +1,125 @@
+---
+title: CLI Reference
+description: Command-line usage and scripts
+order: 10
+sidebarLabel: CLI Reference
+---
+
+# CLI Reference
+
+Orchestra is primarily a web application, but includes several CLI scripts for development and maintenance.
+
+## Development Commands
+
+### Start Development
+
+```bash
+pnpm dev
+```
+
+Starts:
+- API server on `http://localhost:3000`
+- Web frontend on `http://localhost:3001`
+
+### Build
+
+```bash
+pnpm build
+```
+
+Builds the frontend for production. Output goes to `apps/web/.next/`.
+
+### Test
+
+```bash
+pnpm test
+```
+
+Runs all test suites:
+- API tests (Vitest)
+- Web component tests
+- Integration tests
+
+### Test (Watch Mode)
+
+```bash
+pnpm test:watch
+```
+
+## Database Commands
+
+### Reset Database
+
+```bash
+rm apps/api/orchestra.db
+```
+
+Database will be recreated on next server start.
+
+### Backup
+
+```bash
+cp apps/api/orchestra.db apps/api/orchestra-backup-$(date +%Y%m%d).db
+```
+
+### Restore
+
+```bash
+cp apps/api/orchestra-backup-20240115.db apps/api/orchestra.db
+```
+
+## API Commands
+
+### Start API Only
+
+```bash
+cd apps/api
+pnpm dev
+```
+
+### Start API (Production)
+
+```bash
+cd apps/api
+NODE_ENV=production pnpm start
+```
+
+## Web Commands
+
+### Start Web Only
+
+```bash
+cd apps/web
+pnpm dev
+```
+
+### Build Web
+
+```bash
+cd apps/web
+pnpm build
+```
+
+## Cache Commands
+
+### Invalidate Cache
+
+```bash
+curl -X POST http://localhost:3000/api/v1/cache/invalidate \
+  -H "Content-Type: application/json" \
+  -d '{"all": true}'
+```
+
+### Invalidate by Provider
+
+```bash
+curl -X POST http://localhost:3000/api/v1/cache/invalidate \
+  -H "Content-Type: application/json" \
+  -d '{"provider": "openai"}'
+```
+
+## Next Steps
+
+- [API Reference](./api-reference) — Programmatic API
+- [Configuration](./configuration) — Environment variables
+- [Troubleshooting](./troubleshooting) — Common issues

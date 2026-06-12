@@ -1,0 +1,93 @@
+---
+title: Troubleshooting
+description: Common errors and how to fix them
+order: 13
+sidebarLabel: Troubleshooting
+---
+
+# Troubleshooting
+
+## Common Errors
+
+### Port Already in Use
+
+**Error:** `Error: listen EADDRINUSE: address already in use :::3000`
+
+**Fix:**
+```bash
+# Find the process
+lsof -i :3000
+
+# Kill it
+kill -9 <PID>
+
+# Or use a different port
+PORT=3002 pnpm dev
+```
+
+### Database Locked
+
+**Error:** `SQLITE_BUSY: database is locked`
+
+**Fix:**
+- Restart the server
+- Check for multiple processes accessing the same SQLite file
+- Consider using PostgreSQL for concurrent access
+
+### AI Generation Failed
+
+**Error:** `Generation failed: No valid provider`
+
+**Fix:**
+- Check that at least one provider is configured in Settings
+- Validate the provider credentials
+- Check provider status (circuit breaker may have opened)
+
+### Budget Exceeded
+
+**Error:** `OverBudgetError: Budget exceeded`
+
+**Fix:**
+- Budget guardrails are per-project and reset on server restart
+- Restart the server to reset
+- Use opencode-go (free model tier, requires opencode.ai API key) to avoid costs
+
+### AI Returns Invalid JSON
+
+**Error:** Blueprint generation fails with validation error
+
+**Fix:**
+- This is handled automatically by Orchestra with 3 retry attempts
+- If all retries fail, try a different provider
+- Check the provider's status
+
+### High Memory Usage
+
+**Symptoms:** Node.js process using >2GB RAM
+
+**Fix:**
+- Reduce the number of concurrent generations
+- Clear the AI cache: `POST /api/v1/cache/invalidate {all: true}`
+- Restart the server
+
+### Stuck on "Analyzing your answers"
+
+**Symptoms:** Generation stuck at synthesis stage
+
+**Fix:**
+- Check API logs for error details
+- Verify provider credentials are valid
+- Try a different provider
+- Restart the server and retry
+
+## Getting Help
+
+- [GitHub Issues](https://github.com/orchestra/orchestra/issues)
+- [FAQ](./faq)
+- [Configuration](./configuration)
+
+## Next Steps
+
+- [FAQ](./faq) — Common questions
+- [API Reference](./api-reference) — API endpoints
+- [CLI Reference](./cli-reference) — Command-line usage

@@ -1,0 +1,94 @@
+---
+title: Custom Providers
+description: Integrate your own AI backend with Orchestra
+order: 7
+sidebarLabel: Custom Providers
+---
+
+# Custom Providers
+
+Orchestra supports custom AI providers through an OpenAI-compatible API interface.
+
+## When to Use Custom Providers
+
+- **Local LLMs**: Ollama, LM Studio, or local model servers
+- **Private APIs**: Internal company AI services
+- **Specialized models**: Domain-specific models (medical, legal, etc.)
+- **Cost optimization**: Cheaper alternatives not in the default list
+
+## Requirements
+
+Your custom provider must expose an OpenAI-compatible chat completions API:
+
+```
+POST /v1/chat/completions
+```
+
+With request body:
+```json
+{
+  "model": "your-model-name",
+  "messages": [
+    {"role": "system", "content": "..."},
+    {"role": "user", "content": "..."}
+  ],
+  "temperature": 0.7,
+  "max_tokens": 4000
+}
+```
+
+And response:
+```json
+{
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "..."
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 100,
+    "completion_tokens": 200,
+    "total_tokens": 300
+  }
+}
+```
+
+## Implementation Steps
+
+1. **Implement the API**: Create a server that exposes the endpoint above
+2. **Add to Orchestra**: Go to **Settings → Providers → Add Custom**
+3. **Configure**: Enter your API URL and model name
+4. **Validate**: Test the connection with a real API call
+5. **Use**: Select your custom provider in the routing preferences
+
+## Example: Ollama Integration
+
+```bash
+# Start Ollama with an OpenAI-compatible server
+ollama serve
+
+# In Orchestra settings:
+# Provider URL: http://localhost:11434/v1
+# Model: llama3.2
+# API Key: ollama (any non-empty string)
+```
+
+## Pricing Configuration
+
+For cost tracking, you can configure pricing:
+
+| Parameter | Description |
+|---|---|
+| `promptPricePer1K` | Cost per 1K prompt tokens |
+| `completionPricePer1K` | Cost per 1K completion tokens |
+
+Set to `0` for free models.
+
+## Next Steps
+
+- [Configuration](./configuration) — Environment variables and settings
+- [API Reference](./api-reference) — Programmatic provider management
+- [Troubleshooting](./troubleshooting) — When things go wrong

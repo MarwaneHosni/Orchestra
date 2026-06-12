@@ -1,0 +1,61 @@
+---
+title: Getting Started
+description: Get up and running with Orchestra in minutes
+order: 1
+sidebarLabel: Getting Started
+---
+
+# Getting Started
+
+Orchestra is an open-source, local-first tool that uses AI to turn project ideas into structured development plans. This guide will get you from zero to a generated blueprint.
+
+## Prerequisites
+
+| Requirement | Version | Notes |
+|---|---|---|
+| Node.js | >= 20.0.0 | LTS recommended |
+| pnpm | >= 9.0.0 | Recommended package manager |
+| Git | any | For cloning |
+
+## Quick Start
+
+```bash
+git clone https://github.com/orchestra/orchestra.git
+cd orchestra
+pnpm install
+```
+
+Start the development server:
+
+```bash
+pnpm dev
+```
+
+This starts both the API server and the web frontend. Open `http://localhost:3001` in your browser.
+
+## Create Your First Project
+
+1. Click **"New Project"** on the dashboard
+2. Enter a project name and brief description
+3. Answer the interview questions (Quick Mode: ~16–20 questions)
+4. Click **"Generate Plan"** when finished
+5. Watch the real-time progress as Orchestra builds your blueprint
+
+## What Happens Behind the Scenes
+
+1. **Synthesis** — your answers are compiled into a context pack
+2. **Analysis** — deterministic analysis identifies phases, requirements, and constraints
+3. **Blueprint Generation** — AI generates a structured project plan with phases, tasks, and execution prompts
+4. **Task Graph** — phases are decomposed into a dependency-aware task graph
+5. **Prompt Assembly** — per-task execution prompts are built and validated
+
+## Next Steps
+
+- Read the [Installation Guide](./installation) for detailed setup options
+- Learn about [Usage](./usage) patterns and advanced features
+- Explore the [Architecture](./architecture) documentation
+
+## Getting Help
+
+- Open an issue on [GitHub](https://github.com/orchestra/orchestra/issues)
+- Check the [FAQ](./faq) for common questions

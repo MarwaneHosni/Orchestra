@@ -1,0 +1,25 @@
+---
+// Overrides Starlight's default ThemeProvider.
+// Reads from `orchestra-theme` (single source of truth) instead of `starlight-theme`.
+// Does NOT render theme-icons template (unused without ThemeSelect).
+---
+
+<script is:inline>
+	window.StarlightThemeProvider = (() => {
+		const key = 'orchestra-theme';
+		const storedTheme =
+			typeof localStorage !== 'undefined' && localStorage.getItem(key);
+		const theme =
+			storedTheme === 'dark' ? 'dark' : 'light';
+		document.documentElement.dataset.theme = theme;
+		// Sync with Starlight's key for any remaining Starlight code
+		if (typeof localStorage !== 'undefined') {
+			localStorage.setItem('starlight-theme', theme);
+		}
+		return {
+			updatePickers() {
+				// No-op — theme select is handled by our custom header
+			},
+		};
+	})();
+</script>

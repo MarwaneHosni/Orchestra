@@ -1,0 +1,54 @@
+---
+title: Overview
+description: What Orchestra is, how it works, and why it exists
+order: 0
+sidebarLabel: Overview
+---
+
+# What is Orchestra?
+
+Orchestra is an open-source, local-first tool that uses AI to turn project ideas into structured development plans.
+
+## How It Works
+
+1. **Interview** — Orchestra asks you targeted questions about your project idea
+2. **Analyze** — Your answers are analyzed to identify phases, requirements, and constraints
+3. **Generate** — AI generates a structured blueprint with phases, tasks, and execution prompts
+4. **Track** — Real-time progress via SSE with token usage and cost tracking
+5. **Export** — Download your plan as structured JSON or Markdown
+
+## Architecture
+
+- **Frontend**: Next.js 15 + React 19 + Tailwind CSS v4
+- **API**: Fastify 5 + Node.js 20
+- **Database**: SQLite via sql.js (pure JavaScript, no native compilation)
+- **AI**: Pluggable provider system with routing, fallbacks, and cost tracking
+
+## Key Features
+
+| Feature | Description |
+|---|---|
+| **Local-first** | All data on your machine. No cloud, no auth. |
+| **AI-powered** | Generates structured plans from plain language descriptions |
+| **Adaptive interview** | Quick Mode (10–14 questions) or Advanced Mode (deep dive) |
+| **Real-time progress** | Live SSE updates with token usage and cost tracking |
+| **Open source** | MIT licensed. Self-host, fork, or contribute. |
+
+## When to Use
+
+- You have an idea but don't know where to start
+- You need a structured plan to hand to a team
+- You want to think through edge cases before coding
+- You need per-task execution prompts for AI-assisted development
+
+## When Not to Use
+
+- You need real-time collaboration (not built for multi-user)
+- You want a full project management suite with time tracking
+- Your project is already well-scoped and just needs issue tracking
+
+## Next Steps
+
+- [Getting Started](./getting-started) — Create your first project
+- [Installation](./installation) — Detailed setup instructions
+- [Core Concepts](./core-concepts) — Understand blueprints and tasks

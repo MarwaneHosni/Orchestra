@@ -1,0 +1,132 @@
+---
+title: Architecture
+description: Deep dive into Orchestra's architecture
+order: 11
+sidebarLabel: Architecture
+---
+
+# Architecture
+
+## System Overview
+
+Orchestra is a monorepo with three main packages:
+
+```
+orchestra/
+├── apps/api/          # Fastify API server
+├── apps/web/          # Next.js frontend
+├── apps/landing/      # Astro docs site
+└── packages/          # Shared utilities
+```
+
+## API Architecture
+
+### Request Flow
+
+```
+HTTP Request → Fastify Router → Domain Handler → Service → Repository → SQLite
+```
+
+### Key Components
+
+| Component | Responsibility |
+|---|---|
+| **Router** | HTTP routing, validation, error handling |
+| **Domain** | Business logic, orchestration |
+| **Service** | Core operations (AI generation, caching) |
+| **Repository** | Data access, SQLite queries |
+| **Provider** | AI backend abstraction |
+
+### Database Schema
+
+17 tables:
+- `projects` — Project metadata
+- `interview_sessions` — Interview state
+- `answers` — User answers
+- `blueprints` — Generated plans
+- `tasks` — Task graph
+- `execution_prompts` — AI prompts
+- `provider_credentials` — API keys (encrypted)
+- `ai_cache_entries` — AI response cache
+- `usage_records` — Cost tracking
+- `audit_logs` — Security events
+- `guardrail_events` — Rate limiting, budget
+- `workflow_runs` — Generation pipelines
+- `stage_snapshots` — Progress tracking
+- `risk_flags` — Identified risks
+- `mitigations` — Risk mitigation actions
+- `prompt_versions` — Prompt versioning
+- `system_settings` — Configuration
+
+### AI Generation Pipeline
+
+```
+1. Synthesis → 2. Analysis → 3. Blueprint → 4. Task Graph → 5. Prompt Assembly → 6. Summary
+```
+
+Each stage is tracked via SSE events with real-time progress updates.
+
+## Frontend Architecture
+
+### Component Hierarchy
+
+```
+Layout (Server)
+├── Navbar (Client)
+├── Main Content
+│   ├── Project List
+│   ├── Interview View
+│   ├── Blueprint View
+│   └── Settings
+└── Footer
+```
+
+### State Management
+
+- **Server State**: React Query (TanStack Query) for API data
+- **Client State**: React hooks for UI state
+- **Progress**: Custom SSE hook for real-time updates
+
+### Key Features
+
+- **Real-time progress**: SSE-based live updates during generation
+- **Interview**: Multi-step form with validation
+- **Blueprint**: Interactive tree view of phases and tasks
+- **Settings**: Provider management with encryption
+
+## Provider System
+
+### Routing
+
+```
+Task Request → Router → Policy → Provider Selection → API Call
+```
+
+### Fallback Chain
+
+If a provider fails:
+1. Retry with same provider (max 2 retries)
+2. Switch to next preferred provider
+3. Switch to fallback tier
+4. Fail with error if all exhausted
+
+### Cost Tracking
+
+Every API call is tracked:
+- `prompt_tokens` — Input tokens
+- `completion_tokens` — Output tokens
+- `total_tokens` — Sum
+- `cost` — Calculated from pricing table
+
+## Security
+
+- **Encryption**: AES-256-GCM for API keys at rest
+- **No auth**: Local-only, no user authentication
+- **Audit logging**: All generation events tracked
+- **Guardrails**: Rate limiting, budget tracking, circuit breakers
+
+## Next Steps
+
+- [Security](./security) — Security details
+- [Configuration](./configuration) — Environment variables
+- [API Reference](./api-reference) — API endpoints

@@ -1,0 +1,67 @@
+---
+title: Core Concepts
+description: Understand the key concepts and terminology in Orchestra
+order: 3
+sidebarLabel: Core Concepts
+---
+
+# Core Concepts
+
+## Project
+
+A project is the top-level container. It holds:
+- Your project name and description
+- Interview sessions
+- Generated blueprints and plans
+- Settings and preferences
+
+## Interview
+
+The interview is Orchestra's adaptive questionnaire. It adjusts based on your answers:
+- **Quick Mode**: 16–20 questions, focused on core features
+- **Advanced Mode**: 24–28 questions, covers architecture, security, deployment
+
+## Blueprint
+
+A blueprint is the AI-generated plan document:
+- Phases with tasks
+- Dependencies and ordering
+- Risk assessment
+- Execution prompts
+
+## Plan
+
+A plan is a versioned container for blueprints. Each time you refine or regenerate, a new plan version is created.
+
+## Task Graph
+
+The task graph is a dependency-aware DAG of execution tasks:
+- Nodes: individual tasks
+- Edges: dependencies between tasks
+- Cycles: detected and reported
+
+## Execution Prompt
+
+Each task has an execution prompt — a detailed instruction for an AI coding assistant or developer to implement the task.
+
+## Provider
+
+A provider is an AI backend:
+- **openai**: GPT-4o, GPT-4o-mini
+- **anthropic**: Claude Sonnet, Claude Haiku
+- **openrouter**: Aggregator with 100+ models
+- **opencode-go**: Free models from opencode.ai
+- **custom**: Your own OpenAI-compatible API
+
+## Routing
+
+Orchestra routes tasks to models based on task type and quality requirements:
+- **cheap**: Fast, low-cost models
+- **balanced**: Good quality at moderate cost
+- **strong**: Best quality, higher cost
+
+## Next Steps
+
+- [Getting Started](./getting-started) — Create your first project
+- [Usage Guide](./usage) — Advanced patterns
+- [Architecture](./architecture) — Deep dive into the system

@@ -1,0 +1,135 @@
+---
+title: FAQ
+description: Frequently asked questions
+order: 14
+sidebarLabel: FAQ
+---
+
+# Frequently Asked Questions
+
+## General
+
+### What is Orchestra?
+
+Orchestra is an open-source, local-first tool that uses AI to turn project ideas into structured development plans.
+
+### Is Orchestra free?
+
+Yes. Orchestra itself is free and open-source under the MIT License. You provide your own AI provider API keys. The opencode-go provider uses models at no cost from opencode.ai (requires an API key). If you use OpenAI, Anthropic, or OpenRouter, you pay their standard API rates — Orchestra adds no markup.
+
+### Does Orchestra require an internet connection?
+
+- **Setup**: Yes, to download dependencies
+- **Normal use**: Yes, to call AI providers
+- **Offline after generation**: Yes — all data is stored locally
+- **Fully offline**: Not currently — AI generation requires network access
+
+### What platforms are supported?
+
+| Platform | Status |
+|---|---|
+| macOS | Fully supported |
+| Linux | Fully supported |
+| Windows | Fully supported (pure JS SQLite) |
+
+### Can I use Orchestra for commercial projects?
+
+Yes. The MIT License permits commercial use, modification, and distribution.
+
+## AI & Providers
+
+### Which AI providers are supported?
+
+| Provider | Cost | Key Required |
+|---|---|---|
+| opencode-go | Free | Yes |
+| OpenAI | Per-token | Yes |
+| Anthropic | Per-token | Yes |
+| OpenRouter | Varies | Yes |
+| Custom | Varies | Depends |
+
+### How much does a typical blueprint cost?
+
+Using paid providers:
+- **Cheap models** (gpt-4o-mini): $0.005–$0.02
+- **Balanced models** (gpt-4o): $0.05–$0.20
+- **Strong models** (gpt-4.1): $0.20–$1.00
+
+With opencode-go, the cost is always $0.
+
+### Can I use my own API key?
+
+Yes. Go to **Settings → Providers** and add your API key. Keys are encrypted with AES-256-GCM.
+
+### Why was my generation blocked?
+
+- **Rate limit** — Too many requests
+- **Budget exceeded** — Project spending limit
+- **Circuit breaker** — Provider failing repeatedly
+- **No valid credential** — No provider configured
+
+### Can I use a local LLM?
+
+Yes, with custom provider integration. See [Custom Providers](./custom-providers).
+
+## Data & Privacy
+
+### Where is my data stored?
+
+Everything is stored locally in SQLite:
+- Project descriptions
+- Interview answers
+- Generated blueprints
+- Task graphs
+- Execution prompts
+- AI cache entries
+
+### Does my data leave my computer?
+
+Only during AI generation. Your interview answers are sent to the AI provider you select.
+
+### How do I back up my data?
+
+The SQLite file is a regular file — just copy it:
+```bash
+cp orchestra.db orchestra-backup-$(date +%Y%m%d).db
+```
+
+### Can I delete all my data?
+
+Yes:
+```bash
+rm orchestra.db
+```
+Then restart the server.
+
+## Blueprints & Plans
+
+### What's the difference between a blueprint and a plan?
+
+- **Blueprint**: The generated project document
+- **Plan**: A versioned container for blueprints
+
+### Can I edit a blueprint after generation?
+
+Not directly in the UI. You can:
+1. Mitigate risks
+2. Refine via another interview session
+3. Export and edit externally
+
+### How accurate are the generated plans?
+
+Accuracy depends on:
+- **Interview quality** — Longer, specific answers produce better plans
+- **Model choice** — Stronger models reason better
+- **Domain complexity** — Simple CRUD apps are more accurate than novel AI systems
+
+### Can Orchestra generate code?
+
+No. Orchestra generates **execution prompts** — detailed instructions for AI coding assistants.
+
+## Next Steps
+
+- [Getting Started](./getting-started)
+- [Troubleshooting](./troubleshooting)
+- [Configuration](./configuration)

@@ -1,0 +1,64 @@
+---
+const faqs = [
+  {
+    q: 'What is Orchestra?',
+    a: 'Orchestra is an open-source, local-first tool that uses AI to turn project ideas into structured development plans. It interviews you about your project, then generates a blueprint with phases, tasks, and execution prompts.',
+  },
+  {
+    q: 'Do I need an AI subscription?',
+    a: 'No. Orchestra does not bundle AI models — you bring your own provider key. The opencode-go provider uses free models from opencode.ai. You can also use OpenAI, Anthropic, or OpenRouter.',
+  },
+  {
+    q: 'Is my data private?',
+    a: 'Yes. All data is stored locally in SQLite. No cloud services, no telemetry, no external logging. Your project ideas and interview answers never leave your machine unless you explicitly send them to an AI provider.',
+  },
+  {
+    q: 'Can I use it commercially?',
+    a: 'Yes. Orchestra is MIT licensed. Use it for personal projects, commercial products, or internal tooling without restrictions.',
+  },
+  {
+    q: 'What tech stack does it use?',
+    a: 'Next.js 15 + React 19 for the frontend, Fastify 5 for the API, Drizzle ORM with sql.js for SQLite persistence, and Vitest for testing. The entire stack is JavaScript/TypeScript with zero native compilation dependencies.',
+  },
+];
+---
+
+<section class="mx-auto max-w-5xl px-4 py-16">
+  <div class="flex items-center gap-3" style="margin-bottom: 32px;">
+    <span
+      class="text-xs font-medium uppercase tracking-widest"
+      style="color: var(--color-text-muted); letter-spacing: 0.08em;"
+    >
+      FAQ
+    </span>
+    <span style="flex: 1; border-top: 1px solid var(--color-border-subtle); display: inline-block;"></span>
+  </div>
+
+  <div class="space-y-4">
+    {faqs.map((faq) => (
+      <details
+        class="group rounded border"
+        style="border-color: var(--color-border-subtle); background: var(--color-bg-elevated); border-radius: 3px;"
+      >
+        <summary
+          class="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-sm font-medium"
+          style="color: var(--color-text-primary);"
+        >
+          {faq.q}
+          <span
+            class="ml-4 text-xs transition-transform duration-200 group-open:rotate-180"
+            style="color: var(--color-text-muted);"
+          >
+            ▼
+          </span>
+        </summary>
+        <div
+          class="px-5 pb-4 text-xs leading-relaxed"
+          style="color: var(--color-text-secondary);"
+        >
+          {faq.a}
+        </div>
+      </details>
+    ))}
+  </div>
+</section>

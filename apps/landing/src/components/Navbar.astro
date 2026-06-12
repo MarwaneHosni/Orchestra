@@ -1,0 +1,76 @@
+---
+const navLinks = [
+  { href: '/docs/overview/', label: 'Docs' },
+  { href: 'https://github.com/orchestra/orchestra', label: 'GitHub', external: true },
+];
+---
+
+<header
+  class="sticky top-0 z-50 border-b"
+  style="background: var(--color-bg-base); border-color: var(--color-border-subtle);"
+>
+  <div class="mx-auto flex h-12 max-w-5xl items-center justify-between px-4">
+    <a
+      href="/"
+      class="flex items-center gap-2 text-sm font-semibold no-underline"
+      style="color: var(--color-text-primary); font-family: 'JetBrains Mono', monospace;"
+    >
+      <span style="color: var(--color-accent);">orchestra</span>
+    </a>
+
+    <div class="flex items-center gap-1">
+      <nav class="flex items-center gap-1">
+        {navLinks.map((link) => (
+          <a
+            href={link.href}
+            target={link.external ? '_blank' : undefined}
+            rel={link.external ? 'noopener noreferrer' : undefined}
+            class="nav-link flex items-center px-3 py-1.5 text-xs font-medium transition-colors duration-150"
+            style="color: var(--color-text-secondary); border-radius: 2px;"
+          >
+            {link.label}
+            {link.external && (
+              <span class="ml-1 text-[10px]" style="color: var(--color-text-muted);">↗</span>
+            )}
+          </a>
+        ))}
+      </nav>
+
+      <button
+        id="theme-toggle"
+        aria-label="Toggle theme"
+        class="ml-1 flex items-center justify-center rounded p-1.5 text-xs transition-colors duration-150"
+        style="color: var(--color-text-muted); border-radius: 2px;"
+      >
+        <span id="theme-icon-light" style="display: none;">☀</span>
+        <span id="theme-icon-dark">☾</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<script is:inline>
+  (function() {
+    const btn = document.getElementById('theme-toggle');
+    const iconLight = document.getElementById('theme-icon-light');
+    const iconDark = document.getElementById('theme-icon-dark');
+    if (!btn) return;
+
+    function updateIcons() {
+      const isDark = document.documentElement.dataset.theme === 'dark';
+      iconLight.style.display = isDark ? 'inline' : 'none';
+      iconDark.style.display = isDark ? 'none' : 'inline';
+    }
+
+    btn.addEventListener('click', function() {
+      const current = document.documentElement.dataset.theme;
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.dataset.theme = next;
+      localStorage.setItem('orchestra-theme', next);
+      localStorage.setItem('starlight-theme', next);
+      updateIcons();
+    });
+
+    updateIcons();
+  })();
+</script>

@@ -1,0 +1,48 @@
+---
+title: Changelog
+description: Version history and changes
+order: 15
+sidebarLabel: Changelog
+---
+
+# Changelog
+
+## v0.1.0 (Current)
+
+### Features
+
+- **AI-Powered Blueprints**: Generate structured project plans from plain language descriptions
+- **Adaptive Interview**: Quick Mode (16–20 questions) and Advanced Mode (24–28 questions)
+- **Real-Time Progress**: Live SSE updates with token usage and cost tracking
+- **Multi-Provider Support**: OpenAI, Anthropic, OpenRouter, opencode-go, and custom providers
+- **Cost Tracking**: Real-time token usage and cost calculation per generation
+- **Risk Mitigation**: Automatic risk identification and mitigation suggestions
+- **Task Graph Generation**: Dependency-aware task decomposition
+- **Execution Prompts**: Per-task AI-written implementation instructions
+- **Local-First**: SQLite persistence, no cloud dependencies
+- **Theme Toggle**: Manual light/dark mode with persistent preference
+- **17-Page Documentation**: Comprehensive docs with Pagefind search
+
+### Technical
+
+- **API**: Fastify 5 with structured Pino logging
+- **Frontend**: Next.js 15 + React 19 + Tailwind CSS v4
+- **Database**: SQLite via sql.js (pure JavaScript)
+- **Testing**: 586 tests across 26 test files
+- **AI**: Pluggable provider system with routing and fallbacks
+- **Caching**: SQLite-backed AI response cache with SHA256 keys
+- **Security**: AES-256-GCM encryption for provider credentials
+
+### Architecture
+
+- Monorepo structure with `apps/api`, `apps/web`, and `apps/landing`
+- 17 SQLite tables with full repository layer
+- Transaction support with `BEGIN IMMEDIATE`/`COMMIT`/`ROLLBACK`
+- Event-driven progress with 9 SSE event types
+- Circuit breaker pattern for provider resilience
+
+## Next Steps
+
+- [Contributing](./contributing)
+- [Installation](./installation)
+- [Getting Started](./getting-started)

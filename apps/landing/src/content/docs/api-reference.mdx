@@ -1,0 +1,210 @@
+---
+title: API Reference
+description: Complete API reference for Orchestra
+order: 9
+sidebarLabel: API Reference
+---
+
+# API Reference
+
+Orchestra exposes a REST API at `http://localhost:3000/api/v1`.
+
+## Authentication
+
+No authentication required for local deployment. All endpoints are open.
+
+## Projects
+
+### List Projects
+
+```bash
+GET /api/v1/projects
+```
+
+Response:
+```json
+{
+  "projects": [
+    {
+      "id": "uuid",
+      "name": "string",
+      "description": "string",
+      "createdAt": "ISO8601",
+      "updatedAt": "ISO8601"
+    }
+  ]
+}
+```
+
+### Create Project
+
+```bash
+POST /api/v1/projects
+Content-Type: application/json
+
+{
+  "name": "My Project",
+  "description": "A brief description"
+}
+```
+
+### Get Project
+
+```bash
+GET /api/v1/projects/:id
+```
+
+### Delete Project
+
+```bash
+DELETE /api/v1/projects/:id
+```
+
+## Interview Sessions
+
+### Create Session
+
+```bash
+POST /api/v1/interview-sessions
+Content-Type: application/json
+
+{
+  "projectId": "uuid",
+  "mode": "quick" | "advanced"
+}
+```
+
+### Get Next Question
+
+```bash
+GET /api/v1/interview-sessions/:sessionId/next
+```
+
+Response:
+```json
+{
+  "question": {
+    "id": "string",
+    "text": "string",
+    "phase": "string",
+    "type": "text" | "multiline" | "choice"
+  },
+  "progress": {
+    "answered": 5,
+    "total": 20
+  }
+}
+```
+
+### Submit Answer
+
+```bash
+POST /api/v1/interview-sessions/:sessionId/answers
+Content-Type: application/json
+
+{
+  "questionId": "string",
+  "answer": "string"
+}
+```
+
+### Generate Blueprint
+
+```bash
+POST /api/v1/interview-sessions/:sessionId/generate
+```
+
+## Provider Credentials
+
+### List Credentials
+
+```bash
+GET /api/v1/provider-credentials
+```
+
+### Create Credential
+
+```bash
+POST /api/v1/provider-credentials
+Content-Type: application/json
+
+{
+  "provider": "openai" | "anthropic" | "openrouter" | "opencode-go" | "custom",
+  "apiKey": "string",
+  "displayName": "string",
+  "defaultModel": "string"
+}
+```
+
+### Validate Credential
+
+```bash
+POST /api/v1/provider-credentials/:id/validate
+```
+
+## Progress
+
+### Stream Progress
+
+```bash
+GET /api/v1/progress/:workflowId
+Accept: text/event-stream
+```
+
+Events:
+- `stage_started`
+- `stage_completed`
+- `stage_failed`
+- `stage_retry`
+- `progress_update`
+- `heartbeat`
+- `complete`
+
+## Cache
+
+### Invalidate Cache
+
+```bash
+POST /api/v1/cache/invalidate
+Content-Type: application/json
+
+{
+  "all": true
+  // or
+  "provider": "openai"
+  // or
+  "model": "gpt-4o"
+}
+```
+
+## Health
+
+```bash
+GET /api/v1/health
+```
+
+Response:
+```json
+{
+  "status": "healthy",
+  "version": "0.1.0",
+  "timestamp": "ISO8601"
+}
+```
+
+## Error Format
+
+```json
+{
+  "error": {
+    "code": "UPPER_SNAKE_CASE",
+    "message": "Human-readable description"
+  }
+}
+```
+
+## Next Steps
+
+- [CLI Reference](./cli-reference) — Command-line usage
+- [Configuration](./configuration) — Environment variables
+- [Troubleshooting](./troubleshooting) — Common issues

@@ -1,0 +1,74 @@
+---
+const features = [
+  {
+    icon: '◆',
+    title: 'AI-Powered Blueprints',
+    description: 'Describe your idea in plain language. Orchestra generates a structured project plan with phases, tasks, and execution prompts.',
+  },
+  {
+    icon: '◈',
+    title: 'Local-First',
+    description: 'All data stays on your machine. SQLite persistence, no cloud dependencies, no auth walls. Your ideas are yours.',
+  },
+  {
+    icon: '◉',
+    title: 'Zero Infrastructure',
+    description: 'No servers to provision, no databases to configure. Bring your own AI provider key. Runs entirely on your hardware.',
+  },
+  {
+    icon: '◇',
+    title: 'Adaptive Interview',
+    description: 'Quick Mode asks 10–14 focused questions. Advanced Mode dives deep into architecture, security, and deployment. You choose the depth.',
+  },
+  {
+    icon: '◊',
+    title: 'Real-Time Progress',
+    description: 'Watch each generation stage live via Server-Sent Events. Token usage, model selection, and cost tracking — all transparent.',
+  },
+  {
+    icon: '◎',
+    title: 'Open Source',
+    description: 'MIT licensed. Self-host, fork, or contribute. No feature gates, no premium tiers, no vendor lock-in.',
+  },
+];
+---
+
+<section class="mx-auto max-w-5xl px-4 py-16">
+  <div class="flex items-center gap-3" style="margin-bottom: 32px;">
+    <span
+      class="text-xs font-medium uppercase tracking-widest"
+      style="color: var(--color-text-muted); letter-spacing: 0.08em;"
+    >
+      Features
+    </span>
+    <span style="flex: 1; border-top: 1px solid var(--color-border-subtle); display: inline-block;"></span>
+  </div>
+
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    {features.map((feature) => (
+      <div
+        class="feature-card rounded border p-5 transition-colors duration-150"
+        style="border-color: var(--color-border-subtle); background: var(--color-bg-elevated); border-radius: 3px;"
+      >
+        <div
+          class="mb-3 text-lg"
+          style="color: var(--color-accent);"
+        >
+          {feature.icon}
+        </div>
+        <h3
+          class="mb-2 text-sm font-medium"
+          style="color: var(--color-text-primary);"
+        >
+          {feature.title}
+        </h3>
+        <p
+          class="text-xs leading-relaxed"
+          style="color: var(--color-text-secondary);"
+        >
+          {feature.description}
+        </p>
+      </div>
+    ))}
+  </div>
+</section>

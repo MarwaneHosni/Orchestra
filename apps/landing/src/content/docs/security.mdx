@@ -1,0 +1,97 @@
+---
+title: Security
+description: Security practices and data handling
+order: 12
+sidebarLabel: Security
+---
+
+# Security
+
+## Data Storage
+
+### Local-Only
+
+All data is stored locally in SQLite:
+- No cloud services
+- No external logging
+- No telemetry
+- No data leaves your machine except during AI generation
+
+### What Stays Local
+
+| Data | Location | Leaves Machine |
+|---|---|---|
+| Project metadata | SQLite | No |
+| Interview answers | SQLite | No |
+| Blueprints | SQLite | No |
+| Task graphs | SQLite | No |
+| Execution prompts | SQLite | No |
+| Provider credentials | SQLite (encrypted) | No |
+| AI cache entries | SQLite | No |
+
+### What Leaves the Machine
+
+| Data | Destination | When |
+|---|---|---|
+| Interview answers (as context) | AI provider | During blueprint generation |
+| Execution prompts | AI provider | During prompt generation |
+| API validation ping | AI provider | When validating credentials |
+
+:::caution
+When using AI providers, your project context is sent to their servers. Review their privacy policies. For maximum data privacy, host a local model with a custom provider (see [Custom Providers](./custom-providers)).
+:::
+
+## Encryption
+
+### Provider Credentials
+
+API keys are encrypted at rest using AES-256-GCM:
+
+- **Key**: `ENCRYPTION_KEY` environment variable (32-byte hex)
+- **Algorithm**: AES-256-GCM
+- **IV**: Random 16 bytes per encryption
+- **Tag**: 16 bytes authentication tag
+
+Without `ENCRYPTION_KEY`, credentials are stored but not encrypted.
+
+### Generate Key
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+## Network Security
+
+### API Server
+
+- Default bind: `0.0.0.0` (all interfaces)
+- No authentication required (local-only deployment)
+- No HTTPS (use reverse proxy for production)
+
+### Recommendations
+
+- Run behind a reverse proxy (nginx, Caddy)
+- Use `HOST=127.0.0.1` to bind to localhost only
+- Set `ENCRYPTION_KEY` for credential encryption
+- Use PostgreSQL instead of SQLite for concurrent access
+
+## Audit Logging
+
+All security events are logged:
+
+| Event | Description |
+|---|---|
+| `generation.attempted` | AI generation started |
+| `generation.completed` | AI generation finished |
+| `guardrail.rate_limited` | Rate limit triggered |
+| `guardrail.over_budget` | Budget exceeded |
+| `guardrail.circuit_open` | Circuit breaker opened |
+| `guardrail.abuse_blocked` | Abuse detected |
+| `circuit.state_change` | Circuit breaker state changed |
+| `provider.validation` | Credential validation |
+
+## Next Steps
+
+- [Configuration](./configuration) — Environment variables
+- [Troubleshooting](./troubleshooting) — Common issues
+- [FAQ](./faq) — Security questions

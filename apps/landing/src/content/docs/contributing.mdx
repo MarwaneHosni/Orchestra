@@ -1,0 +1,87 @@
+---
+title: Contributing
+description: How to contribute to Orchestra
+order: 16
+sidebarLabel: Contributing
+---
+
+# Contributing
+
+Orchestra is open source under the MIT License. Contributions are welcome.
+
+## Getting Started
+
+1. Fork the repository
+2. Clone your fork
+3. Install dependencies: `pnpm install`
+4. Start development: `pnpm dev`
+
+## Development Workflow
+
+### Branch Naming
+
+- `feature/description` — New features
+- `fix/description` — Bug fixes
+- `docs/description` — Documentation updates
+- `refactor/description` — Code refactoring
+
+### Commit Messages
+
+Use conventional commits:
+```
+feat: add new feature
+fix: resolve bug
+docs: update documentation
+refactor: improve code structure
+test: add tests
+```
+
+### Code Style
+
+- TypeScript strict mode
+- ESLint + Prettier for formatting
+- 586 tests must pass before merging
+- No console.log in production code
+
+### Testing
+
+```bash
+pnpm test        # Run all tests
+pnpm test:watch  # Watch mode
+```
+
+## Areas for Contribution
+
+### High Priority
+
+- **Web UI tests**: Add Playwright E2E tests
+- **Provider support**: Add more AI providers (Google, AWS Bedrock)
+- **Local LLM**: Improve Ollama/LM Studio integration
+- **Performance**: Optimize generation pipeline
+- **Mobile**: Responsive UI improvements
+
+### Medium Priority
+
+- **Documentation**: Add more tutorials and guides
+- **Internationalization**: Multi-language support
+- **Export formats**: Add more export formats (PDF, Confluence)
+- **Integrations**: GitHub Issues, Linear, Notion
+
+### Low Priority
+
+- **Docker**: Official Docker image
+- **Cloud deployment**: Guides for AWS, GCP, Azure
+- **Plugins**: Plugin system for custom extensions
+
+## Code of Conduct
+
+- Be respectful and constructive
+- Focus on technical merit
+- Help newcomers
+- Report security issues privately
+
+## Next Steps
+
+- [Getting Started](./getting-started)
+- [Architecture](./architecture)
+- [GitHub Issues](https://github.com/orchestra/orchestra/issues)

@@ -1,0 +1,119 @@
+---
+title: Configuration
+description: All environment variables, provider settings, and customization options
+order: 8
+sidebarLabel: Configuration
+---
+
+# Configuration
+
+Orchestra works with sensible defaults out of the box, but every aspect can be configured.
+
+## Environment Variables
+
+Create a `.env` file in the project root. All variables are optional unless noted.
+
+### Core Application
+
+| Variable | Default | Description |
+|---|---|---|
+| `NODE_ENV` | `development` | Runtime environment |
+| `PORT` | `3000` | API server port |
+| `HOST` | `0.0.0.0` | API server bind address |
+| `LOG_LEVEL` | `info` | Logging verbosity |
+
+### Database
+
+| Variable | Default | Description |
+|---|---|---|
+| `SQLITE_DB_PATH` | `./orchestra.db` | SQLite database file path |
+| `DATABASE_URL` | *(none)* | PostgreSQL connection string |
+
+### Encryption
+
+| Variable | Default | Description |
+|---|---|---|
+| `ENCRYPTION_KEY` | *(none)* | 32-byte hex string for AES-256-GCM encryption |
+
+Generate a key:
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+### AI Provider Keys
+
+At least one provider key is needed for AI-powered features. The opencode-go provider also requires an API key from opencode.ai — its models are priced at $0.
+
+| Variable | Provider | Notes |
+|---|---|---|
+| `OPENAI_API_KEY` | OpenAI | Get from platform.openai.com |
+| `ANTHROPIC_API_KEY` | Anthropic | Get from console.anthropic.com |
+| `OPENROUTER_API_KEY` | OpenRouter | Get from openrouter.ai |
+
+### Frontend
+
+| Variable | Default | Description |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | *(empty)* | Absolute URL of the API server |
+
+## Provider Configuration
+
+### Adding a Provider
+
+1. Go to **Settings** in the web UI
+2. Click **Add Provider**
+3. Select provider type and enter your API key
+4. Optionally set a default model
+5. Click **Validate** to test the key
+
+### Provider Statuses
+
+| Status | Meaning | Action |
+|---|---|---|
+| `unverified` | Just added | Click Validate |
+| `valid` | Key works | Ready to use |
+| `invalid` | Key rejected | Check and re-enter |
+| `expired` | No longer valid | Generate new key |
+| `rate_limited` | Throttled | Wait or switch |
+| `failed` | Validation failed | Check network |
+
+### Model Routing
+
+Orchestra selects models based on task type:
+
+| Task Type | Min Tier | Preferred Models |
+|---|---|---|
+| `clarification` | cheap | deepseek-v4-flash, gpt-4o-mini |
+| `blueprint` | cheap | deepseek-v4-flash, mimo-v2.5, gpt-4o-mini |
+| `roadmap` | balanced | gpt-4o, claude-sonnet |
+| `architecture` | strong | gpt-4.1, claude-sonnet |
+| `prompt_generation` | balanced | deepseek-v4-flash, gpt-4o |
+| `summary` | cheap | deepseek-v4-flash, mimo-v2.5, gpt-4o-mini |
+
+### Pricing Table
+
+All costs are calculated from actual token usage:
+
+| Provider | Model | Prompt / 1K | Completion / 1K |
+|---|---|---|---|
+| openai | gpt-4o-mini | $0.00015 | $0.00060 |
+| openai | gpt-4o | $0.00250 | $0.01000 |
+| openai | gpt-4.1 | $0.00200 | $0.00800 |
+| anthropic | claude-3-5-haiku-latest | $0.00080 | $0.00400 |
+| anthropic | claude-sonnet-4-20250514 | $0.00300 | $0.01500 |
+| openrouter | deepseek-v4-flash:free | $0 | $0 |
+| opencode-go | *all 10 models* | $0 | $0 |
+
+## Theme Configuration
+
+The web UI supports manual light/dark mode:
+- **Light**: Off-white background (#f5f5f0)
+- **Dark**: Near-black background (#0d0d0d)
+- **Accent**: Orange (#D77757)
+- **Font**: JetBrains Mono
+
+## Next Steps
+
+- [Installation](./installation) — Detailed setup
+- [API Reference](./api-reference) — Programmatic configuration
+- [Troubleshooting](./troubleshooting) — Common issues

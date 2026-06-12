@@ -1,0 +1,63 @@
+---
+title: Risk Mitigation
+description: How Orchestra handles and mitigates project risks
+order: 6
+sidebarLabel: Risk Mitigation
+---
+
+# Risk Mitigation
+
+Orchestra identifies potential risks during blueprint generation and provides mitigation strategies.
+
+## Risk Types
+
+### Technical Risks
+
+- **Scope creep**: Unclear or expanding requirements
+- **Technology mismatch**: Chosen stack doesn't fit requirements
+- **Integration complexity**: Too many external dependencies
+- **Performance bottlenecks**: Insufficient scalability planning
+
+### Business Risks
+
+- **Budget overrun**: Underestimated costs or timeline
+- **Market fit**: Unclear value proposition
+- **Compliance**: Missing regulatory requirements
+- **Security**: Insufficient security measures
+
+### Operational Risks
+
+- **Team capacity**: Skills or resources not available
+- **Deployment complexity**: Insufficient DevOps planning
+- **Maintenance burden**: No long-term maintenance strategy
+- **Data management**: Missing backup/recovery plans
+
+## Mitigation Strategies
+
+When risks are identified, Orchestra:
+1. **Flags** the risk in the blueprint
+2. **Suggests** specific mitigation actions
+3. **Adjusts** the task plan to account for risk handling
+4. **Provides** execution prompts with risk-aware implementation
+
+## Handling Risks
+
+After generation, you can:
+1. Review the **Risks** section in the blueprint
+2. Click **"Mitigate"** on individual risks
+3. Provide additional context or constraints
+4. Regenerate the affected sections with risk-aware prompts
+
+## Example
+
+A risk like ""Unproven AI integration"" might be mitigated with:
+- Fallback to manual processing if AI fails
+- A/B testing framework for AI features
+- Gradual rollout with feature flags
+- Monitoring and alerting for AI performance
+
+## Next Steps
+
+- [Usage Guide](./usage) — General usage patterns
+- [Custom Providers](./custom-providers) — Adding your own AI
+- [Troubleshooting](./troubleshooting) — When things go wrong

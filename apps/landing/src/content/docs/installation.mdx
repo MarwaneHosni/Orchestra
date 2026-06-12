@@ -1,0 +1,82 @@
+---
+title: Installation
+description: Install and configure Orchestra locally
+order: 2
+sidebarLabel: Installation
+---
+
+# Installation
+
+Orchestra is designed to run entirely on your local machine. No cloud services, no Docker required (though supported).
+
+## Requirements
+
+| Requirement | Version | Notes |
+|---|---|---|
+| Node.js | >= 20.0.0 | LTS recommended |
+| pnpm | >= 9.0.0 | `npm install -g pnpm` |
+| Git | any | For cloning |
+
+## Clone & Install
+
+```bash
+git clone https://github.com/orchestra/orchestra.git
+cd orchestra
+pnpm install
+```
+
+## Environment Setup
+
+Create a `.env` file in `apps/api/` (optional — Orchestra works with sensible defaults):
+
+```bash
+# Optional: override default API port
+PORT=3000
+
+# Optional: SQLite database path
+SQLITE_DB_PATH=./orchestra.db
+```
+
+## Start Development
+
+```bash
+pnpm dev
+```
+
+This starts:
+- API server on `http://localhost:3000`
+- Web frontend on `http://localhost:3001`
+
+The frontend proxies `/api/v1/*` requests to the API automatically.
+
+## Provider Credentials
+
+Orchestra requires at least one AI provider. The opencode-go provider uses free models from opencode.ai (requires an API key from opencode.ai). To configure providers:
+
+1. Go to **Settings** in the web UI
+2. Add your provider API key (openai, anthropic, openrouter, or opencode-go)
+3. Select your preferred model for each task type
+
+Credentials are encrypted at rest using AES-256-GCM.
+
+## Database
+
+Orchestra uses SQLite via `sql.js` (pure JavaScript, no native compilation):
+
+- **Development**: In-memory with automatic export to `orchestra.db`
+- **Production**: File-backed SQLite with `queueSyncDb()` for atomic persistence
+
+No manual migration needed — schemas auto-create on startup.
+
+## Troubleshooting
+
+| Issue | Fix |
+|---|---|
+| `PORT already in use` | Set `PORT=3002` in `.env` |
+| `pnpm install fails` | Ensure Node.js >= 20.0.0 |
+| `API not responding` | Check that `apps/api` started successfully in logs |
+
+## Next Steps
+
+- Read the [Usage Guide](./usage)
+- Explore [Architecture](./architecture) docs

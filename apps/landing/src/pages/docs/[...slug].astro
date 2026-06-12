@@ -1,0 +1,114 @@
+---
+import Layout from '../../layouts/landing.astro';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+export async function getStaticPaths() {
+  const docsDir = join(process.cwd(), 'src', 'content', 'docs');
+  const files = readFileSync;
+  // Use a simple approach: list all .mdx files
+  const glob = await import('glob');
+  const docs = glob.globSync('*.mdx', { cwd: docsDir });
+  return docs.map((file) => {
+    const slug = file.replace('.mdx', '');
+    return {
+      params: { slug },
+      props: { slug },
+    };
+  });
+}
+
+const { slug } = Astro.props;
+const docsDir = join(process.cwd(), 'src', 'content', 'docs');
+const content = readFileSync(join(docsDir, `${slug}.mdx`), 'utf8');
+
+// Parse frontmatter
+const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n/);
+let frontmatter = { title: slug, description: '' };
+if (frontmatterMatch) {
+  const fm = frontmatterMatch[1];
+  const titleMatch = fm.match(/title:\s*(.+)/);
+  const descMatch = fm.match(/description:\s*(.+)/);
+  if (titleMatch) frontmatter.title = titleMatch[1].trim();
+  if (descMatch) frontmatter.description = descMatch[1].trim();
+}
+
+// Remove frontmatter for rendering
+const body = content.replace(/^---\n[\s\S]*?\n---\n/, '');
+
+// Convert markdown to HTML
+function markdownToHtml(md) {
+  return md
+    .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+    .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+    .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+    .replace(/^#### (.*$)/gm, '<h4>$1</h4>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+    .replace(/^\| (.+) \|$/gm, (match) => {
+      const cells = match.slice(1, -1).split(' | ').map(c => `<td>${c.trim()}</td>`).join('');
+      return `<tr>${cells}</tr>`;
+    })
+    .replace(/^- (.*$)/gm, '<li>$1</li>')
+    .replace(/^\d+\. (.*$)/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/^<p>(.*)<\/p>$/g, '$1');
+}
+
+const html = markdownToHtml(body);
+---
+
+<Layout title={`${frontmatter.title} | Orchestra`} description={frontmatter.description}>
+  <div class="mx-auto max-w-5xl px-4 py-8">
+    <div class="flex gap-8">
+      <aside class="hidden w-64 shrink-0 lg:block">
+        <nav class="sticky top-20 space-y-6">
+          <div>
+            <h3 class="mb-2 text-xs font-semibold uppercase tracking-wider" style="color: var(--color-text-muted);">Start Here</h3>
+            <ul class="space-y-1">
+              <li><a href="/docs/overview/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Overview</a></li>
+              <li><a href="/docs/getting-started/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Getting Started</a></li>
+              <li><a href="/docs/installation/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Installation</a></li>
+              <li><a href="/docs/core-concepts/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Core Concepts</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="mb-2 text-xs font-semibold uppercase tracking-wider" style="color: var(--color-text-muted);">Guides</h3>
+            <ul class="space-y-1">
+              <li><a href="/docs/usage/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Usage</a></li>
+              <li><a href="/docs/tutorial-web-app/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Tutorial: Web App</a></li>
+              <li><a href="/docs/risk-mitigation/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Risk Mitigation</a></li>
+              <li><a href="/docs/custom-providers/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Custom Providers</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="mb-2 text-xs font-semibold uppercase tracking-wider" style="color: var(--color-text-muted);">Reference</h3>
+            <ul class="space-y-1">
+              <li><a href="/docs/configuration/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Configuration</a></li>
+              <li><a href="/docs/api-reference/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">API Reference</a></li>
+              <li><a href="/docs/cli-reference/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">CLI Reference</a></li>
+              <li><a href="/docs/architecture/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Architecture</a></li>
+              <li><a href="/docs/security/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Security</a></li>
+              <li><a href="/docs/troubleshooting/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Troubleshooting</a></li>
+              <li><a href="/docs/faq/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">FAQ</a></li>
+              <li><a href="/docs/changelog/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Changelog</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="mb-2 text-xs font-semibold uppercase tracking-wider" style="color: var(--color-text-muted);">Contributing</h3>
+            <ul class="space-y-1">
+              <li><a href="/docs/contributing/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Contributing</a></li>
+            </ul>
+          </div>
+        </nav>
+      </aside>
+      <article class="prose min-w-0 flex-1" style="max-width: none;">
+        <h1 style="color: var(--color-text-primary); font-family: 'JetBrains Mono', monospace;">{frontmatter.title}</h1>
+        <div class="doc-content" set:html={html} />
+      </article>
+    </div>
+  </div>
+</Layout>
