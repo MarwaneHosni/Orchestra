@@ -7,48 +7,154 @@ sidebarLabel: Overview
 
 # What is Orchestra?
 
-Orchestra is an open-source, local-first tool that uses AI to turn project ideas into structured development plans.
+Orchestra is an open-source, local-first AI project planning tool that transforms vague software ideas into structured, execution-ready development plans. It interviews you about your project, analyzes your answers, and generates a complete blueprint with phases, tasks, dependencies, risk assessments, and per-task AI prompts — all running entirely on your machine.
+
+> [!NOTE]
+> Orchestra is not a project management tool or issue tracker. It is a **planning engine** — it produces the structured plan you hand to your team, your AI coding assistant, or yourself before writing a single line of code.
+
+## The Problem
+
+Most software projects fail not because of bad code, but because of bad planning. Ideas start vague. Requirements shift. Edge cases surface mid-sprint. Teams burn cycles re-discovering what should have been decided upfront.
+
+Orchestra solves this by forcing structured thinking early:
+
+- **Vague idea** → targeted interview questions that surface hidden assumptions
+- **Hidden assumptions** → explicit requirements, constraints, and risks
+- **Requirements** → a phased blueprint with dependency-aware tasks
+- **Tasks** → execution prompts ready for AI coding assistants or human developers
+
+> [!TIP]
+> Think of Orchestra as a senior architect who asks the right questions before you start building — and writes the spec while you listen.
 
 ## How It Works
 
-1. **Interview** — Orchestra asks you targeted questions about your project idea
-2. **Analyze** — Your answers are analyzed to identify phases, requirements, and constraints
-3. **Generate** — AI generates a structured blueprint with phases, tasks, and execution prompts
-4. **Track** — Real-time progress via SSE with token usage and cost tracking
-5. **Export** — Download your plan as structured JSON or Markdown
+The end-to-end flow is straightforward:
+
+```
+┌──────────┐    ┌───────────┐    ┌────────────┐    ┌──────────┐    ┌──────────┐
+│ Interview │───▶│  Analysis  │───▶│  Blueprint  │───▶│   Tasks   │───▶│  Prompts  │
+└──────────┘    └───────────┘    └────────────┘    └──────────┘    └──────────┘
+```
+
+1. **Interview** — Answer targeted questions about your project (Quick Mode: 16-20 questions, Advanced Mode: 24-28 questions)
+2. **Analysis** — Your answers are synthesized and analyzed to identify phases, requirements, constraints, and risks
+3. **Blueprint** — AI generates a structured project plan with ordered phases and detailed tasks
+4. **Task Graph** — Phases are decomposed into a dependency-aware directed acyclic graph (DAG)
+5. **Prompts** — Each task gets a detailed execution prompt optimized for AI coding assistants
+
+> [!NOTE]
+> Every stage streams real-time progress via Server-Sent Events (SSE). You see exactly what Orchestra is doing — no black boxes.
 
 ## Architecture
 
-- **Frontend**: Next.js 15 + React 19 + Tailwind CSS v4
-- **API**: Fastify 5 + Node.js 20
-- **Database**: SQLite via sql.js (pure JavaScript, no native compilation)
-- **AI**: Pluggable provider system with routing, fallbacks, and cost tracking
+Orchestra is a monorepo built with modern, battle-tested tools:
+
+```
+orchestra/
+├── apps/
+│   ├── api/          Fastify 5 HTTP API server (port 3000)
+│   ├── web/          Next.js 15 + React 19 frontend (port 3001)
+│   └── landing/      Astro docs & marketing site
+├── packages/
+│   ├── shared/       Shared types, utilities, and domain models
+│   └── config/       Shared configuration helpers
+├── docs/             Architecture decisions and development guides
+└── scripts/          Development helper scripts
+```
+
+### Tech Stack
+
+| Layer | Technology | Why |
+|---|---|---|
+| **Frontend** | Next.js 15 + React 19 | App Router, Server Components, streaming |
+| **Styling** | Tailwind CSS v4 | Utility-first, zero-runtime CSS |
+| **API** | Fastify 5 | High-performance Node.js framework with schema-based validation |
+| **Database** | SQLite via sql.js | Pure JavaScript — no native compilation, zero config |
+| **ORM** | Drizzle ORM | Type-safe queries, lightweight, migration support |
+| **Validation** | Zod v4 | Runtime type checking and schema validation |
+| **AI Providers** | Pluggable system | OpenAI, Anthropic, OpenRouter, opencode-go, custom |
+| **Encryption** | AES-256-GCM | API keys encrypted at rest |
+| **Monorepo** | pnpm workspaces | Fast, disk-efficient, strict dependency resolution |
+| **Testing** | Vitest + Playwright | Unit/integration tests + E2E browser tests |
+| **CI/CD** | GitHub Actions | Automated testing and deployment |
 
 ## Key Features
 
 | Feature | Description |
 |---|---|
-| **Local-first** | All data on your machine. No cloud, no auth. |
-| **AI-powered** | Generates structured plans from plain language descriptions |
-| **Adaptive interview** | Quick Mode (10–14 questions) or Advanced Mode (deep dive) |
-| **Real-time progress** | Live SSE updates with token usage and cost tracking |
-| **Open source** | MIT licensed. Self-host, fork, or contribute. |
+| **Local-first** | All data stays on your machine. No cloud, no accounts, no telemetry. |
+| **AI-powered planning** | Generates structured blueprints from plain language descriptions using 9+ provider models. |
+| **Adaptive interview** | Quick Mode (16-20 questions) for fast scoping, Advanced Mode (24-28 questions) for deep architectural analysis. |
+| **Real-time progress** | Live SSE updates with stage-by-stage progress, token usage, and cost tracking. |
+| **9 provider support** | OpenAI, Anthropic, OpenRouter, opencode-go, and custom OpenAI-compatible endpoints. |
+| **Cost tracking** | Per-call token accounting with pricing tables. Know exactly what each generation costs. |
+| **Risk mitigation** | Automatic identification of technical, business, and operational risks with mitigation strategies. |
+| **Content-addressable cache** | Identical inputs produce cached outputs — regenerate without re-paying for unchanged sections. |
+| **Dependency-aware tasks** | Task graph is a proper DAG with automatic cycle detection and topological ordering. |
+| **Versioned snapshots** | Every generation creates an immutable snapshot with full lineage tracking. |
+| **Structured diffs** | Compare any two plan versions to see exactly what changed in tasks, prompts, and blueprints. |
+| **Export** | Download plans as JSON, Markdown, or task checklists with full version metadata. |
 
-## When to Use
+## The 12-Phase Lifecycle
 
-- You have an idea but don't know where to start
-- You need a structured plan to hand to a team
-- You want to think through edge cases before coding
-- You need per-task execution prompts for AI-assisted development
+Orchestra maps every project through a fixed software development lifecycle. AI customizes the content within each phase, but the structure is always consistent:
 
-## When Not to Use
+| Phase | Name | What Happens |
+|---|---|---|
+| 1 | **Ideation** | Raw idea is captured and initial scope is defined |
+| 2 | **Requirements** | Functional and non-functional requirements are elicited |
+| 3 | **Architecture** | System design, technology choices, and component structure |
+| 4 | **Data Model** | Database schema, entity relationships, and data flow |
+| 5 | **API Design** | Endpoints, contracts, authentication, and error handling |
+| 6 | **UI/UX Design** | Interface layout, user flows, and interaction patterns |
+| 7 | **Implementation** | Code structure, module breakdown, and coding standards |
+| 8 | **Testing** | Test strategy, coverage targets, and quality gates |
+| 9 | **Security** | Threat modeling, auth flows, and vulnerability mitigation |
+| 10 | **Deployment** | CI/CD pipelines, infrastructure, and release strategy |
+| 11 | **Documentation** | API docs, user guides, and developer onboarding |
+| 12 | **Monitoring** | Logging, alerting, performance metrics, and incident response |
 
-- You need real-time collaboration (not built for multi-user)
-- You want a full project management suite with time tracking
+> [!TIP]
+> The fixed lifecycle is intentional. It ensures every plan covers the same ground, making it easy to compare projects and spot gaps.
+
+## When to Use Orchestra
+
+- You have a project idea but don't know where to start
+- You need a structured plan to hand to a development team
+- You want to think through edge cases, risks, and dependencies before coding
+- You need per-task execution prompts for AI-assisted development (Cursor, Copilot, Aider, etc.)
+- You're scoping a project and want to estimate effort accurately
+- You want to iterate on a plan without losing previous versions
+
+## When Not to Use Orchestra
+
+- You need real-time multi-user collaboration (Orchestra is single-user, local-first)
+- You want a full project management suite with time tracking and sprint boards
 - Your project is already well-scoped and just needs issue tracking
+- You need Orchestra to write the actual code (it produces plans and prompts, not implementations)
+
+## Security Model
+
+Orchestra is designed for local-first use with no network exposure by default:
+
+- **No authentication** — the API binds to localhost. No login, no sessions.
+- **Encrypted credentials** — API keys are encrypted at rest with AES-256-GCM
+- **Audit logging** — all generation events are tracked in an immutable log
+- **Guardrails** — rate limiting, budget caps, and circuit breakers prevent runaway API costs
+- **No telemetry** — nothing leaves your machine unless you configure an AI provider
+
+> [!WARNING]
+> If you expose the API server beyond localhost, you are responsible for adding your own authentication and transport security. Orchestra does not include auth by design.
 
 ## Next Steps
 
-- [Getting Started](./getting-started) — Create your first project
-- [Installation](./installation) — Detailed setup instructions
-- [Core Concepts](./core-concepts) — Understand blueprints and tasks
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+
+- [Getting Started](./getting-started) — Clone, install, and generate your first plan
+- [Installation](./installation) — Detailed setup for all platforms
+- [Core Concepts](./core-concepts) — Blueprints, tasks, providers, and more
+- [Architecture](./architecture) — Deep dive into the system design
+- [Configuration](./configuration) — Environment variables and provider setup
+- [Usage Guide](./usage) — Advanced patterns and tips
+
+</div>

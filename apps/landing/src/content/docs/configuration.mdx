@@ -1,119 +1,151 @@
 ---
 title: Configuration
-description: All environment variables, provider settings, and customization options
+description: All environment variables and configuration options
 order: 8
 sidebarLabel: Configuration
 ---
 
 # Configuration
 
-Orchestra works with sensible defaults out of the box, but every aspect can be configured.
+Orchestra is configured through environment variables. All configuration is validated at startup using Zod schemas, and the process will exit with code `1` if any required values are missing or invalid.
 
 ## Environment Variables
 
-Create a `.env` file in the project root. All variables are optional unless noted.
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `NODE_ENV` | `"development" \| "production" \| "test"` | `"development"` | Runtime environment mode |
+| `PORT` | `number` (positive integer) | `3000` | Backend API server port |
+| `HOST` | `string` | `"0.0.0.0"` | Backend API server bind address |
+| `LOG_LEVEL` | `"fatal" \| "error" \| "warn" \| "info" \| "debug" \| "trace" \| "silent"` | `"info"` | Pino logger verbosity level |
+| `DATABASE_URL` | `string` (optional) | — | PostgreSQL connection string. If omitted, SQLite is used |
+| `SQLITE_DB_PATH` | `string` | `"./orchestra.db"` | Path to the SQLite database file |
+| `ENCRYPTION_KEY` | `string` | — | AES-256-GCM key for encrypting provider API keys at rest |
+| `WEB_PORT` | `number` | `3001` | Frontend development server port |
+| `NEXT_PUBLIC_API_URL` | `string` | — | Base URL the frontend uses to reach the API |
 
-### Core Application
+> [!NOTE]
+> All variables are validated at startup. Invalid or missing required values cause the process to exit with code `1`.
 
-| Variable | Default | Description |
-|---|---|---|
-| `NODE_ENV` | `development` | Runtime environment |
-| `PORT` | `3000` | API server port |
-| `HOST` | `0.0.0.0` | API server bind address |
-| `LOG_LEVEL` | `info` | Logging verbosity |
+## Startup Validation
 
-### Database
+Orchestra uses Zod schemas to validate every environment variable before the server starts. This ensures misconfigurations fail fast rather than causing cryptic runtime errors.
 
-| Variable | Default | Description |
-|---|---|---|
-| `SQLITE_DB_PATH` | `./orchestra.db` | SQLite database file path |
-| `DATABASE_URL` | *(none)* | PostgreSQL connection string |
-
-### Encryption
-
-| Variable | Default | Description |
-|---|---|---|
-| `ENCRYPTION_KEY` | *(none)* | 32-byte hex string for AES-256-GCM encryption |
-
-Generate a key:
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```ts
+// Simplified validation schema
+const envSchema = z.object({
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  PORT: z.coerce.number().int().positive().default(3000),
+  HOST: z.string().default("0.0.0.0"),
+  LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
+  DATABASE_URL: z.string().url().optional(),
+  SQLITE_DB_PATH: z.string().default("./orchestra.db"),
+  ENCRYPTION_KEY: z.string().min(1),
+  WEB_PORT: z.coerce.number().int().positive().default(3001),
+  NEXT_PUBLIC_API_URL: z.string().url(),
+});
 ```
 
-### AI Provider Keys
+> [!WARNING]
+> If validation fails, detailed error messages are logged to stderr showing exactly which variables are invalid and why.
 
-At least one provider key is needed for AI-powered features. The opencode-go provider also requires an API key from opencode.ai — its models are priced at $0.
+## Database Configuration
 
-| Variable | Provider | Notes |
-|---|---|---|
-| `OPENAI_API_KEY` | OpenAI | Get from platform.openai.com |
-| `ANTHROPIC_API_KEY` | Anthropic | Get from console.anthropic.com |
-| `OPENROUTER_API_KEY` | OpenRouter | Get from openrouter.ai |
+Orchestra supports two database backends:
 
-### Frontend
+### SQLite (Default)
 
-| Variable | Default | Description |
-|---|---|---|
-| `NEXT_PUBLIC_API_URL` | *(empty)* | Absolute URL of the API server |
+When `DATABASE_URL` is not set, Orchestra uses SQLite via [sql.js](https://sql.js.org/), a pure JavaScript SQLite implementation compiled to WebAssembly.
 
-## Provider Configuration
+- **No native compilation required** — works on any platform Node.js supports
+- **Auto-creates** the database file on first startup if it doesn't exist
+- **File location** controlled by `SQLITE_DB_PATH` (default: `./orchestra.db`)
 
-### Adding a Provider
+> [!TIP]
+> SQLite is ideal for local development and single-user deployments. No external database server is needed.
 
-1. Go to **Settings** in the web UI
-2. Click **Add Provider**
-3. Select provider type and enter your API key
-4. Optionally set a default model
-5. Click **Validate** to test the key
+### PostgreSQL
 
-### Provider Statuses
+Set `DATABASE_URL` to a valid PostgreSQL connection string to use PostgreSQL instead:
 
-| Status | Meaning | Action |
-|---|---|---|
-| `unverified` | Just added | Click Validate |
-| `valid` | Key works | Ready to use |
-| `invalid` | Key rejected | Check and re-enter |
-| `expired` | No longer valid | Generate new key |
-| `rate_limited` | Throttled | Wait or switch |
-| `failed` | Validation failed | Check network |
+```bash
+DATABASE_URL="postgresql://user:password@localhost:5432/orchestra"
+```
 
-### Model Routing
+## Provider Credential Configuration
 
-Orchestra selects models based on task type:
+Provider credentials (API keys for LLM providers) are configured at runtime through the REST API or the web UI. They are never stored in environment variables or config files.
 
-| Task Type | Min Tier | Preferred Models |
-|---|---|---|
-| `clarification` | cheap | deepseek-v4-flash, gpt-4o-mini |
-| `blueprint` | cheap | deepseek-v4-flash, mimo-v2.5, gpt-4o-mini |
-| `roadmap` | balanced | gpt-4o, claude-sonnet |
-| `architecture` | strong | gpt-4.1, claude-sonnet |
-| `prompt_generation` | balanced | deepseek-v4-flash, gpt-4o |
-| `summary` | cheap | deepseek-v4-flash, mimo-v2.5, gpt-4o-mini |
+See the [Provider Credentials API](/docs/api-reference#provider-credentials) for programmatic management.
 
-### Pricing Table
+> [!DANGER]
+> Never commit API keys to version control. Always use the API or UI to configure provider credentials.
 
-All costs are calculated from actual token usage:
+## Encryption
 
-| Provider | Model | Prompt / 1K | Completion / 1K |
-|---|---|---|---|
-| openai | gpt-4o-mini | $0.00015 | $0.00060 |
-| openai | gpt-4o | $0.00250 | $0.01000 |
-| openai | gpt-4.1 | $0.00200 | $0.00800 |
-| anthropic | claude-3-5-haiku-latest | $0.00080 | $0.00400 |
-| anthropic | claude-sonnet-4-20250514 | $0.00300 | $0.01500 |
-| openrouter | deepseek-v4-flash:free | $0 | $0 |
-| opencode-go | *all 10 models* | $0 | $0 |
+All provider API keys are encrypted at rest using **AES-256-GCM** symmetric encryption.
 
-## Theme Configuration
+### Key Derivation
 
-The web UI supports manual light/dark mode:
-- **Light**: Off-white background (#f5f5f0)
-- **Dark**: Near-black background (#0d0d0d)
-- **Accent**: Orange (#D77757)
-- **Font**: JetBrains Mono
+The `ENCRYPTION_KEY` environment variable is processed through **SHA-256** to derive a fixed 256-bit key, regardless of the input length.
 
-## Next Steps
+### Storage Format
 
-- [Installation](./installation) — Detailed setup
-- [API Reference](./api-reference) — Programmatic configuration
-- [Troubleshooting](./troubleshooting) — Common issues
+Encrypted values are stored as a colon-delimited string:
+
+```
+<iv>:<ciphertext>:<tag>
+```
+
+| Component | Description |
+|-----------|-------------|
+| `iv` | Hex-encoded initialization vector (12 bytes for GCM) |
+| `ciphertext` | Hex-encoded encrypted data |
+| `tag` | Hex-encoded GCM authentication tag (16 bytes) |
+
+> [!NOTE]
+> Each encryption operation uses a unique random IV, so the same plaintext will produce different ciphertext each time.
+
+## Logging
+
+Orchestra uses [Pino](https://getpino.io/) for structured JSON logging. The `LOG_LEVEL` environment variable controls which messages are emitted.
+
+| Level | Description |
+|-------|-------------|
+| `fatal` | Critical errors that cause process termination |
+| `error` | Runtime errors and unexpected conditions |
+| `warn` | Potentially harmful situations |
+| `info` | General operational information (default) |
+| `debug` | Detailed diagnostic information |
+| `trace` | Fine-grained event tracing |
+| `silent` | All logging disabled |
+
+```json
+{"level":30,"time":1700000000000,"pid":1234,"hostname":"localhost","msg":"Server started","port":3000}
+```
+
+> [!TIP]
+> Set `LOG_LEVEL=debug` during development for detailed request/response logging and internal state information.
+
+## Example `.env` File
+
+```bash
+# Runtime
+NODE_ENV=development
+PORT=3000
+HOST=0.0.0.0
+LOG_LEVEL=info
+
+# Database (omit DATABASE_URL to use SQLite)
+# DATABASE_URL=postgresql://user:password@localhost:5432/orchestra
+SQLITE_DB_PATH=./orchestra.db
+
+# Encryption (required — used to encrypt provider API keys at rest)
+ENCRYPTION_KEY=your-secret-encryption-key-here
+
+# Frontend
+WEB_PORT=3001
+NEXT_PUBLIC_API_URL=http://localhost:3000
+```
+
+> [!WARNING]
+> The `.env` file should never be committed to version control. Add it to your `.gitignore` file.

@@ -1,23 +1,28 @@
 ---
 title: Installation
-description: Install and configure Orchestra locally
+description: Install and configure Orchestra on your machine
 order: 2
 sidebarLabel: Installation
 ---
 
 # Installation
 
-Orchestra is designed to run entirely on your local machine. No cloud services, no Docker required (though supported).
+Orchestra is designed to run entirely on your local machine. No cloud services, no Docker required (though supported). This guide walks you through every step from prerequisites to a verified running instance.
 
-## Requirements
+## Prerequisites
+
+Before installing Orchestra, ensure the following tools are available on your system.
 
 | Requirement | Version | Notes |
 |---|---|---|
-| Node.js | >= 20.0.0 | LTS recommended |
-| pnpm | >= 9.0.0 | `npm install -g pnpm` |
-| Git | any | For cloning |
+| **Node.js** | `>= 20.0.0` | LTS recommended. Check with `node -v` |
+| **pnpm** | `>= 9.0.0` | Install via `npm install -g pnpm`. Check with `pnpm -v` |
+| **Git** | Any recent version | Required for cloning the repository |
 
-## Clone & Install
+> [!NOTE]
+> Orchestra's `package.json` specifies `"packageManager": "pnpm@9.15.4"` and `"engines": { "node": ">=20.0.0" }`. Using other package managers (npm, yarn) is not supported and will cause workspace resolution failures.
+
+## Clone and Install
 
 ```bash
 git clone https://github.com/orchestra/orchestra.git
@@ -25,58 +30,254 @@ cd orchestra
 pnpm install
 ```
 
-## Environment Setup
+This installs all dependencies across the monorepo workspaces:
 
-Create a `.env` file in `apps/api/` (optional — Orchestra works with sensible defaults):
-
-```bash
-# Optional: override default API port
-PORT=3000
-
-# Optional: SQLite database path
-SQLITE_DB_PATH=./orchestra.db
+```
+orchestra/
+├── apps/api/          # Fastify 5 API server
+├── apps/web/          # Next.js 15 frontend
+├── apps/landing/      # Astro docs site
+└── packages/          # Shared utilities
 ```
 
-## Start Development
+> [!TIP]
+> If `pnpm install` fails with engine errors, verify your Node.js version with `node -v`. Orchestra requires Node.js 20 or later.
+
+## Environment Variables
+
+Create a `.env` file in `apps/api/` to override defaults. All variables are optional — Orchestra works with sensible defaults out of the box.
+
+### Core Application
+
+| Variable | Allowed Values | Default | Description |
+|---|---|---|---|
+| `NODE_ENV` | `development`, `production`, `test` | `development` | Runtime environment. Controls logging, caching behavior, and error detail. |
+| `PORT` | Any positive integer | `3000` | API server bind port. |
+| `HOST` | Any valid bind address | `0.0.0.0` | API server bind address. Use `127.0.0.1` to restrict to localhost. |
+| `LOG_LEVEL` | `fatal`, `error`, `warn`, `info`, `debug`, `trace`, `silent` | `info` | Logging verbosity. Use `debug` when troubleshooting. |
+
+### Database
+
+| Variable | Allowed Values | Default | Description |
+|---|---|---|---|
+| `SQLITE_DB_PATH` | Any valid file path | `./orchestra.db` | Path to the SQLite database file. Relative paths resolve from the working directory. |
+
+### Encryption
+
+| Variable | Allowed Values | Default | Description |
+|---|---|---|---|
+| `ENCRYPTION_KEY` | 64-character hex string (32 bytes) | *(auto-generated)* | AES-256-GCM key used to encrypt provider API keys at rest. |
+
+Generate a secure encryption key:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+> [!WARNING]
+> If you do not set `ENCRYPTION_KEY`, Orchestra generates a random key on each startup. This means stored API keys become unreadable after a restart. Always set a persistent key if you plan to add provider credentials.
+
+### Frontend
+
+| Variable | Allowed Values | Default | Description |
+|---|---|---|---|
+| `WEB_PORT` | Any positive integer | `3001` | Frontend development server port. Configured in `apps/web/package.json` as `next dev --port 3001`. |
+
+### Example `.env` File
+
+```bash
+# apps/api/.env
+NODE_ENV=development
+PORT=3000
+HOST=0.0.0.0
+LOG_LEVEL=info
+SQLITE_DB_PATH=./orchestra.db
+ENCRYPTION_KEY=abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789
+```
+
+## Starting the Application
+
+From the repository root:
 
 ```bash
 pnpm dev
 ```
 
-This starts:
-- API server on `http://localhost:3000`
-- Web frontend on `http://localhost:3001`
+This single command starts both services concurrently:
 
-The frontend proxies `/api/v1/*` requests to the API automatically.
+| Service | URL | Description |
+|---|---|---|
+| **API server** | `http://localhost:3000` | Fastify 5 backend with all REST endpoints |
+| **Web frontend** | `http://localhost:3001` | Next.js 15 UI with hot reload |
 
-## Provider Credentials
+The frontend automatically proxies `/api/v1/*` requests to the API server via Next.js rewrites, so no CORS configuration is needed during development.
 
-Orchestra requires at least one AI provider. The opencode-go provider uses free models from opencode.ai (requires an API key from opencode.ai). To configure providers:
+> [!NOTE]
+> The `pnpm dev` command runs `scripts/dev.mjs`, which launches both `apps/api` and `apps/web` in parallel. You will see interleaved logs from both services in your terminal.
 
-1. Go to **Settings** in the web UI
-2. Add your provider API key (openai, anthropic, openrouter, or opencode-go)
-3. Select your preferred model for each task type
+## Verifying Installation
 
-Credentials are encrypted at rest using AES-256-GCM.
+Once both services are running, verify with the health check endpoints:
 
-## Database
+### Basic Health Check
 
-Orchestra uses SQLite via `sql.js` (pure JavaScript, no native compilation):
+```bash
+curl http://localhost:3000/health
+```
 
-- **Development**: In-memory with automatic export to `orchestra.db`
-- **Production**: File-backed SQLite with `queueSyncDb()` for atomic persistence
+Expected response:
 
-No manual migration needed — schemas auto-create on startup.
+```json
+{ "status": "ok" }
+```
+
+### Readiness Check (with database status)
+
+```bash
+curl http://localhost:3000/ready
+```
+
+Expected response (SQLite — default):
+
+```json
+{ "status": "ok", "database": "not_configured" }
+```
+
+Expected response (PostgreSQL — if `DATABASE_URL` is set):
+
+```json
+{ "status": "ok", "database": "connected" }
+```
+
+### Frontend
+
+Open `http://localhost:3001` in your browser. You should see the Orchestra landing page with the project dashboard.
+
+> [!TIP]
+> If the API responds but the frontend shows errors, check that port `3001` is not already in use. Set `WEB_PORT` to a different value in your environment.
+
+## Database: SQLite vs PostgreSQL
+
+Orchestra supports two database backends. SQLite is the default and recommended choice for local development.
+
+### SQLite (Default)
+
+Orchestra uses **sql.js** — a pure JavaScript implementation of SQLite compiled from the C source via Emscripten. This has important implications:
+
+| Characteristic | Detail |
+|---|---|
+| **No native compilation** | No `node-gyp`, no Python, no VS Build Tools required |
+| **In-memory with file export** | The database lives in memory and is flushed to `orchestra.db` via `queueSyncDb()` |
+| **WAL mode enabled** | Write-Ahead Logging for concurrent read access |
+| **Foreign keys enforced** | `PRAGMA foreign_keys=ON` is set on every connection |
+| **Busy timeout** | 5-second busy timeout (`PRAGMA busy_timeout=5000`) to handle transient locks |
+
+Schemas auto-create on first startup — no manual migration step is required.
+
+### PostgreSQL (Optional)
+
+Set `DATABASE_URL` to use PostgreSQL instead:
+
+```bash
+DATABASE_URL=postgresql://user:password@localhost:5432/orchestra
+```
+
+> [!WARNING]
+> PostgreSQL support is intended for production deployments. For local development and personal use, SQLite is simpler and requires zero configuration.
+
+## Windows-Specific Notes
+
+Orchestra runs natively on Windows without WSL. Keep the following in mind:
+
+### CRLF Line Endings
+
+Git on Windows defaults to CRLF line endings. Orchestra's tooling (ESLint, Prettier, Vitest) handles both CRLF and LF transparently, but if you encounter unexpected test failures or lint errors related to line endings, ensure your Git configuration is set correctly:
+
+```bash
+git config core.autocrlf true
+```
+
+### No VS Build Tools Required
+
+Because Orchestra uses **sql.js** (pure JavaScript) instead of `better-sqlite3` (native addon), you do **not** need:
+
+- Visual Studio Build Tools
+- Python
+- `node-gyp`
+- Any C/C++ compiler
+
+This is a deliberate architectural choice to make `pnpm install` work on any platform without native compilation headaches.
+
+### File Paths
+
+Use forward slashes or double backslashes in environment variables:
+
+```bash
+# Both work on Windows
+SQLITE_DB_PATH=./orchestra.db
+SQLITE_DB_PATH=.\\orchestra.db
+```
 
 ## Troubleshooting
 
-| Issue | Fix |
-|---|---|
-| `PORT already in use` | Set `PORT=3002` in `.env` |
-| `pnpm install fails` | Ensure Node.js >= 20.0.0 |
-| `API not responding` | Check that `apps/api` started successfully in logs |
+### Common Issues
+
+| Issue | Cause | Fix |
+|---|---|---|
+| `PORT already in use` | Another process is using port 3000 | Set `PORT=3002` in `.env`, or kill the conflicting process |
+| `pnpm install fails` with engine error | Node.js version is too old | Upgrade to Node.js >= 20.0.0 |
+| `pnpm: command not found` | pnpm is not installed globally | Run `npm install -g pnpm` |
+| `API not responding` on localhost:3000 | API server failed to start | Check terminal logs for errors in `apps/api` startup |
+| `ECONNREFUSED` from frontend | API server is not running | Ensure `pnpm dev` is running and both services started |
+| `ENCRYPTION_KEY` errors after restart | Key was not persisted | Set a fixed `ENCRYPTION_KEY` in `.env` — see [Encryption](#encryption) |
+| `SQLITE_DB_PATH` permission denied | Directory does not exist or is read-only | Ensure the parent directory exists and is writable |
+| Blank page on localhost:3001 | Frontend failed to compile | Check terminal for Next.js compilation errors |
+
+### Debug Logging
+
+For deeper diagnostics, increase the log level:
+
+```bash
+LOG_LEVEL=debug pnpm dev
+```
+
+This outputs detailed internal logs including SQL queries, cache hits, provider API calls, and routing decisions.
+
+### Clean Slate
+
+If you encounter persistent issues, reset the database and node modules:
+
+```bash
+pnpm clean:all
+pnpm install
+pnpm dev
+```
+
+## Provider Credentials
+
+Orchestra requires at least one AI provider for generation features. To configure providers:
+
+1. Open `http://localhost:3001` in your browser
+2. Navigate to **Settings**
+3. Click **Add Provider**
+4. Select a provider type and enter your API key
+5. Click **Validate** to verify the key works
+
+All API keys are encrypted at rest using AES-256-GCM with the `ENCRYPTION_KEY`.
+
+| Provider | Free Options | Notes |
+|---|---|---|
+| **opencode-go** | All 10 models at $0 | Requires API key from opencode.ai |
+| **openrouter** | `deepseek-v4-flash:free` | 100+ models via single API |
+| **openai** | None | GPT-4o, GPT-4o-mini, GPT-4.1 |
+| **anthropic** | None | Claude Sonnet, Claude Haiku |
+
+> [!TIP]
+> The **opencode-go** provider offers 10 free models and is the fastest way to get started without spending money on API credits.
 
 ## Next Steps
 
-- Read the [Usage Guide](./usage)
-- Explore [Architecture](./architecture) docs
+- [Core Concepts](./core-concepts) — Understand blueprints, tasks, and the generation pipeline
+- [Usage Guide](./usage) — Create your first project and generate a plan
+- [Configuration](./configuration) — Full reference for all environment variables
+- [Troubleshooting](./troubleshooting) — Extended troubleshooting guide

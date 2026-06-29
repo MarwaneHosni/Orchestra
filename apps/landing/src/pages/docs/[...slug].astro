@@ -101,6 +101,19 @@ marked.use({
         .replace(/>/g, '&gt;');
       return `<pre${attr}><code class="language-${lang || 'text'}">${escaped}</code></pre>\n`;
     },
+    blockquote(token) {
+      const raw = token.raw || '';
+      const calloutMatch = raw.match(/^\s*>\s*\[!(NOTE|TIP|WARNING|DANGER|CAUTION|INFO)\]\s*\n?([\s\S]*)/i);
+      if (calloutMatch) {
+        const type = calloutMatch[1].toLowerCase();
+        const labels = { note: 'Note', tip: 'Tip', warning: 'Warning', danger: 'Danger', caution: 'Caution', info: 'Info' };
+        const icons = { note: 'ℹ', tip: '💡', warning: '⚠', danger: '⛔', caution: '⚠', info: 'ℹ' };
+        const parsedBody = this.parser.parse(token.tokens || []);
+        const cleanedBody = parsedBody.replace(/\[!(NOTE|TIP|WARNING|DANGER|CAUTION|INFO)\]\s*/gi, '');
+        return `<div class="callout callout-${type}"><div class="callout-title"><span class="callout-icon">${icons[type]}</span><span>${labels[type]}</span></div><div class="callout-body">${cleanedBody}</div></div>\n`;
+      }
+      return `<blockquote>${this.parser.parse(token.tokens || [])}</blockquote>\n`;
+    },
   },
 });
 const html = await marked.parse(body);

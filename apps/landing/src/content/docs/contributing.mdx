@@ -7,81 +7,419 @@ sidebarLabel: Contributing
 
 # Contributing
 
-Orchestra is open source under the MIT License. Contributions are welcome.
+Orchestra is open source under the MIT License. Contributions of all kinds are welcome — code, documentation, bug reports, and feature requests all make the project better.
 
-## Getting Started
+## Development Setup
 
-1. Fork the repository
-2. Clone your fork
-3. Install dependencies: `pnpm install`
-4. Start development: `pnpm dev`
+### Prerequisites
 
-## Development Workflow
+| Requirement | Version | Check |
+|---|---|---|
+| **Node.js** | `>= 20.0.0` | `node -v` |
+| **pnpm** | `>= 9.0.0` | `pnpm -v` |
+| **Git** | Any recent version | `git --version` |
+
+> [!NOTE]
+> Orchestra uses pnpm workspaces. Do not use `npm` or `yarn` — they will cause workspace resolution failures.
+
+### Clone and Install
+
+```bash
+git clone https://github.com/orchestra/orchestra.git
+cd orchestra
+pnpm install
+```
+
+### Start Development Server
+
+```bash
+pnpm dev
+```
+
+This starts both services concurrently:
+
+| Service | URL | Description |
+|---|---|---|
+| **API server** | `http://localhost:3000` | Fastify 5 backend |
+| **Web frontend** | `http://localhost:3001` | Next.js 15 with hot reload |
+
+### Verify Setup
+
+```bash
+# Health check
+curl http://localhost:3000/health
+
+# Expected: { "status": "ok" }
+```
+
+## Project Structure
+
+```
+orchestra/
+├── apps/
+│   ├── api/                # Fastify 5 HTTP API server
+│   │   ├── src/
+│   │   │   ├── config/     # Environment validation (Zod schemas)
+│   │   │   ├── db/         # Database connection and schema (Drizzle ORM)
+│   │   │   ├── domain/     # Business logic and orchestration
+│   │   │   ├── providers/  # AI provider implementations
+│   │   │   ├── routes/     # HTTP route handlers
+│   │   │   ├── services/   # Core services (generation, caching, encryption)
+│   │   │   └── server.ts   # Fastify server setup
+│   │   └── tests/          # API tests (Vitest)
+│   ├── web/                # Next.js 15 frontend
+│   │   ├── app/            # App Router pages and layouts
+│   │   ├── components/     # React components
+│   │   ├── hooks/          # Custom React hooks (SSE, theme, etc.)
+│   │   └── lib/            # Client utilities and API client
+│   └── landing/            # Astro docs and marketing site
+│       └── src/content/docs/  # MDX documentation pages
+├── packages/
+│   ├── shared/             # Shared types, utilities, and domain models
+│   └── config/             # Shared configuration helpers
+├── scripts/
+│   └── dev.mjs             # Development launcher (runs API + Web concurrently)
+└── package.json            # Root workspace configuration
+```
+
+## Code Style
+
+Orchestra enforces a consistent code style across the monorepo.
+
+### TypeScript
+
+- **Strict mode** is enabled in all `tsconfig.json` files
+- Prefer explicit types over `any` — use `unknown` when the type is genuinely unknown
+- Use interfaces for object shapes, type aliases for unions and intersections
+- Prefer `const` over `let`; never use `var`
+
+### Formatting
+
+- **ESLint** for linting — configuration in each package's `eslint.config.js`
+- **Prettier** for formatting — configuration in root `.prettierrc`
+- Run before committing:
+
+```bash
+# Lint all packages
+pnpm lint
+
+# Lint a specific package
+pnpm --filter api lint
+```
+
+### Monospace-First Aesthetic
+
+Orchestra's UI follows a monospace-first design aesthetic. When writing frontend code:
+
+- Use the configured monospace font stack for all text
+- Prefer utility-first Tailwind classes over custom CSS
+- Maintain consistent spacing using the Tailwind spacing scale
+- Support both light and dark themes — test your changes in both modes
+
+> [!TIP]
+> Run `pnpm lint` before committing. The CI pipeline will reject PRs that fail linting.
+
+## Testing
+
+Orchestra uses **Vitest** for unit and integration tests. The test suite contains **586 tests across 26 test files**.
+
+### Running Tests
+
+```bash
+# Run all tests
+pnpm test
+
+# Run tests in watch mode
+pnpm test:watch
+
+# Run tests for a specific package
+pnpm --filter api test
+
+# Run tests with coverage
+pnpm test:coverage
+```
+
+### Writing Tests
+
+- Place test files next to the source file: `foo.ts` → `foo.test.ts`
+- Use `describe` blocks to group related tests
+- Use descriptive test names that explain the expected behavior
+- Mock external dependencies (AI providers, database) in unit tests
+- Prefer integration tests that exercise the full request/response cycle for API routes
+
+```ts
+import { describe, it, expect } from 'vitest';
+
+describe('BlueprintService', () => {
+  it('should generate a structurally valid blueprint', async () => {
+    const result = await service.generate(mockAnswers);
+    expect(result.phases).toHaveLength(12);
+    expect(result.generationMetadata).toBeDefined();
+  });
+});
+```
+
+> [!WARNING]
+> All 586 tests must pass before a PR can be merged. Run `pnpm test` locally before pushing.
+
+## Adding a New AI Provider
+
+Orchestra's provider system is designed to be extensible. Adding a new provider involves implementing a standard interface and registering it in the system.
+
+### Step 1: Implement the AIProvider Interface
+
+Create a new file in `apps/api/src/providers/`:
+
+```ts
+// apps/api/src/providers/my-provider.ts
+import { AIProvider, AIProviderResponse } from './types';
+
+export class MyProvider implements AIProvider {
+  readonly id = 'my_provider';
+  readonly name = 'My Provider';
+
+  async validateCredential(apiKey: string): Promise<boolean> {
+    // Call the provider's API to verify the key is valid
+  }
+
+  async generate(params: {
+    model: string;
+    messages: Array<{ role: string; content: string }>;
+    temperature?: number;
+    maxTokens?: number;
+  }): Promise<AIProviderResponse> {
+    // Call the provider's chat completions API
+    // Return structured response with content, tokens, and finish reason
+  }
+}
+```
+
+### Step 2: Add to the Provider Enum
+
+Add your provider to the provider type enum:
+
+```ts
+// In the shared types or provider configuration
+export type ProviderType =
+  | 'openai'
+  | 'anthropic'
+  | 'openrouter'
+  | 'opencode-go'
+  | 'my_provider'  // Add here
+  | 'mock';
+```
+
+### Step 3: Add Pricing Information
+
+Add your provider's models to the pricing table for cost tracking:
+
+```ts
+// In the pricing configuration
+{
+  provider: 'my_provider',
+  model: 'my-model-v1',
+  promptCostPer1K: 0.001,
+  completionCostPer1K: 0.002,
+}
+```
+
+### Step 4: Register the Provider
+
+Register your provider in the provider factory so it can be instantiated:
+
+```ts
+// In the provider factory/registry
+case 'my_provider':
+  return new MyProvider();
+```
+
+### Step 5: Add Tests
+
+Write tests for your provider implementation:
+
+- Credential validation (valid key, invalid key, network error)
+- Generation (successful response, error handling, timeout)
+- Token counting and cost calculation
+
+> [!TIP]
+> If your provider is OpenAI-compatible, you can extend the existing `OpenAICompatibleProvider` base class instead of implementing the full interface from scratch.
+
+## Adding a New Interview Question
+
+The question bank is a TypeScript module that defines all interview questions. Each question has a structured format.
+
+### Question Structure
+
+```ts
+{
+  id: 'q_arch_scale',
+  text: 'What is the expected number of concurrent users?',
+  phase: 'architecture',           // Lifecycle phase association
+  category: 'high-value',          // critical | high-value | optional | contextual | advanced-only | derivable
+  type: 'single-choice',           // single-choice | multi-choice | short-text | long-text | number
+  options: [                       // For choice-type questions
+    { value: 'small', label: '< 100 users' },
+    { value: 'medium', label: '100-10,000 users' },
+    { value: 'large', label: '10,000+ users' },
+  ],
+  gate: {                          // Conditional visibility
+    questionId: 'q_ideation_platform',
+    expectedValue: 'web',
+  },
+  derivable: false,                // Can AI infer this from other answers?
+  required: true,                  // Must be answered before generation
+}
+```
+
+### Step-by-Step
+
+1. **Add the question** to the question bank array in the appropriate phase section
+2. **Set the category** — choose based on importance:
+   - `critical` / `high-value` — always asked in both modes
+   - `contextual` — always asked, provides context
+   - `optional` — skipped in Quick Mode
+   - `advanced-only` — deferred to post-generation refinement
+   - `derivable` — never asked, AI infers from other answers
+3. **Add gate dependencies** if the question should only appear conditionally
+4. **Set the phase** — must match one of the 12 lifecycle phases
+5. **Write tests** to verify the question appears in the correct mode and phase
+
+> [!NOTE]
+> The current question bank has 47 questions: 5 critical, 11 high-value, 4 contextual, 8 optional, 5 advanced-only, and 11 derivable. Quick Mode asks ~20 questions; Advanced Mode asks ~28.
+
+## Commit Guidelines
+
+Orchestra enforces strict commit safety rules to prevent accidental breakage.
+
+### Commit Message Format
+
+Use [conventional commits](https://www.conventionalcommits.org/):
+
+```
+feat: add Google Gemini provider
+fix: resolve cache key collision for different temperatures
+docs: update troubleshooting guide with Windows section
+refactor: extract prompt validation into shared utility
+test: add integration tests for task graph generation
+chore: update pnpm to 9.15.4
+```
+
+### Commit Safety Rules
+
+> [!DANGER]
+> These rules are enforced by the repository configuration. Violations will cause CI failures.
+
+1. **Never use `git add -A` or `git add .`** — always specify explicit file paths
+2. **Pre-flight lint** — run `pnpm lint` before committing to catch failures before git hooks
+3. **If hooks fail** — immediately restore affected files with `git checkout` and `git stash pop`
+4. **Check before committing** — always verify `git status` and `git diff --cached` to confirm exactly what will be committed
+5. **Stage new files carefully** — only stage untracked files after verifying all lint and type checks pass
+
+### Example Commit Workflow
+
+```bash
+# 1. Make your changes
+# 2. Run lint
+pnpm lint
+
+# 3. Run tests
+pnpm test
+
+# 4. Check what changed
+git status
+git diff
+
+# 5. Stage specific files
+git add apps/api/src/providers/google.ts
+git add apps/api/tests/providers/google.test.ts
+
+# 6. Verify staged changes
+git diff --cached
+
+# 7. Commit
+git commit -m "feat: add Google Gemini provider"
+```
+
+## PR Process
+
+### Before Opening a PR
+
+1. **Ensure all tests pass**: `pnpm test`
+2. **Ensure lint passes**: `pnpm lint`
+3. **Rebase on main**: `git rebase origin/main`
+4. **Check your diff**: review every file you are about to submit
+
+### Opening the PR
+
+1. Push your branch to your fork
+2. Open a PR against the `main` branch
+3. Fill in the PR template:
+   - **What** does this PR change?
+   - **Why** is this change needed?
+   - **How** did you test it?
+4. Link any related issues
+
+### PR Review
+
+- All PRs require at least one review before merging
+- Address all review comments before requesting re-review
+- Keep PRs focused — one feature or fix per PR
+- Small, focused PRs are reviewed and merged faster than large ones
 
 ### Branch Naming
 
-- `feature/description` — New features
-- `fix/description` — Bug fixes
-- `docs/description` — Documentation updates
-- `refactor/description` — Code refactoring
-
-### Commit Messages
-
-Use conventional commits:
-```
-feat: add new feature
-fix: resolve bug
-docs: update documentation
-refactor: improve code structure
-test: add tests
-```
-
-### Code Style
-
-- TypeScript strict mode
-- ESLint + Prettier for formatting
-- 586 tests must pass before merging
-- No console.log in production code
-
-### Testing
-
-```bash
-pnpm test        # Run all tests
-pnpm test:watch  # Watch mode
-```
+| Prefix | Use For |
+|---|---|
+| `feature/` | New features |
+| `fix/` | Bug fixes |
+| `docs/` | Documentation updates |
+| `refactor/` | Code refactoring (no behavior change) |
+| `test/` | Test additions or fixes |
+| `chore/` | Build, CI, or tooling changes |
 
 ## Areas for Contribution
 
 ### High Priority
 
-- **Web UI tests**: Add Playwright E2E tests
-- **Provider support**: Add more AI providers (Google, AWS Bedrock)
-- **Local LLM**: Improve Ollama/LM Studio integration
-- **Performance**: Optimize generation pipeline
-- **Mobile**: Responsive UI improvements
+- **Web UI tests** — Playwright E2E tests for the interview flow, blueprint view, and settings
+- **Provider implementations** — Google Gemini, AWS Bedrock, Azure OpenAI (enum defined, implementation needed)
+- **Performance** — Optimize the generation pipeline for large projects
+- **Mobile responsiveness** — Improve the UI for smaller screens
 
 ### Medium Priority
 
-- **Documentation**: Add more tutorials and guides
-- **Internationalization**: Multi-language support
-- **Export formats**: Add more export formats (PDF, Confluence)
-- **Integrations**: GitHub Issues, Linear, Notion
+- **Documentation** — Tutorials, video guides, and cookbook recipes
+- **Export formats** — PDF, Markdown, Confluence wiki pages
+- **Integrations** — GitHub Issues, Linear, Notion, Jira
+- **Internationalization** — Multi-language support for the UI and docs
 
 ### Low Priority
 
-- **Docker**: Official Docker image
-- **Cloud deployment**: Guides for AWS, GCP, Azure
-- **Plugins**: Plugin system for custom extensions
+- **Docker** — Official Docker image and docker-compose setup
+- **Cloud deployment** — Guides for AWS, GCP, Azure
+- **Plugin system** — Extensible architecture for custom integrations
 
 ## Code of Conduct
 
-- Be respectful and constructive
-- Focus on technical merit
-- Help newcomers
-- Report security issues privately
+- **Be respectful and constructive** — assume good intent in all interactions
+- **Focus on technical merit** — critique ideas, not people
+- **Help newcomers** — everyone starts somewhere; answer questions patiently
+- **Report security issues privately** — do not open public issues for vulnerabilities; email the maintainers directly
+- **Follow the project's conventions** — read existing code before writing new code
+
+> [!NOTE]
+> Serious or persistent violations of the code of conduct may result in a ban from the project's communication channels.
+
+## Getting Help
+
+If you have questions about contributing:
+
+1. Check existing [GitHub Issues](https://github.com/orchestra/orchestra/issues) for related discussions
+2. Open a new issue with the `question` label
+3. Reference the [Architecture](./architecture) docs for system design context
 
 ## Next Steps
 
-- [Getting Started](./getting-started)
-- [Architecture](./architecture)
-- [GitHub Issues](https://github.com/orchestra/orchestra/issues)
+- [Getting Started](./getting-started) — Run Orchestra locally
+- [Architecture](./architecture) — Understand the system design
+- [GitHub Issues](https://github.com/orchestra/orchestra/issues) — Find something to work on

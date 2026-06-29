@@ -1,48 +1,153 @@
 ---
 title: Changelog
-description: Version history and changes
+description: Version history and release notes
 order: 15
 sidebarLabel: Changelog
 ---
 
 # Changelog
 
+All notable changes to Orchestra are documented on this page.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/), and the project adheres to [Semantic Versioning](https://semver.org/).
+
 ## v0.1.0 (Current)
 
-### Features
+**Initial release.** Orchestra transforms vague software ideas into structured, execution-ready development plans through an AI-powered interview and generation pipeline.
 
-- **AI-Powered Blueprints**: Generate structured project plans from plain language descriptions
-- **Adaptive Interview**: Quick Mode (16–20 questions) and Advanced Mode (24–28 questions)
-- **Real-Time Progress**: Live SSE updates with token usage and cost tracking
-- **Multi-Provider Support**: OpenAI, Anthropic, OpenRouter, opencode-go, and custom providers
-- **Cost Tracking**: Real-time token usage and cost calculation per generation
-- **Risk Mitigation**: Automatic risk identification and mitigation suggestions
-- **Task Graph Generation**: Dependency-aware task decomposition
-- **Execution Prompts**: Per-task AI-written implementation instructions
-- **Local-First**: SQLite persistence, no cloud dependencies
-- **Theme Toggle**: Manual light/dark mode with persistent preference
-- **17-Page Documentation**: Comprehensive docs with Pagefind search
+### Interview System
 
-### Technical
+- **Adaptive questionnaire** with 50+ questions across 12 lifecycle phases
+- **Two modes**: Quick Mode (16-20 questions) for fast scoping, Advanced Mode (24-28 questions) for deep architectural analysis
+- **6 question categories**: `critical` (5), `high-value` (11), `contextual` (4), `optional` (8), `advanced-only` (5), `derivable` (11)
+- **Gate dependencies** — questions conditionally appear based on prior answers
+- **Inference engine** — derivable questions are never shown; AI infers answers from context with confidence levels
+- **Contradiction detection** — flags conflicting answers with severity levels
+- **Freeform extraction** — scans open-text answers for implicit requirements and constraints
+- **Real-time validation** — answers validated as you type with inline feedback
 
-- **API**: Fastify 5 with structured Pino logging
-- **Frontend**: Next.js 15 + React 19 + Tailwind CSS v4
-- **Database**: SQLite via sql.js (pure JavaScript)
-- **Testing**: 586 tests across 26 test files
-- **AI**: Pluggable provider system with routing and fallbacks
-- **Caching**: SQLite-backed AI response cache with SHA256 keys
-- **Security**: AES-256-GCM encryption for provider credentials
+### AI Blueprint Generation
 
-### Architecture
+- **7-stage generation pipeline**: Synthesis, Analysis, Blueprint, Task Graph, Prompt Assembly, Risk Assessment, Summary
+- **Real-time SSE progress streaming** with 9 event types for live stage-by-stage updates
+- **Content-addressable AI response cache** — SHA-256 keyed, stored in SQLite, persists across restarts
+- **JSON extraction and repair** — automatic recovery from malformed AI responses
+- **Zod schema validation** — all AI output validated against strict schemas with 3 retry attempts
+- **Deterministic fallback** — structurally valid placeholder generation when no AI provider is available
 
-- Monorepo structure with `apps/api`, `apps/web`, and `apps/landing`
-- 17 SQLite tables with full repository layer
-- Transaction support with `BEGIN IMMEDIATE`/`COMMIT`/`ROLLBACK`
-- Event-driven progress with 9 SSE event types
-- Circuit breaker pattern for provider resilience
+### AI Provider System
+
+- **9 providers** defined: OpenAI, Anthropic, OpenRouter, opencode-go, Google, AWS Bedrock, Azure OpenAI, Custom, Mock
+- **4 fully implemented**: OpenAI, Anthropic, OpenRouter, opencode-go
+- **Mock provider** for testing without API calls
+- **Model routing** with 3 tiers (cheap, balanced, strong) and per-task-type policies
+- **Cascading fallback chains** — automatic retry, model switching, and tier downgrade on failure
+- **Circuit breaker pattern** — providers that fail repeatedly are temporarily excluded from routing
+- **Provider validation lifecycle** — `unverified` → `valid` / `invalid` / `expired` / `rate_limited` / `failed`
+
+### Pricing and Cost Tracking
+
+- **19-model pricing table** across 4 providers with per-token cost data
+- **Real-time cost calculation** from actual token counts (prompt + completion)
+- **Per-call usage records** tracking provider, model, task type, tokens, cost, duration, and status
+- **Cost aggregation** by model, provider, and task type
+- **Budget guardrails** with per-project spending limits
+
+### Task Graph and Execution
+
+- **Dependency-aware task decomposition** — phases decomposed into a directed acyclic graph (DAG)
+- **8 task types**: `code`, `config`, `test`, `docs`, `review`, `deploy`, `pending_input`, `other`
+- **Automatic cycle detection** with error reporting
+- **Topological ordering** for correct execution sequence
+- **7-section execution prompts** with structural validation:
+  1. Objective (min 100 chars)
+  2. Context (min 200 chars)
+  3. Constraints (1+ items)
+  4. Expected Output (min 120 chars)
+  5. Validation Criteria (1+ items)
+  6. Architectural Alignment (min 100 chars)
+  7. Agent Tips (1+ items)
+- **Dynamic agent tips** tailored by task type — security, edge cases, dependency warnings, common bugs
+
+### Risk Mitigation
+
+- **Surgical prompt rewriting** — targeted edits to affected prompts only, not full regeneration
+- **Keyword extraction** from risk descriptions with stop word filtering
+- **Prompt matching** to identify affected execution prompts
+- **Rewrite rules** — opposite of risk becomes reality, features never removed, structural validity preserved
+- **Project summary update** to reflect risk resolution
+
+### Security
+
+- **AES-256-GCM encryption** for all provider API keys at rest
+- **Key derivation** via SHA-256 from `ENCRYPTION_KEY` environment variable
+- **Storage format**: `<iv>:<ciphertext>:<tag>` with unique random IV per encryption
+- **Audit logging** — all generation events tracked in immutable log
+- **Rate limiting** on export endpoints (30 requests per 60-second window)
+- **No telemetry** — nothing leaves your machine unless you configure an AI provider
+
+### Database
+
+- **SQLite persistence** via sql.js (pure JavaScript — no native compilation required)
+- **17 tables**: `projects`, `interview_sessions`, `answers`, `blueprints`, `tasks`, `execution_prompts`, `provider_credentials`, `ai_cache_entries`, `usage_records`, `audit_logs`, `guardrail_events`, `workflow_runs`, `stage_snapshots`, `risk_flags`, `mitigations`, `prompt_versions`, `system_settings`
+- **WAL mode** enabled for concurrent read access
+- **Foreign keys enforced** (`PRAGMA foreign_keys=ON`)
+- **5-second busy timeout** (`PRAGMA busy_timeout=5000`)
+- **PostgreSQL support** via `DATABASE_URL` for production deployments
+- **Transaction support** with `BEGIN IMMEDIATE` / `COMMIT` / `ROLLBACK`
+
+### Frontend
+
+- **Next.js 15** with React 19 and App Router
+- **Tailwind CSS v4** for utility-first styling
+- **Light/dark theme** with system preference detection and persistent toggle
+- **Real-time SSE progress** with custom hook for live generation updates
+- **Interactive interview** with multi-step form, validation, and progress tracking
+- **Blueprint viewer** with tree view of phases and tasks
+- **Settings panel** for provider management with credential validation
+- **TanStack Query** for server state management
+
+### Landing Page and Documentation
+
+- **Astro-based docs site** with 17 pages
+- **Pagefind search** for full-text documentation search
+- **MDX content** with callout syntax, code blocks, and tables
+- Pages include: Overview, Getting Started, Installation, Core Concepts, Usage, Tutorial, Configuration, CLI Reference, API Reference, Security, Risk Mitigation, Architecture, Troubleshooting, FAQ, Changelog, Contributing, Custom Providers
+
+### Technical Stack
+
+| Layer | Technology |
+|---|---|
+| **Monorepo** | pnpm workspaces |
+| **API** | Fastify 5 with Pino structured logging |
+| **Frontend** | Next.js 15 + React 19 |
+| **Styling** | Tailwind CSS v4 |
+| **Database** | SQLite via sql.js (pure JS) |
+| **ORM** | Drizzle ORM |
+| **Validation** | Zod v4 |
+| **Testing** | Vitest — 586 tests across 26 test files |
+| **Encryption** | AES-256-GCM (Node.js crypto) |
+| **Logging** | Pino (structured JSON) |
+
+### Architecture Highlights
+
+- **Event-driven progress** with 9 SSE event types
+- **Content-addressable caching** with SHA-256 keys stored in SQLite
+- **Pluggable provider system** with unified `AIProvider` interface
+- **Model routing** with per-task-type policies and cascading fallbacks
+- **Versioned snapshots** — every generation creates an immutable plan version
+- **Structured diffs** between plan versions
+
+## Versioning Policy
+
+Orchestra follows [Semantic Versioning](https://semver.org/):
+
+- **MAJOR** — Breaking changes to the API, database schema, or configuration
+- **MINOR** — New features, providers, or capabilities (backward-compatible)
+- **PATCH** — Bug fixes, performance improvements, documentation updates
 
 ## Next Steps
 
-- [Contributing](./contributing)
-- [Installation](./installation)
-- [Getting Started](./getting-started)
+- [Contributing](./contributing) — How to contribute to Orchestra
+- [Installation](./installation) — Install the latest version
+- [Getting Started](./getting-started) — Generate your first plan

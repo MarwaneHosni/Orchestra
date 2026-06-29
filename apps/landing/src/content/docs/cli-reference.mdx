@@ -1,108 +1,276 @@
 ---
 title: CLI Reference
-description: Command-line usage and scripts
+description: Command-line tools and scripts for Orchestra
 order: 10
 sidebarLabel: CLI Reference
 ---
 
 # CLI Reference
 
-Orchestra is primarily a web application, but includes several CLI scripts for development and maintenance.
+Orchestra is primarily a web application, but includes several CLI scripts for development, maintenance, database management, and quality assurance. This page documents every command available in the project.
 
-## Development Commands
+## Prerequisites
 
-### Start Development
+Before running any command, ensure you have:
+
+| Requirement | Version | Check Command |
+|---|---|---|
+| **Node.js** | >= 20.0.0 | `node --version` |
+| **pnpm** | 9.15.4+ | `pnpm --version` |
+| **Git** | Any recent | `git --version` |
+
+> [!NOTE]
+> All commands below are run from the repository root unless otherwise noted. Orchestra uses pnpm workspaces, so most commands delegate to per-package scripts.
+
+## Development Scripts
+
+### `pnpm setup`
+
+Runs the full environment setup script. This is the recommended first command after cloning the repository.
 
 ```bash
-pnpm dev
+pnpm setup
 ```
 
-Starts:
-- API server on `http://localhost:3000`
-- Web frontend on `http://localhost:3001`
+**What it does:**
 
-### Build
+- Installs all dependencies across the monorepo
+- Copies `.env.example` to `.env` if it does not exist
+- Generates a random `ENCRYPTION_KEY` and writes it to `.env`
+- Initializes the SQLite database with schema migrations
+- Optionally seeds demo data
+
+> [!TIP]
+> Run `pnpm setup` immediately after cloning. It handles every step that would otherwise require manual configuration.
+
+### `pnpm dev`
+
+Starts development servers with hot-reload.
+
+```bash
+pnpm dev          # Start all services (api + web + worker)
+pnpm dev api      # Start API server only
+pnpm dev web      # Start web frontend only
+```
+
+**What it starts:**
+
+| Service | URL | Framework |
+|---|---|---|
+| **API** | `http://localhost:3000` | Fastify 5 |
+| **Web** | `http://localhost:3001` | Next.js 15 |
+
+When running `pnpm dev` (all), the script automatically sets `NEXT_PUBLIC_API_URL=http://localhost:3000` so the frontend calls the API directly, bypassing the Next.js proxy which has no configurable timeout and can `ECONNRESET` during long-running AI generation calls.
+
+> [!WARNING]
+> If port 3000 or 3001 is already in use, the dev server will fail to bind. Kill the conflicting process or change the port in `.env`.
+
+### `pnpm build`
+
+Builds all packages for production.
 
 ```bash
 pnpm build
 ```
 
-Builds the frontend for production. Output goes to `apps/web/.next/`.
+This runs `pnpm build` in every workspace package via `pnpm -r build`. Output locations:
 
-### Test
+| Package | Output |
+|---|---|
+| `apps/api` | `dist/` (compiled TypeScript) |
+| `apps/web` | `.next/` (Next.js production build) |
+| `apps/landing` | `dist/` (Astro static site) |
+| `packages/shared` | `dist/` (compiled TypeScript) |
+| `packages/config` | `dist/` (compiled TypeScript) |
+
+### `pnpm lint`
+
+Runs ESLint across the entire monorepo.
 
 ```bash
-pnpm test
+pnpm lint
 ```
 
-Runs all test suites:
-- API tests (Vitest)
-- Web component tests
-- Integration tests
-
-### Test (Watch Mode)
+Uses the flat config (`eslint.config.js`) at the repository root. The linter covers TypeScript files in all apps and packages. Fix auto-fixable issues with:
 
 ```bash
-pnpm test:watch
+npx eslint --fix .
 ```
+
+### `pnpm format` / `pnpm format:fix`
+
+Check and fix code formatting with Prettier.
+
+```bash
+pnpm format          # Check formatting (fails if files are unformatted)
+pnpm format:fix      # Fix formatting in place
+```
+
+> [!TIP]
+> Run `pnpm format:fix` before committing to avoid lint-staged rejections. Husky pre-commit hooks run Prettier automatically on staged files.
+
+### `pnpm test` / `pnpm test:watch`
+
+Run the test suite with Vitest.
+
+```bash
+pnpm test            # Run all tests once and exit
+pnpm test:watch      # Run tests in watch mode (re-runs on file changes)
+```
+
+Test suites include:
+
+| Suite | Location | Description |
+|---|---|---|
+| **Unit tests** | `*.test.ts` alongside source | Encryption, caching, routing, validation, budget |
+| **Integration tests** | `apps/api/src/lib/e2e/` | End-to-end persistence, BYOK flows |
+| **Contract tests** | `apps/api/src/lib/provider/contract.test.ts` | Provider interface compliance |
+| **E2E tests** | `tests/e2e/` | Playwright browser tests for the web UI |
+
+Run a specific test file:
+
+```bash
+npx vitest run apps/api/src/lib/secrets/encryption.test.ts
+```
+
+### `pnpm typecheck`
+
+Runs TypeScript type checking across all workspace packages.
+
+```bash
+pnpm typecheck
+```
+
+This executes `tsc --noEmit` in every package. It catches type errors without producing output files.
+
+### `pnpm clean` / `pnpm clean:all`
+
+Remove build artifacts.
+
+```bash
+pnpm clean          # Remove dist/, .next/, and other build outputs
+pnpm clean:all      # Remove build outputs AND node_modules/
+```
+
+> [!NOTE]
+> After `pnpm clean:all`, you must run `pnpm setup` again to reinstall dependencies.
 
 ## Database Commands
 
-### Reset Database
+Orchestra uses SQLite as its database, stored as a single file at `apps/api/orchestra.db`.
+
+### `pnpm db:start`
+
+Starts the database container via Docker Compose (if configured for containerized development).
 
 ```bash
-rm apps/api/orchestra.db
+pnpm db:start
 ```
 
-Database will be recreated on next server start.
+> [!NOTE]
+> For the default SQLite setup, no container is needed. The database file is created automatically on first server start. This command is useful only if you have configured a PostgreSQL or containerized database.
 
-### Backup
+### `pnpm db:stop`
+
+Stops the database container.
 
 ```bash
-cp apps/api/orchestra.db apps/api/orchestra-backup-$(date +%Y%m%d).db
+pnpm db:stop
 ```
 
-### Restore
+### `pnpm db:reset`
+
+Resets the database by deleting the SQLite file and re-running migrations.
 
 ```bash
+pnpm db:reset
+```
+
+**What it does:**
+
+1. Deletes `apps/api/orchestra.db`
+2. Runs `scripts/reset-db.mjs`
+3. Database is recreated with fresh schema on next server start
+
+> [!DANGER]
+> This permanently deletes all projects, blueprints, credentials, and usage data. Back up the database file first if you need to preserve data.
+
+### `pnpm db:status`
+
+Shows the current database container status.
+
+```bash
+pnpm db:status
+```
+
+### Manual Backup
+
+Since the database is a single SQLite file, backup is a simple file copy:
+
+```bash
+# Linux / macOS
+cp apps/api/orchestra.db "apps/api/orchestra-backup-$(date +%Y%m%d).db"
+
+# Windows PowerShell
+Copy-Item apps\api\orchestra.db "apps\api\orchestra-backup-$(Get-Date -Format yyyyMMdd).db"
+```
+
+### Manual Restore
+
+```bash
+# Stop the API server first to avoid corruption
 cp apps/api/orchestra-backup-20240115.db apps/api/orchestra.db
 ```
 
-## API Commands
+> [!WARNING]
+> Always stop the API server before copying the database file. SQLite does not support concurrent writes from external tools while the server holds a connection.
 
-### Start API Only
+## Per-App Commands with `--filter`
 
-```bash
-cd apps/api
-pnpm dev
-```
-
-### Start API (Production)
+Since Orchestra is a pnpm workspace monorepo, you can target individual packages using `--filter`:
 
 ```bash
-cd apps/api
-NODE_ENV=production pnpm start
+# Run dev server for API only
+pnpm --filter @orchestra/api dev
+
+# Build web frontend only
+pnpm --filter @orchestra/web build
+
+# Run tests in the shared package
+pnpm --filter @orchestra/shared test
+
+# Typecheck a specific package
+pnpm --filter @orchestra/api typecheck
+
+# Run lint in a specific package
+pnpm --filter @orchestra/web lint
 ```
 
-## Web Commands
+**Package names:**
 
-### Start Web Only
+| Package | npm Name |
+|---|---|
+| `apps/api` | `@orchestra/api` |
+| `apps/web` | `@orchestra/web` |
+| `apps/landing` | `@orchestra/landing` |
+| `packages/shared` | `@orchestra/shared` |
+| `packages/config` | `@orchestra/config` |
+
+## API Operations via curl
+
+The API server exposes HTTP endpoints for cache management, health checks, and diagnostics. These are useful for scripting and automation.
+
+### Health Check
 
 ```bash
-cd apps/web
-pnpm dev
+curl http://localhost:3000/api/v1/health
 ```
 
-### Build Web
+Returns server status, uptime, and database connectivity.
 
-```bash
-cd apps/web
-pnpm build
-```
+### Cache Invalidation
 
-## Cache Commands
-
-### Invalidate Cache
+Invalidate all cached AI responses:
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/cache/invalidate \
@@ -110,7 +278,7 @@ curl -X POST http://localhost:3000/api/v1/cache/invalidate \
   -d '{"all": true}'
 ```
 
-### Invalidate by Provider
+Invalidate cache entries for a specific provider:
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/cache/invalidate \
@@ -118,8 +286,101 @@ curl -X POST http://localhost:3000/api/v1/cache/invalidate \
   -d '{"provider": "openai"}'
 ```
 
+> [!TIP]
+> Cache invalidation is useful when you switch models or want to force fresh AI responses without restarting the server.
+
+### Cache Statistics
+
+```bash
+curl http://localhost:3000/api/v1/cache/stats
+```
+
+Returns entry count, hit rates, and storage size.
+
+### Diagnostics
+
+```bash
+curl http://localhost:3000/api/v1/diagnostics
+```
+
+Returns internal system diagnostics including provider status, circuit breaker states, and rate limiter windows.
+
+### Observability
+
+```bash
+curl http://localhost:3000/api/v1/observability
+```
+
+Returns observability data including audit log summaries and guardrail event counts.
+
+### API Version
+
+```bash
+curl http://localhost:3000/api/v1/version
+```
+
+Returns the current API version.
+
+## Regression Guard Script
+
+### `node scripts/check-no-stubs.mjs`
+
+A regression guard that prevents stub routes, placeholder code, and dead infrastructure from being reintroduced.
+
+```bash
+node scripts/check-no-stubs.mjs
+```
+
+**What it checks:**
+
+| Check | Description |
+|---|---|
+| **Dead scaffolding** | Ensures `apps/worker/` directory does not exist (removed scaffolding) |
+| **501 stubs** | Scans domain files for `501` or `NOT_IMPLEMENTED` status codes |
+| **Placeholder text** | Scans production code for `"not yet implemented"` strings |
+| **Dead config** | Ensures `.env.example` does not reference `REDIS_URL` or `WORKER_CONCURRENCY` |
+| **Unbounded stores** | Checks that in-memory Maps have been replaced with SQLite-backed stores |
+
+> [!WARNING]
+> This script exits with code 1 if any violations are found. It is designed to run in CI pipelines and pre-commit hooks to catch regressions early.
+
+The script is intentionally strict. If you need to add a pattern that looks suspicious but is actually valid, update the allowlist in `scripts/check-no-stubs.mjs` with a comment explaining why.
+
+## Environment Variables Reference
+
+These environment variables affect CLI behavior:
+
+| Variable | Default | Description |
+|---|---|---|
+| `PORT` | `3000` | API server port |
+| `HOST` | `0.0.0.0` | API server bind address |
+| `NEXT_PUBLIC_API_URL` | _(auto-set by dev script)_ | Frontend API endpoint |
+| `ENCRYPTION_KEY` | _(generated by setup)_ | 32-byte hex key for AES-256-GCM encryption |
+| `NODE_ENV` | `development` | Set to `production` for production builds |
+| `LOG_LEVEL` | `info` | Logging verbosity: `debug`, `info`, `warn`, `error` |
+
+## Quick Reference Card
+
+| Task | Command |
+|---|---|
+| First-time setup | `pnpm setup` |
+| Start developing | `pnpm dev` |
+| Start API only | `pnpm dev api` |
+| Start web only | `pnpm dev web` |
+| Build everything | `pnpm build` |
+| Run linter | `pnpm lint` |
+| Fix formatting | `pnpm format:fix` |
+| Run tests | `pnpm test` |
+| Type check | `pnpm typecheck` |
+| Reset database | `pnpm db:reset` |
+| Backup database | `cp apps/api/orchestra.db backup.db` |
+| Invalidate AI cache | `curl -X POST localhost:3000/api/v1/cache/invalidate -d '{"all":true}'` |
+| Check for regressions | `node scripts/check-no-stubs.mjs` |
+| Clean build artifacts | `pnpm clean` |
+| Full clean (incl. deps) | `pnpm clean:all` |
+
 ## Next Steps
 
-- [API Reference](./api-reference) — Programmatic API
-- [Configuration](./configuration) — Environment variables
-- [Troubleshooting](./troubleshooting) — Common issues
+- [API Reference](./api-reference) — Programmatic API endpoints
+- [Configuration](./configuration) — Environment variables and provider setup
+- [Troubleshooting](./troubleshooting) — Common issues and solutions

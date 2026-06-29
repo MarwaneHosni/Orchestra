@@ -1,94 +1,440 @@
 ---
 title: Custom Providers
-description: Integrate your own AI backend with Orchestra
+description: Configure and use custom AI providers
 order: 7
 sidebarLabel: Custom Providers
 ---
 
 # Custom Providers
 
-Orchestra supports custom AI providers through an OpenAI-compatible API interface.
+Orchestra supports multiple AI providers through a unified interface. Each provider connects to a different AI backend, and Orchestra handles routing, fallback, encryption, and cost tracking across all of them.
 
-## When to Use Custom Providers
+## Supported Providers
 
-- **Local LLMs**: Ollama, LM Studio, or local model servers
-- **Private APIs**: Internal company AI services
-- **Specialized models**: Domain-specific models (medical, legal, etc.)
-- **Cost optimization**: Cheaper alternatives not in the default list
+| Provider | API Endpoint | Auth Method | Models | Status |
+|---|---|---|---|---|
+| `openai` | `api.openai.com/v1` | `Authorization: Bearer` | GPT-4o, GPT-4o-mini, GPT-4.1 | Available |
+| `anthropic` | `api.anthropic.com/v1` | `x-api-key` header | Claude Sonnet 4, Claude 3.5 Haiku | Available |
+| `openrouter` | `openrouter.ai/api/v1` | `Authorization: Bearer` | All models (100+) | Available |
+| `opencode-go` | `opencode.ai/zen/go/v1` | `Authorization: Bearer` | 10 Go models (free tier) | Available |
+| `google` | — | — | — | Not implemented |
+| `aws_bedrock` | — | — | — | Not implemented |
+| `azure_openai` | — | — | — | Not implemented |
+| `custom` | — | — | — | Not implemented |
+| `mock` | No network | None | `mock-blueprint-v1` | Available (testing) |
 
-## Requirements
+> [!NOTE]
+> The `google`, `aws_bedrock`, `azure_openai`, and `custom` provider types are defined in the schema but not yet implemented. Attempting to use them will return a validation error.
 
-Your custom provider must expose an OpenAI-compatible chat completions API:
+## Provider Details
+
+### OpenAI
+
+Connects to the OpenAI API for GPT models.
 
 ```
-POST /v1/chat/completions
+Base URL: https://api.openai.com/v1
+Auth:     Authorization: Bearer <api-key>
+Validate: GET /models (filters for gpt* models)
 ```
 
-With request body:
-```json
-{
-  "model": "your-model-name",
-  "messages": [
-    {"role": "system", "content": "..."},
-    {"role": "user", "content": "..."}
-  ],
-  "temperature": 0.7,
-  "max_tokens": 4000
-}
+**Available models:**
+
+| Model | Prompt (per 1K tokens) | Completion (per 1K tokens) |
+|---|---|---|
+| `gpt-4o-mini` | $0.00015 | $0.0006 |
+| `gpt-4o` | $0.0025 | $0.01 |
+| `gpt-4.1` | $0.002 | $0.008 |
+
+### Anthropic
+
+Connects to the Anthropic API for Claude models.
+
+```
+Base URL: https://api.anthropic.com/v1
+Auth:     x-api-key: <api-key>
+Headers:  anthropic-version: 2023-06-01
+Validate: GET /models (filters for claude* models)
 ```
 
-And response:
-```json
-{
-  "choices": [
-    {
-      "message": {
-        "role": "assistant",
-        "content": "..."
-      }
-    }
-  ],
-  "usage": {
-    "prompt_tokens": 100,
-    "completion_tokens": 200,
-    "total_tokens": 300
-  }
-}
+**Available models:**
+
+| Model | Prompt (per 1K tokens) | Completion (per 1K tokens) |
+|---|---|---|
+| `claude-3-5-haiku-latest` | $0.0008 | $0.004 |
+| `claude-sonnet-4-20250514` | $0.003 | $0.015 |
+
+### OpenRouter
+
+An aggregator providing access to 100+ models through a single API.
+
+```
+Base URL: https://openrouter.ai/api/v1
+Auth:     Authorization: Bearer <api-key>
+Validate: GET /auth/key + GET /models
 ```
 
-## Implementation Steps
+**Available models:**
 
-1. **Implement the API**: Create a server that exposes the endpoint above
-2. **Add to Orchestra**: Go to **Settings → Providers → Add Custom**
-3. **Configure**: Enter your API URL and model name
-4. **Validate**: Test the connection with a real API call
-5. **Use**: Select your custom provider in the routing preferences
+| Model | Prompt (per 1K tokens) | Completion (per 1K tokens) |
+|---|---|---|
+| `openai/gpt-4o-mini` | $0.00015 | $0.0006 |
+| `openai/gpt-4o` | $0.0025 | $0.01 |
+| `anthropic/claude-sonnet-4` | $0.003 | $0.015 |
+| `deepseek/deepseek-v4-flash:free` | $0.00 | $0.00 |
 
-## Example: Ollama Integration
+> [!TIP]
+> OpenRouter is useful when you want access to models from multiple providers through a single API key. Pricing is pass-through (approximate) — actual costs depend on OpenRouter's current rates.
+
+### OpenCode Go
+
+Free-tier models from opencode.ai. All models share a single quota and cost nothing.
+
+```
+Base URL: https://opencode.ai/zen/go/v1
+Auth:     Authorization: Bearer <api-key>
+Validate: POST /chat/completions (30s timeout, "Say OK" test)
+Generate: POST /chat/completions (no timeout)
+```
+
+**Available models (all free):**
+
+| Model | Prompt (per 1K tokens) | Completion (per 1K tokens) |
+|---|---|---|
+| `deepseek-v4-flash` | $0.00 | $0.00 |
+| `deepseek-v4-pro` | $0.00 | $0.00 |
+| `glm-5.1` | $0.00 | $0.00 |
+| `glm-5` | $0.00 | $0.00 |
+| `kimi-k2.5` | $0.00 | $0.00 |
+| `kimi-k2.6` | $0.00 | $0.00 |
+| `mimo-v2.5` | $0.00 | $0.00 |
+| `mimo-v2.5-pro` | $0.00 | $0.00 |
+| `qwen3.6-plus` | $0.00 | $0.00 |
+| `qwen3.5-plus` | $0.00 | $0.00 |
+
+> [!NOTE]
+> OpenCode Go has no generation timeout (`GENERATE_TIMEOUT_MS = 0`), meaning requests wait indefinitely for a response. Validation uses a 30-second timeout. This is the recommended provider for cost-free usage.
+
+### Mock Provider
+
+A testing provider that requires no network access and returns a hardcoded blueprint.
+
+```
+Network:  None
+Auth:     None (API key ignored)
+Validate: Always returns valid
+Model:    mock-blueprint-v1
+```
+
+The mock provider returns a complete blueprint with all 12 lifecycle phases, sample assumptions, constraints, risks, and a roadmap. It simulates a 50ms processing delay.
+
+> [!WARNING]
+> The mock provider is for development and testing only. It returns identical output regardless of interview answers. Do not use it for real project planning.
+
+## Adding a Provider Credential
+
+### Via the API
 
 ```bash
-# Start Ollama with an OpenAI-compatible server
-ollama serve
+# Create a credential
+curl -X POST http://localhost:3000/api/v1/provider-credentials \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "openai",
+    "apiKey": "sk-...",
+    "defaultModel": "gpt-4o-mini"
+  }'
 
-# In Orchestra settings:
-# Provider URL: http://localhost:11434/v1
-# Model: llama3.2
-# API Key: ollama (any non-empty string)
+# Validate the credential
+curl -X POST http://localhost:3000/api/v1/provider-credentials/<id>/validate
 ```
 
-## Pricing Configuration
+### Via the UI
 
-For cost tracking, you can configure pricing:
+1. Navigate to **Settings** in the Orchestra web interface
+2. Select **Providers** from the sidebar
+3. Click **Add Provider**
+4. Choose a provider type from the dropdown
+5. Enter your API key
+6. Optionally set a default model
+7. Click **Save** to store the credential
+8. Click **Validate** to test the connection
 
-| Parameter | Description |
+> [!TIP]
+> After adding a credential, always validate it. Validation confirms the API key works and discovers available models. An unvalidated credential has status `unverified` and may not be selected by the router.
+
+### Credential Lifecycle
+
+```
+Created → unverified
+         ↓
+    Validate → valid (success)
+             → invalid (bad key)
+             → failed (connection error)
+         ↓
+    Update API key → unverified (re-validates)
+```
+
+| Status | Meaning |
 |---|---|
-| `promptPricePer1K` | Cost per 1K prompt tokens |
-| `completionPricePer1K` | Cost per 1K completion tokens |
+| `unverified` | Credential created but not yet validated |
+| `valid` | API key confirmed working |
+| `invalid` | API key rejected by provider |
+| `expired` | API key expired (provider-specific) |
+| `rate_limited` | Too many validation attempts |
+| `failed` | Connection or unknown error |
 
-Set to `0` for free models.
+## Provider Validation
+
+When you validate a credential, Orchestra makes a real API call to the provider to confirm the key works.
+
+### How It Works
+
+Each provider has a provider-specific validation strategy:
+
+| Provider | Validation Method |
+|---|---|
+| `openai` | `GET /models` — lists available GPT models |
+| `anthropic` | `GET /models` — lists available Claude models |
+| `openrouter` | `GET /auth/key` + `GET /models` — checks key and lists models |
+| `opencode-go` | `POST /chat/completions` — sends "Say OK" test message (30s timeout) |
+| `mock` | Always returns `{ valid: true }` |
+
+On success, the credential status is set to `valid` and available models are stored. On failure, the status is set to `invalid` and the error message is recorded.
+
+### Rate Limiting
+
+Provider validation is rate-limited to prevent abuse:
+
+```
+Max requests: 20 per 60 seconds (per credential)
+```
+
+> [!DANGER]
+> Exceeding the validation rate limit returns a `429 Too Many Requests` error with a `Retry-After` header. Repeated violations may lock the credential.
+
+## Encryption at Rest
+
+API keys are encrypted before being stored in the database using AES-256-GCM.
+
+### Configuration
+
+```bash
+# Generate a 32-byte encryption key
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+# Set it as an environment variable
+export ENCRYPTION_KEY="your-64-character-hex-key"
+```
+
+### Encryption Details
+
+| Parameter | Value |
+|---|---|
+| Algorithm | AES-256-GCM |
+| Key derivation | SHA-256 hash of `ENCRYPTION_KEY` env var |
+| IV | Random 16 bytes per encryption |
+| Auth tag | 16 bytes (GCM authentication) |
+| Serialized format | `<iv>:<ciphertext>:<tag>` (hex-encoded, colon-separated) |
+
+### Storage Format
+
+Encrypted keys are stored as a single string in the format:
+
+```
+<16-byte-iv-hex>:<ciphertext-hex>:<16-byte-tag-hex>
+```
+
+The ciphertext may contain colons (since the ciphertext itself is hex-encoded and could produce colon characters), so parsing splits on the first and last colons only.
+
+> [!WARNING]
+> Without `ENCRYPTION_KEY` set, credentials are still stored but **not encrypted**. The API key is stored as-is. Always set `ENCRYPTION_KEY` in production environments.
+
+> [!DANGER]
+> If you change `ENCRYPTION_KEY` after storing credentials, all existing encrypted keys become undecryptable. Back up your encryption key securely.
+
+## Model Routing and Fallback Chains
+
+Orchestra uses a router to select the best provider and model for each task. The router considers:
+
+- **Task type**: `blueprint`, `prompt_generation`, `architecture`, `roadmap`, `summary`, `clarification`
+- **User preferences**: Preferred provider and model
+- **Provider availability**: Only validated credentials are selected
+- **Model tier**: `cheap`, `balanced`, or `strong`
+
+### Fallback Chain
+
+If the primary provider fails, the router automatically falls back through a chain:
+
+```
+Primary selection → Fallback 1 → Fallback 2 → ...
+```
+
+Each fallback attempt:
+
+1. Detects the failure (network error, rate limit, invalid response)
+2. Selects the next model in the fallback chain
+3. Retries the generation with the new provider
+4. Continues until success or chain exhaustion
+
+> [!TIP]
+> Configure multiple provider credentials to maximize fallback options. If OpenAI is down, having Anthropic and OpenRouter credentials means the router can fall back automatically.
+
+### Retry Behavior
+
+Both risk resolution and blueprint refinement use retry loops:
+
+| Operation | Max Attempts | Retry On |
+|---|---|---|
+| Risk resolution (prompt rewrite) | 2 | Provider error, short response, parse failure |
+| Blueprint refinement | 3 | Provider error, parse failure, Zod validation failure |
+| Provider validation | 1 | No retry (single attempt) |
+
+## Full Pricing Table
+
+All 19 models with per-1K-token costs:
+
+| # | Provider | Model | Prompt ($/1K) | Completion ($/1K) |
+|---|---|---|---|---|
+| 1 | `openai` | `gpt-4o-mini` | $0.00015 | $0.0006 |
+| 2 | `openai` | `gpt-4o` | $0.0025 | $0.01 |
+| 3 | `openai` | `gpt-4.1` | $0.002 | $0.008 |
+| 4 | `anthropic` | `claude-3-5-haiku-latest` | $0.0008 | $0.004 |
+| 5 | `anthropic` | `claude-sonnet-4-20250514` | $0.003 | $0.015 |
+| 6 | `openrouter` | `openai/gpt-4o-mini` | $0.00015 | $0.0006 |
+| 7 | `openrouter` | `openai/gpt-4o` | $0.0025 | $0.01 |
+| 8 | `openrouter` | `anthropic/claude-sonnet-4` | $0.003 | $0.015 |
+| 9 | `openrouter` | `deepseek/deepseek-v4-flash:free` | $0.00 | $0.00 |
+| 10 | `opencode-go` | `deepseek-v4-flash` | $0.00 | $0.00 |
+| 11 | `opencode-go` | `deepseek-v4-pro` | $0.00 | $0.00 |
+| 12 | `opencode-go` | `glm-5.1` | $0.00 | $0.00 |
+| 13 | `opencode-go` | `glm-5` | $0.00 | $0.00 |
+| 14 | `opencode-go` | `kimi-k2.5` | $0.00 | $0.00 |
+| 15 | `opencode-go` | `kimi-k2.6` | $0.00 | $0.00 |
+| 16 | `opencode-go` | `mimo-v2.5` | $0.00 | $0.00 |
+| 17 | `opencode-go` | `mimo-v2.5-pro` | $0.00 | $0.00 |
+| 18 | `opencode-go` | `qwen3.6-plus` | $0.00 | $0.00 |
+| 19 | `opencode-go` | `qwen3.5-plus` | $0.00 | $0.00 |
+
+> [!NOTE]
+> OpenCode Go models are currently on a free tier with shared quota. Pricing may change when the free tier ends. OpenRouter pricing is pass-through (approximate) and may differ from direct provider pricing.
+
+## OpenCode Go Provider Details
+
+The OpenCode Go provider (`opencode-go`) is Orchestra's recommended free-tier option. It provides access to 10 models at zero cost.
+
+### Endpoint
+
+```
+https://opencode.ai/zen/go/v1
+```
+
+### Authentication
+
+Uses Bearer token authentication. Any non-empty API key is accepted for validation, but a valid key from opencode.ai is required for actual generation.
+
+### Validation
+
+```
+Method:  POST /chat/completions
+Timeout: 30 seconds
+Body:    { "model": "deepseek-v4-flash", "messages": [{"role":"user","content":"Say OK"}] }
+```
+
+Validation sends a minimal test message to confirm the key works. If the provider responds successfully, all 10 Go models are marked as available.
+
+### Generation
+
+```
+Method:  POST /chat/completions
+Timeout: None (waits indefinitely)
+Stream:  false
+```
+
+> [!WARNING]
+> Generation requests to OpenCode Go have no timeout. If the provider is slow or unresponsive, the request will block indefinitely. Consider monitoring long-running generations and cancelling if needed.
+
+### Model List
+
+| Model | Family | Notes |
+|---|---|---|
+| `deepseek-v4-flash` | DeepSeek | Fast, cost-effective |
+| `deepseek-v4-pro` | DeepSeek | Higher quality |
+| `glm-5.1` | GLM | Latest GLM version |
+| `glm-5` | GLM | Stable GLM version |
+| `kimi-k2.5` | Kimi | Moonshot AI |
+| `kimi-k2.6` | Kimi | Latest Moonshot AI |
+| `mimo-v2.5` | MIMO | Multimodal model |
+| `mimo-v2.5-pro` | MIMO | Pro multimodal model |
+| `qwen3.6-plus` | Qwen | Latest Alibaba model |
+| `qwen3.5-plus` | Qwen | Stable Alibaba model |
+
+## API Reference
+
+### List Credentials
+
+```
+GET /api/v1/provider-credentials
+```
+
+Returns paginated list of credentials (secrets stripped).
+
+### Get Credential
+
+```
+GET /api/v1/provider-credentials/:id
+```
+
+Returns a single credential (secrets stripped).
+
+### Create Credential
+
+```
+POST /api/v1/provider-credentials
+Content-Type: application/json
+
+{
+  "provider": "openai",
+  "apiKey": "sk-...",
+  "defaultModel": "gpt-4o-mini",
+  "displayName": "My OpenAI Key"
+}
+```
+
+### Update Credential
+
+```
+PUT /api/v1/provider-credentials/:id
+Content-Type: application/json
+
+{
+  "apiKey": "sk-new-...",
+  "defaultModel": "gpt-4o"
+}
+```
+
+> [!NOTE]
+> Updating the API key resets the credential status to `unverified`. You must re-validate after changing the key.
+
+### Delete Credential
+
+```
+DELETE /api/v1/provider-credentials/:id
+```
+
+Returns `204 No Content`.
+
+### Validate Credential
+
+```
+POST /api/v1/provider-credentials/:id/validate
+```
+
+Tests the stored API key against the provider. Returns the updated credential with `valid` or `invalid` status.
 
 ## Next Steps
 
 - [Configuration](./configuration) — Environment variables and settings
-- [API Reference](./api-reference) — Programmatic provider management
-- [Troubleshooting](./troubleshooting) — When things go wrong
+- [Security](./security) — Encryption and data handling details
+- [Risk Mitigation](./risk-mitigation) — How providers are used during risk resolution
+- [Troubleshooting](./troubleshooting) — Common provider issues

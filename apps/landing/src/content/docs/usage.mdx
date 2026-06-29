@@ -7,53 +7,364 @@ sidebarLabel: Usage
 
 # Usage Guide
 
+This guide covers every feature in Orchestra, from creating your first project to exporting a complete plan bundle.
+
 ## Creating a Project
 
-1. Click **"New Project"** on the dashboard
-2. Enter a name and description
-3. Choose interview mode (Quick or Advanced)
-4. Answer the questions
-5. Click **"Generate Plan"**
+Every project starts with two fields: a **name** and an **idea description**.
+
+| Field | Constraints | Example |
+|---|---|---|
+| Name | 1–200 characters | `Collaborative Code Editor` |
+| Idea description | 10–5,000 characters | `A real-time collaborative code editor with CRDT-based sync, supporting multiple languages, cursor presence, and voice chat.` |
+
+> [!TIP]
+> The idea description is the single most important input. The more specific you are, the better the blueprint. Think of it as a brief you would hand to an engineering lead.
+
+After filling in both fields, choose your **interview mode** (Quick or Advanced) and click **"New Project"**. Orchestra creates the project, starts an interview session, and takes you directly to the first question.
+
+## The Interview Flow
+
+The interview is Orchestra's adaptive questionnaire. It presents **one question at a time** and adjusts its path based on your answers.
+
+### How it works
+
+1. Each question belongs to a **phase** (ideation, requirements, architecture, security, etc.)
+2. A **phase intro** banner appears when you enter a new phase, explaining what it covers
+3. Answer the question in the text area, or select from the provided options
+4. Click **"Submit answer"** (or **"Save"** for optional questions) to proceed
+5. The next question loads immediately
+
+### Navigation
+
+| Action | How |
+|---|---|
+| Go forward | Answer the current question |
+| Go back | Click **"Review answers"** at the end, or use the back button to revisit previous answers |
+| Skip a question | Click **"Skip"** (only available for optional questions) |
+| "I'm not sure" | Click the **"I'm not sure"** button on text questions — Orchestra records a neutral fallback answer and moves on |
+
+> [!NOTE]
+> The "I'm not sure" button is only shown for free-text questions. For select, boolean, and scale questions, choose the closest option.
+
+### Phase summary
+
+When you finish all questions, a **phase summary** screen shows how many answers you provided per phase. Phases with no answers are marked **"Skipped"**. From here you can:
+
+- **Review answers** — go back and edit previous responses
+- **Generate project plan** — proceed to blueprint generation
 
 ## Interview Tips
 
-- Be specific: "Next.js 15 App Router" not "React"
-- Mention constraints: budget, compliance, performance
-- Use concrete examples: "10,000 concurrent users" not "high traffic"
+The quality of your answers directly determines the quality of the generated plan.
 
-## Reviewing the Blueprint
+> [!TIP]
+> **Be specific.** Write "Next.js 15 App Router with PostgreSQL and Prisma" instead of "React with a database."
 
-After generation, the blueprint shows:
-- **Phases**: Major project stages
-- **Tasks**: Individual work items within phases
-- **Dependencies**: What must be done before each task
-- **Risks**: Identified potential issues
-- **Execution Prompts**: Detailed instructions for each task
+> [!TIP]
+> **Mention constraints.** Include budget limits, compliance requirements (GDPR, HIPAA), performance targets, or team size. These shape the architecture decisions.
 
-## Refining a Plan
+> [!TIP]
+> **Note unknowns.** If you are unsure about something, say so explicitly: "I haven't decided on auth yet — leaning toward OAuth." Orchestra flags these as assumptions and adjusts confidence scores accordingly.
 
-If the blueprint needs adjustment:
-1. Click **"Refine"** in the project view
-2. Answer follow-up questions
-3. A new plan version is generated
+> [!WARNING]
+> Short or vague answers (under 15 characters) trigger an **insufficient detail notice** when you move to the next phase. The plan will still generate, but affected phases may receive `needs_review` markers in the task graph.
 
-## Exporting
+## Quick vs Advanced Mode
 
-Download your plan as:
-- **JSON**: Full structured data with all metadata
-- **Markdown**: Human-readable document with all prompts
-- **Task List**: Simple checklist of all tasks
+Orchestra offers two interview modes that control question depth and count.
 
-## Settings
+| Feature | Quick Mode | Advanced Mode |
+|---|---|---|
+| Question count | 16–20 | 24–28 |
+| Categories asked | critical, high-value, contextual | critical, high-value, optional, contextual |
+| Categories skipped | optional, advanced-only, derivable | advanced-only, derivable |
+| Best for | MVPs, prototypes, quick validation | Production systems, complex projects |
+| Time to complete | ~5–10 minutes | ~15–25 minutes |
 
-Configure in **Settings → Providers**:
-- Add API keys for multiple providers
-- Set default models per task type
-- Enable/disable cost tracking
-- Configure budget guardrails
+### Question categories
+
+Each question has a category that determines whether it appears in your chosen mode:
+
+| Category | Label | Quick | Advanced |
+|---|---|---|---|
+| `critical` | required | Yes | Yes |
+| `high-value` | important | Yes | Yes |
+| `contextual` | context dependent | Yes | Yes |
+| `optional` | optional | No | Yes |
+| `advanced-only` | deferred | No | No |
+| `derivable` | auto-inferred | No | No |
+
+> [!NOTE]
+> In Quick mode, optional questions are skipped. The completion screen notes: *"Some advanced questions were skipped — you can refine these after reviewing the plan."*
+
+## Generating a Blueprint
+
+Click **"Generate project plan"** on the phase summary screen. This triggers the **7-stage generation pipeline**. Progress is streamed in real time via Server-Sent Events (SSE).
+
+### The 7 stages
+
+| # | Stage | Label | Description |
+|---|---|---|---|
+| 1 | `synthesis` | Analyzing your answers | Builds a context pack from all interview answers |
+| 2 | `analysis` | Building project analysis | Runs deterministic analysis to identify phases, requirements, and constraints |
+| 3 | `blueprint` | Generating project plan with AI | Calls the AI provider to generate the structured blueprint and roadmap |
+| 4 | `roadmap` | Creating roadmap | Generates a phase-level roadmap from the blueprint |
+| 5 | `taskGraph` | Decomposing into tasks | Breaks phases into a dependency-aware task graph |
+| 6 | `promptGen` | Assembling execution prompts | Builds per-task execution prompts with full context |
+| 7 | `summary` | Generating project summary | Synthesizes a high-level project overview and key decisions |
+
+> [!NOTE]
+> The blueprint stage is the longest (typically 30–60 seconds). The progress UI shows an animated bar, elapsed time, and subtask details as each phase is processed.
+
+### Progress UI
+
+During generation, you see:
+
+- **Stage list** — each stage appears as it is reached, with a colored status dot
+- **Active indicator** — the current stage pulses with a purple halo
+- **Progress bar** — filled or indeterminate, depending on the stage
+- **Subtask detail** — shows which phase or task is being processed
+- **Attempt counter** — if a provider fails and retries, an `attempt N` badge appears
+- **Cancel button** — abort generation at any point
+
+When all stages complete, you are redirected to the **plan summary** page.
+
+## Understanding the Blueprint
+
+The plan summary page is your project's command center. It displays:
+
+### Metrics bar
+
+| Metric | Description |
+|---|---|
+| **Confidence** | Overall confidence score (0–100%). Green >= 60%, amber >= 40%, red < 40% |
+| **Phases** | Number of project phases generated |
+| **Flags** | Number of ambiguity items detected |
+
+### Project summary
+
+A high-level overview including:
+
+- **Project overview** — 2–3 sentence description
+- **Key features** — bulleted list of main capabilities
+- **Technical constraints** — architecture and stack limitations
+- **Business conditions** — market, compliance, or organizational factors
+- **Architecture highlights** — notable design decisions
+- **Risk summary** — 1–2 sentence overview of significant risks
+
+### Phase progress
+
+Each phase is listed with:
+
+| Column | Description |
+|---|---|
+| Status icon | `✓` sufficient, `~` insufficient, `○` missing |
+| Phase name | Human-readable phase name |
+| Status label | `[sufficient]` or `[insufficient]` |
+| Confidence | Per-phase confidence percentage |
+
+> [!WARNING]
+> Phases marked `insufficient` will produce `needs_review` tasks in the task graph. You can revisit the interview to add more detail, or provide additional input directly in the task graph.
+
+### Assumptions
+
+Items the AI inferred but could not confirm from your answers. Each assumption shows:
+
+- **Description** — what was assumed
+- **Source** — which phase or answer triggered it
+
+### Constraints
+
+Hard limitations extracted from your answers (e.g., "Must use PostgreSQL", "GDPR compliant").
+
+### Risks
+
+Potential issues identified during analysis. Each risk shows a description and its source phase. You can select risks and trigger mitigation (see [Risk Mitigation Workflow](#risk-mitigation-workflow) below).
+
+### Ambiguity flags
+
+Detected gaps or contradictions in the plan. Each flag has a severity:
+
+| Severity | Icon | Meaning |
+|---|---|---|
+| High | `✗` | Critical gap — plan may be incomplete |
+| Medium | `~` | Notable ambiguity — review recommended |
+| Low | `○` | Minor — likely resolvable during implementation |
+
+## Task Graph
+
+The task graph decomposes your blueprint into individual executable tasks organized by phase.
+
+### Layout
+
+Tasks are displayed in a **timeline view** with a vertical rail connecting phases. Each phase is collapsible and shows:
+
+- Phase name and task count
+- Status: `complete`, `in progress`, or `pending`
+- Individual tasks with status glyphs, priority, and dependency count
+
+### Keyboard navigation
+
+| Key | Action |
+|---|---|
+| `j` / `ArrowDown` | Move to next task |
+| `k` / `ArrowUp` | Move to previous task |
+| `Enter` / `Space` | Select the current task |
+| `p` | Open execution prompt for selected task |
+| `[` | Jump to previous phase |
+| `]` | Jump to next phase |
+| `Escape` | Close prompt panel, then deselect task |
+
+> [!TIP]
+> Keyboard hints are shown at the bottom-left of the task graph view: `j/k navigate · enter select · p prompt · esc close`
+
+### Task details panel
+
+Clicking a task opens a **detail panel** on the right side showing:
+
+- **Title** and metadata (phase, type, priority, status)
+- **Dependencies** — clickable list of upstream tasks
+- **Acceptance criteria** — numbered checklist
+- **Blocked by** — tasks that must complete first
+- **Mark as complete** — checkbox to track progress
+- **View execution prompt** — button to open the prompt preview
+
+### Pending input tasks
+
+If a phase had insufficient interview data, its tasks may appear as `pending_input` type. The detail panel includes a textarea to **provide additional input** and a **"resolve & regenerate tasks"** button that re-runs task generation with your extra context.
+
+## Viewing Execution Prompts
+
+Each task has a structured execution prompt designed for AI coding agents (OpenCode, Claude Code, Cursor, etc.).
+
+### 7-section structure
+
+| # | Section | Content |
+|---|---|---|
+| 1 | **Objective** | What must be built or accomplished |
+| 2 | **Context** | Background information from the interview and blueprint |
+| 3 | **Constraints** | Technical and business limitations |
+| 4 | **Expected Output** | Deliverables and acceptance criteria |
+| 5 | **Validation Criteria** | How to verify the task is complete |
+| 6 | **Architectural Alignment** | How this task fits the overall system design |
+| 7 | **Agent Tips** | Security notes, edge cases, dependency warnings, common bugs |
+
+### Prompt preview UI
+
+The prompt preview panel features:
+
+- **Tab navigation** — click section tabs to jump between sections
+- **Collapsible sections** — click any section header to expand/collapse
+- **Copy to clipboard** — click **"[ copy raw ]"** in the header to copy the full prompt markdown
+
+> [!TIP]
+> Copy the raw prompt and paste it directly into your AI coding agent. The prompt is self-contained and includes all context needed for implementation.
+
+## Exporting Prompts
+
+Click **"[ ↑ export bundle ]"** in the task graph header to download a **JSON bundle** containing all execution prompts.
+
+The bundle includes:
+
+- Project metadata (name, version, generation timestamp)
+- All tasks with their full execution prompts
+- Dependency relationships
+- Phase organization
+
+The file is named `prompts-<session-id>.json` and is ready for programmatic consumption or archival.
+
+## Risk Mitigation Workflow
+
+Orchestra provides an active risk mitigation workflow that rewrites affected parts of your plan.
+
+### Steps
+
+1. **Review risks** — on the plan summary page, scroll to the **risks** section
+2. **Select risks** — check the boxes next to risks you want to address
+3. **Click mitigate** — the button shows the count: `[ mitigate selected risks (N) ]`
+4. **AI rewrites** — Orchestra sends the selected risks to the AI, which rewrites the affected phase summaries, narratives, key decisions, and execution prompts to account for mitigation strategies
+5. **Review changes** — a green **change summary** banner appears describing what was updated
+
+> [!NOTE]
+> Mitigation does not delete risks — it updates the plan to reflect post-mitigation states. For example, a risk like "Unproven AI integration" might result in the AI adding fallback strategies, feature flags, and monitoring requirements to the affected phases.
+
+### What changes after mitigation
+
+| Artifact | What happens |
+|---|---|
+| Phase summaries | Rewritten to describe the post-mitigation state |
+| Phase narratives | Updated with mitigation context |
+| Key decisions | Adjusted to include risk-aware choices |
+| Execution prompts | Regenerated with mitigation steps included |
+| Change summary | A human-readable diff description is displayed |
+
+## Provider Management
+
+Orchestra supports multiple AI providers. Configure them in **Settings → Providers**.
+
+### Adding a provider
+
+1. Click **"Add provider"**
+2. Select a provider from the dropdown
+3. Enter your API key
+4. Optionally select a **default model**
+5. Click **"Connect"**
+
+| Provider | Key format | Available models |
+|---|---|---|
+| OpenAI | `sk-...` | gpt-4o-mini, gpt-4o, gpt-4.1 |
+| Anthropic | `sk-ant-...` | claude-3-5-haiku-latest, claude-sonnet-4-20250514 |
+| OpenRouter | `sk-or-...` | openai/gpt-4o-mini, openai/gpt-4o, anthropic/claude-sonnet-4 |
+| OpenCode Go | `oc-go-...` | deepseek-v4-flash, deepseek-v4-pro, kimi-k2.6, kimi-k2.5, glm-5.1, glm-5, mimo-v2.5-pro, mimo-v2.5, qwen3.6-plus, qwen3.5-plus |
+
+### Provider statuses
+
+| Status | Label | Meaning |
+|---|---|---|
+| `valid` | Connected | Key verified and ready to use |
+| `unverified` | Unverified | Just added — click **Verify** to test |
+| `invalid` | Invalid | Key rejected by provider |
+| `expired` | Expired | Key no longer valid — generate a new one |
+| `rate_limited` | Rate Limited | Throttled — wait or switch provider |
+| `failed` | Failed | Validation request failed — check network |
+
+> [!WARNING]
+> API keys are encrypted with AES-256-GCM before storage and are never displayed in the UI after entry. Set the `ENCRYPTION_KEY` environment variable for production deployments.
+
+### Model routing
+
+Orchestra automatically selects the best model for each task type:
+
+| Task type | Min tier | Preferred models |
+|---|---|---|
+| Clarification | cheap | deepseek-v4-flash, gpt-4o-mini |
+| Blueprint | cheap | deepseek-v4-flash, mimo-v2.5, gpt-4o-mini |
+| Roadmap | balanced | gpt-4o, claude-sonnet |
+| Architecture | strong | gpt-4.1, claude-sonnet |
+| Prompt generation | balanced | deepseek-v4-flash, gpt-4o |
+| Summary | cheap | deepseek-v4-flash, mimo-v2.5, gpt-4o-mini |
+
+If the preferred model fails, Orchestra follows a **fallback chain** to alternative models and providers automatically.
+
+## Theme Switching
+
+The web UI supports three theme modes:
+
+| Mode | Description |
+|---|---|
+| **Light** | Off-white background for well-lit environments |
+| **Dark** | Near-black background for low-light work |
+| **System** | Follows your OS appearance preference automatically |
+
+Toggle the theme using the theme button in the navigation bar. The cycle order is: `light → dark → system → light`. Your preference is stored in `localStorage` and persists across sessions.
+
+> [!NOTE]
+> When set to **System**, the UI responds to OS-level appearance changes in real time. If your OS switches to dark mode, Orchestra follows immediately.
 
 ## Next Steps
 
-- [Tutorial: Web App](./tutorial-web-app) — Step-by-step walkthrough
-- [Risk Mitigation](./risk-mitigation) — Handling identified risks
+- [Tutorial: Web App](./tutorial-web-app) — Step-by-step walkthrough building a complete project
+- [Risk Mitigation](./risk-mitigation) — Deep dive into risk handling strategies
 - [Custom Providers](./custom-providers) — Adding your own AI backend
+- [Configuration](./configuration) — Environment variables and advanced settings

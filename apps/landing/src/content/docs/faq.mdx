@@ -1,6 +1,6 @@
 ---
 title: FAQ
-description: Frequently asked questions
+description: Frequently asked questions about Orchestra
 order: 14
 sidebarLabel: FAQ
 ---
@@ -11,125 +11,288 @@ sidebarLabel: FAQ
 
 ### What is Orchestra?
 
-Orchestra is an open-source, local-first tool that uses AI to turn project ideas into structured development plans.
+Orchestra is an open-source, local-first AI project planning tool. It interviews you about your software idea, analyzes your answers, and generates a structured development plan — complete with phases, tasks, dependencies, risk assessments, and per-task execution prompts for AI coding assistants.
+
+Think of it as a senior software architect that asks the right questions before you start building, then writes the spec while you listen.
+
+> [!NOTE]
+> Orchestra is a **planning engine**, not a project management tool. It produces the structured plan you hand to your team, your AI coding assistant, or yourself before writing a single line of code.
 
 ### Is Orchestra free?
 
-Yes. Orchestra itself is free and open-source under the MIT License. You provide your own AI provider API keys. The opencode-go provider uses models at no cost from opencode.ai (requires an API key). If you use OpenAI, Anthropic, or OpenRouter, you pay their standard API rates — Orchestra adds no markup.
+Yes. Orchestra itself is free and open-source under the **MIT License**. You can use it for personal, commercial, or educational purposes without restriction.
 
-### Does Orchestra require an internet connection?
+However, AI generation requires an AI provider, and providers have their own pricing:
 
-- **Setup**: Yes, to download dependencies
-- **Normal use**: Yes, to call AI providers
-- **Offline after generation**: Yes — all data is stored locally
-- **Fully offline**: Not currently — AI generation requires network access
+| Provider | Cost | Notes |
+|---|---|---|
+| **opencode-go** | **Free** | 10 models at $0.00 — requires API key from opencode.ai |
+| **OpenRouter** | Varies | Includes free models like `deepseek-v4-flash:free` |
+| **OpenAI** | Per-token | Standard API pricing — no markup from Orchestra |
+| **Anthropic** | Per-token | Standard API pricing — no markup from Orchestra |
 
-### What platforms are supported?
+> [!TIP]
+> The **opencode-go** provider offers 10 free models. You can run the entire Orchestra generation pipeline at zero cost using this provider alone.
 
-| Platform | Status |
-|---|---|
-| macOS | Fully supported |
-| Linux | Fully supported |
-| Windows | Fully supported (pure JS SQLite) |
+### Do I need an API key?
 
-### Can I use Orchestra for commercial projects?
+**Yes**, for AI-powered generation. Orchestra requires at least one configured AI provider to generate blueprints, task graphs, and execution prompts.
 
-Yes. The MIT License permits commercial use, modification, and distribution.
+**No**, for basic functionality. You can create projects, run interviews, and explore the UI without any API keys. Without a provider, Orchestra falls back to deterministic placeholder generation that produces structurally valid but content-light plans.
 
-## AI & Providers
+For testing and development, Orchestra includes a **mock provider** that returns deterministic responses without making any API calls.
+
+> [!NOTE]
+> API keys are encrypted at rest using AES-256-GCM. They never leave your machine except when calling the provider's API during generation.
 
 ### Which AI providers are supported?
 
-| Provider | Cost | Key Required |
+Orchestra supports **9 AI providers** through a unified abstraction layer. Four are fully implemented and production-ready:
+
+| Provider | Status | Models | Protocol |
+|---|---|---|---|
+| **OpenAI** | Fully implemented | GPT-4o, GPT-4o-mini, GPT-4.1 | OpenAI API |
+| **Anthropic** | Fully implemented | Claude Sonnet 4, Claude 3.5 Haiku | Anthropic API |
+| **OpenRouter** | Fully implemented | 100+ models via single API | OpenAI-compatible |
+| **opencode-go** | Fully implemented | 10 free models | OpenAI-compatible |
+| **Google** | Enum defined | Gemini models | Google AI API |
+| **AWS Bedrock** | Enum defined | Claude, Titan, Llama | AWS Bedrock API |
+| **Azure OpenAI** | Enum defined | Azure-hosted OpenAI | Azure OpenAI API |
+| **Custom** | Enum defined | Any OpenAI-compatible endpoint | OpenAI-compatible |
+| **Mock** | Fully implemented | Deterministic test responses | In-memory |
+
+See [Custom Providers](./custom-providers) for details on connecting your own AI backend.
+
+### How much does it cost to generate a blueprint?
+
+Cost depends on the provider and model you use. Here are typical ranges for a full blueprint generation (all 6 pipeline stages):
+
+| Model Tier | Example Models | Typical Cost |
 |---|---|---|
-| opencode-go | Free | Yes |
-| OpenAI | Per-token | Yes |
-| Anthropic | Per-token | Yes |
-| OpenRouter | Varies | Yes |
-| Custom | Varies | Depends |
+| **Free** | opencode-go (all models), `deepseek-v4-flash:free` | **$0.00** |
+| **Cheap** | `gpt-4o-mini`, `claude-3-5-haiku` | $0.005 – $0.02 |
+| **Balanced** | `gpt-4o`, `claude-sonnet-4` | $0.05 – $0.20 |
+| **Strong** | `gpt-4.1`, `claude-sonnet-4` (architecture) | $0.20 – $1.00 |
 
-### How much does a typical blueprint cost?
+Orchestra's content-addressable cache means identical inputs are served from cache at zero cost. If you regenerate a plan without changing your interview answers, you pay nothing for cached stages.
 
-Using paid providers:
-- **Cheap models** (gpt-4o-mini): $0.005–$0.02
-- **Balanced models** (gpt-4o): $0.05–$0.20
-- **Strong models** (gpt-4.1): $0.20–$1.00
+> [!TIP]
+> Orchestra includes a 19-model pricing table with real-time cost tracking. You can see exactly what each generation costs in the usage records.
 
-With opencode-go, the cost is always $0.
+### Can I use Orchestra offline?
 
-### Can I use my own API key?
+**Not fully.** Orchestra requires an internet connection to call AI providers during generation. However:
 
-Yes. Go to **Settings → Providers** and add your API key. Keys are encrypted with AES-256-GCM.
+- **All data is stored locally** in SQLite — no cloud sync, no accounts
+- **After generation**, you can view, export, and browse your plans entirely offline
+- **The cache persists** across restarts — cached responses do not require network access
 
-### Why was my generation blocked?
-
-- **Rate limit** — Too many requests
-- **Budget exceeded** — Project spending limit
-- **Circuit breaker** — Provider failing repeatedly
-- **No valid credential** — No provider configured
-
-### Can I use a local LLM?
-
-Yes, with custom provider integration. See [Custom Providers](./custom-providers).
-
-## Data & Privacy
-
-### Where is my data stored?
-
-Everything is stored locally in SQLite:
-- Project descriptions
-- Interview answers
-- Generated blueprints
-- Task graphs
-- Execution prompts
-- AI cache entries
-
-### Does my data leave my computer?
-
-Only during AI generation. Your interview answers are sent to the AI provider you select.
+A fully offline mode (using local LLMs like Ollama) is on the roadmap but not yet implemented.
 
 ### How do I back up my data?
 
-The SQLite file is a regular file — just copy it:
+All Orchestra data lives in a single SQLite file (`orchestra.db` by default). Back it up by copying the file:
+
 ```bash
-cp orchestra.db orchestra-backup-$(date +%Y%m%d).db
+# Simple copy
+cp orchestra.db orchestra-backup-2026-06-29.db
+
+# With timestamp (Linux/macOS)
+cp orchestra.db "orchestra-backup-$(date +%Y%m%d).db"
+
+# Windows (PowerShell)
+Copy-Item orchestra.db "orchestra-backup-$(Get-Date -Format yyyyMMdd).db"
 ```
 
-### Can I delete all my data?
+> [!WARNING]
+> Make sure the API server is not actively writing when you copy the database. Stop the server first, or use SQLite's `.backup` command for a safe live copy.
 
-Yes:
+### Can I use PostgreSQL instead of SQLite?
+
+**Yes.** Set the `DATABASE_URL` environment variable to a PostgreSQL connection string:
+
 ```bash
-rm orchestra.db
+DATABASE_URL=postgresql://user:password@localhost:5432/orchestra
 ```
-Then restart the server.
 
-## Blueprints & Plans
+When `DATABASE_URL` is set, Orchestra uses PostgreSQL instead of SQLite. This is intended for production deployments or multi-user scenarios. For local development and personal use, SQLite is simpler and requires zero configuration.
+
+See [Installation](./installation) for full database configuration details.
+
+### What happens if AI generation fails?
+
+Orchestra has multiple layers of resilience:
+
+1. **Automatic retry** — Each pipeline stage retries up to 3 times with the error fed back to the model
+2. **Fallback chain** — If a provider fails, the router tries the next preferred model in the policy
+3. **Tier downgrade** — If all preferred models fail, the router downgrades to a fallback tier
+4. **Deterministic fallback** — If all AI options are exhausted, Orchestra generates a structurally valid placeholder blueprint
+
+> [!NOTE]
+> The deterministic fallback produces plans that are correct in structure (all 12 phases, valid task graphs, 7-section prompts) but contain generic content rather than project-specific analysis.
+
+### Can I customize the interview questions?
+
+Not through the UI yet. The question bank is a TypeScript module with 47 questions across 6 categories and 12 lifecycle phases. Each question has:
+
+- A category (`critical`, `high-value`, `optional`, `contextual`, `advanced-only`, `derivable`)
+- A lifecycle phase association
+- Gate dependencies (conditional visibility)
+- Inference flags (whether AI can derive the answer)
+
+The question bank is extensible by editing the source code. See [Contributing](./contributing) for details on adding new questions.
+
+### How do I export my plan?
+
+Orchestra supports JSON bundle export via the API:
+
+```bash
+# Export a full project bundle
+curl http://localhost:3000/api/v1/projects/<project-id>/export
+
+# Export includes:
+# - Project metadata
+# - Interview answers
+# - Blueprint (all phases and tasks)
+# - Task graph with dependencies
+# - Execution prompts (all 7 sections)
+# - Cost and usage records
+# - Version history
+```
+
+The export is a self-contained JSON document that can be imported back into Orchestra or processed by external tools.
+
+> [!TIP]
+> Exports are rate-limited to 30 requests per 60-second window to prevent accidental abuse.
+
+### Can I use my own AI model?
+
+**Partially.** Orchestra's **custom provider** lets you connect any OpenAI-compatible API endpoint. If your model exposes an OpenAI-compatible chat completions interface, you can add it as a custom provider.
+
+However, the following features are not yet available:
+
+- Native integration with non-OpenAI-compatible APIs (e.g., Google Gemini native API)
+- Custom model routing policies for custom providers
+- Pricing table entries for custom models (cost tracking shows $0.00)
+
+See [Custom Providers](./custom-providers) for setup instructions.
+
+### Is there a CLI?
+
+Orchestra does not have a dedicated CLI binary. However, all functionality is accessible via:
+
+1. **pnpm scripts** — Development and utility commands from the repository root
+2. **REST API** — All operations are available via `curl` or any HTTP client
+3. **Web UI** — The primary interface at `http://localhost:3001`
+
+Common API operations:
+
+```bash
+# Health check
+curl http://localhost:3000/health
+
+# List projects
+curl http://localhost:3000/api/v1/projects
+
+# Create a project
+curl -X POST http://localhost:3000/api/v1/projects \
+  -H "Content-Type: application/json" \
+  -d '{"name": "My Project", "description": "A new app"}'
+
+# Start generation
+curl -X POST http://localhost:3000/api/v1/projects/<id>/generate
+
+# Export plan
+curl http://localhost:3000/api/v1/projects/<id>/export
+```
+
+See the [API Reference](./api-reference) and [CLI Reference](./cli-reference) for full details.
+
+### How does risk mitigation work?
+
+When you identify a risk in a generated plan, Orchestra performs **surgical prompt rewriting** — not full regeneration.
+
+The process:
+
+1. **Keyword extraction** — The risk description is tokenized and filtered to extract meaningful keywords
+2. **Prompt matching** — Execution prompts containing those keywords are identified as affected
+3. **Targeted rewrite** — Only the matched prompts are sent to the AI for rewriting
+4. **Summary update** — The project summary is also rewritten to reflect the risk resolution
+
+Key rules:
+
+- The **opposite** of the risk becomes the new reality
+- Features are **never removed** to eliminate a risk — mitigations are added instead
+- Rewritten prompts must remain structurally valid (all 7 sections intact)
+
+See [Risk Mitigation](./risk-mitigation) for the full workflow.
+
+### Can I collaborate with others?
+
+**Not currently.** Orchestra is designed as a **local-first, single-user** tool. There is no built-in multi-user support, authentication, or real-time collaboration.
+
+Workarounds:
+
+- **Share exports** — Export your plan as JSON and share it with teammates
+- **Shared database** — Point multiple instances at the same PostgreSQL database (not recommended — no conflict resolution)
+- **Version control** — Commit exported JSON bundles to a shared repository
+
+> [!NOTE]
+> Multi-user collaboration is not on the immediate roadmap. Orchestra's design philosophy prioritizes simplicity and local-first operation over collaborative features.
+
+### Where is my data stored?
+
+Everything is stored locally in SQLite (17 tables):
+
+| Data | Table |
+|---|---|
+| Project metadata | `projects` |
+| Interview sessions | `interview_sessions` |
+| User answers | `answers` |
+| Generated blueprints | `blueprints` |
+| Task graphs | `tasks` |
+| Execution prompts | `execution_prompts` |
+| Provider credentials (encrypted) | `provider_credentials` |
+| AI response cache | `ai_cache_entries` |
+| Cost tracking | `usage_records` |
+| Audit logs | `audit_logs` |
+
+The database file is `orchestra.db` by default, configurable via `SQLITE_DB_PATH`.
+
+### Does my data leave my computer?
+
+**Only during AI generation.** Your interview answers are sent to the AI provider you select (OpenAI, Anthropic, etc.) as part of the generation prompt. Everything else — project metadata, cached responses, exported plans — stays on your machine.
+
+Orchestra itself sends no telemetry, analytics, or tracking data.
 
 ### What's the difference between a blueprint and a plan?
 
-- **Blueprint**: The generated project document
-- **Plan**: A versioned container for blueprints
+- **Blueprint** — The AI-generated project document with phases, tasks, risks, and decisions
+- **Plan** — A versioned container for blueprints. Each generation creates a new plan version, preserving the full lineage
 
-### Can I edit a blueprint after generation?
-
-Not directly in the UI. You can:
-1. Mitigate risks
-2. Refine via another interview session
-3. Export and edit externally
-
-### How accurate are the generated plans?
-
-Accuracy depends on:
-- **Interview quality** — Longer, specific answers produce better plans
-- **Model choice** — Stronger models reason better
-- **Domain complexity** — Simple CRUD apps are more accurate than novel AI systems
+You can have multiple plan versions for a single project. Each version is an immutable snapshot.
 
 ### Can Orchestra generate code?
 
-No. Orchestra generates **execution prompts** — detailed instructions for AI coding assistants.
+**No.** Orchestra generates **execution prompts** — detailed, structured instructions for AI coding assistants (Cursor, Copilot, Aider, etc.) or human developers. Each prompt contains 7 sections: Objective, Context, Constraints, Expected Output, Validation Criteria, Architectural Alignment, and Agent Tips.
+
+The prompts are designed to be copy-pasted directly into your AI coding tool of choice.
+
+### How accurate are the generated plans?
+
+Accuracy depends on three factors:
+
+| Factor | Impact |
+|---|---|
+| **Interview quality** | Longer, specific answers produce better plans. One-word answers produce generic plans. |
+| **Model choice** | Stronger models (GPT-4.1, Claude Sonnet 4) reason better about architecture and edge cases. |
+| **Domain complexity** | Standard CRUD apps are more accurate than novel AI systems or distributed architectures. |
+
+> [!TIP]
+> Use **Advanced Mode** for the interview (24-28 questions) to give the AI more context. The additional questions take 5 extra minutes but significantly improve plan quality.
 
 ## Next Steps
 
-- [Getting Started](./getting-started)
-- [Troubleshooting](./troubleshooting)
-- [Configuration](./configuration)
+- [Getting Started](./getting-started) — Clone, install, and generate your first plan
+- [Troubleshooting](./troubleshooting) — Common errors and fixes
+- [Configuration](./configuration) — Full environment variable reference

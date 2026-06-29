@@ -1,97 +1,585 @@
 ---
 title: Security
-description: Security practices and data handling
+description: Security model and data protection
 order: 12
 sidebarLabel: Security
 ---
 
 # Security
 
-## Data Storage
+Orchestra is designed around a **local-first security model**. All data stays on your machine, API keys are encrypted at rest, and no external network calls are made except to configured AI providers. This page documents every security mechanism, threat model, and best practice.
 
-### Local-Only
+## Local-First Security Model
 
-All data is stored locally in SQLite:
-- No cloud services
-- No external logging
-- No telemetry
-- No data leaves your machine except during AI generation
+Orchestra makes a fundamental architectural choice: **everything runs locally**. There is no cloud backend, no user authentication, and no multi-tenant infrastructure.
 
-### What Stays Local
+### What This Means
 
-| Data | Location | Leaves Machine |
-|---|---|---|
-| Project metadata | SQLite | No |
-| Interview answers | SQLite | No |
-| Blueprints | SQLite | No |
-| Task graphs | SQLite | No |
-| Execution prompts | SQLite | No |
-| Provider credentials | SQLite (encrypted) | No |
-| AI cache entries | SQLite | No |
+| Property | Detail |
+|---|---|
+| **No cloud services** | No data is sent to Orchestra-operated servers |
+| **No authentication** | No login, no sessions, no tokens — the API binds to localhost |
+| **No telemetry** | No usage analytics, no crash reporting, no phone-home |
+| **No external logging** | All logs stay on your filesystem |
+| **Single-user** | Designed for one developer on one machine |
 
-### What Leaves the Machine
+### Threat Model
 
-| Data | Destination | When |
-|---|---|---|
-| Interview answers (as context) | AI provider | During blueprint generation |
-| Execution prompts | AI provider | During prompt generation |
-| API validation ping | AI provider | When validating credentials |
+| Threat | Mitigation |
+|---|---|
+| Remote attacker accessing API | API binds to `0.0.0.0` by default — use `HOST=127.0.0.1` to restrict |
+| API key theft from database | AES-256-GCM encryption at rest with per-record random IVs |
+| API key leakage via API responses | `stripSecrets()` removes all key material before serialization |
+| Secrets in audit logs | Automatic redaction of sensitive keys and patterns |
+| Runaway API costs | Rate limiting, budget caps, circuit breakers, abuse detection |
+| Data exfiltration | Only configured AI providers receive data — no other outbound connections |
+| SQLite file access | OS-level file permissions; no world-readable defaults |
 
-:::caution
-When using AI providers, your project context is sent to their servers. Review their privacy policies. For maximum data privacy, host a local model with a custom provider (see [Custom Providers](./custom-providers)).
-:::
+> [!WARNING]
+> If you expose the API server beyond localhost (e.g., in a Docker container or behind a reverse proxy), you are responsible for adding authentication and transport security (TLS). Orchestra does not include auth by design.
 
-## Encryption
+## API Key Encryption
 
-### Provider Credentials
+Provider API keys are encrypted at rest using **AES-256-GCM**, a NIST-approved authenticated encryption algorithm.
 
-API keys are encrypted at rest using AES-256-GCM:
+### Encryption Details
 
-- **Key**: `ENCRYPTION_KEY` environment variable (32-byte hex)
-- **Algorithm**: AES-256-GCM
-- **IV**: Random 16 bytes per encryption
-- **Tag**: 16 bytes authentication tag
+| Property | Value |
+|---|---|
+| **Algorithm** | AES-256-GCM (Galois/Counter Mode) |
+| **Key derivation** | SHA-256 hash of `ENCRYPTION_KEY` environment variable |
+| **Key source** | `ENCRYPTION_KEY` environment variable (32-byte hex string) |
+| **IV** | Random 16 bytes, generated per encryption operation |
+| **Auth tag** | 16 bytes, appended to ciphertext for integrity verification |
+| **Storage format** | `iv:ciphertext:tag` (colon-separated hex strings) |
 
-Without `ENCRYPTION_KEY`, credentials are stored but not encrypted.
+### How Encryption Works
 
-### Generate Key
+```
+ENCRYPTION_KEY (env var)
+        │
+        ▼
+   SHA-256 hash
+        │
+        ▼
+   256-bit key ──┐
+                  ▼
+   Random 16-byte IV → AES-256-GCM Encrypt → ciphertext + auth tag
+                                                    │
+                                                    ▼
+                                          Store as "iv:ciphertext:tag"
+                                          in provider_credentials table
+```
+
+### Code Example
+
+```typescript
+// From lib/secrets/encryption.ts
+import { createCipheriv, createDecipheriv, randomBytes, createHash } from "node:crypto";
+
+const ALGORITHM = "aes-256-gcm";
+const IV_LENGTH = 16;
+
+function deriveKey(raw: string): Buffer {
+  return createHash("sha256").update(raw).digest();
+}
+
+export function encrypt(plaintext: string): EncryptedPayload {
+  const key = getEncryptionKey();
+  const iv = randomBytes(IV_LENGTH);              // Per-record random IV
+  const cipher = createCipheriv(ALGORITHM, key, iv);
+
+  let ciphertext = cipher.update(plaintext, "utf8", "hex");
+  ciphertext += cipher.final("hex");
+  const tag = cipher.getAuthTag().toString("hex"); // 16-byte auth tag
+
+  return { iv: iv.toString("hex"), ciphertext, tag };
+}
+```
+
+### Per-Record Random IVs
+
+Every encryption operation generates a fresh 16-byte random IV. This means:
+
+- The same API key encrypted twice produces different ciphertexts
+- IVs are stored alongside the ciphertext (in the `iv:ciphertext:tag` format)
+- IVs are not secret — they are safe to store in plaintext
+
+> [!DANGER]
+> Without the `ENCRYPTION_KEY` environment variable, credentials cannot be decrypted. If you lose this key, all stored API keys are permanently unrecoverable. Back up your `.env` file.
+
+### Generate an Encryption Key
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-## Network Security
+Add the output to your `.env` file:
 
-### API Server
+```
+ENCRYPTION_KEY=your-64-character-hex-string
+```
 
-- Default bind: `0.0.0.0` (all interfaces)
-- No authentication required (local-only deployment)
-- No HTTPS (use reverse proxy for production)
+> [!NOTE]
+> `pnpm setup` generates a random `ENCRYPTION_KEY` automatically during initial setup. If you already have a `.env` file, it will not overwrite the existing key.
 
-### Recommendations
+## Secrets Never Returned in API Responses
 
-- Run behind a reverse proxy (nginx, Caddy)
-- Use `HOST=127.0.0.1` to bind to localhost only
-- Set `ENCRYPTION_KEY` for credential encryption
-- Use PostgreSQL instead of SQLite for concurrent access
+Orchestra enforces a strict policy: **API keys are never included in API responses**. The `stripSecrets()` function removes all sensitive fields before data is serialized to JSON.
 
-## Audit Logging
+### How It Works
 
-All security events are logged:
+```typescript
+// From lib/credentials/store.ts
+function stripSecrets(c: FullProviderCredential): FullProviderCredential {
+  const { encryptedApiKey: _key, keyReference: _ref, ...rest } = c;
+  return rest as FullProviderCredential;
+}
+```
+
+Every credential retrieval path passes through `stripSecrets()`:
+
+| Operation | Secret Stripped? |
+|---|---|
+| `GET /api/v1/providers` (list all) | Yes — `stripSecrets()` applied to each credential |
+| `GET /api/v1/providers/:id` (get one) | Yes — `stripSecrets()` applied |
+| `POST /api/v1/providers` (create) | Yes — response returns stripped credential |
+| `PUT /api/v1/providers/:id` (update) | Yes — response returns stripped credential |
+| `POST /api/v1/providers/:id/validate` | Yes — validation result does not include the key |
+| Internal decryption (for API calls) | No — the raw key is used in-memory only for AI provider calls |
+
+> [!TIP]
+> The `getRaw()` method exists for internal use only — it returns the full credential including the encrypted key. This method is never exposed through HTTP routes.
+
+### Fields Removed
+
+| Field | Description |
+|---|---|
+| `encryptedApiKey` | The AES-256-GCM encrypted API key |
+| `keyReference` | Reference identifier for the encrypted key |
+
+The response still includes non-sensitive metadata: provider name, model list, validation status, and creation timestamp.
+
+## Audit Logging with Redaction
+
+Every security-relevant event is recorded in an immutable audit log. The audit system includes automatic redaction to prevent accidental secret leakage.
+
+### Audit Event Types
 
 | Event | Description |
 |---|---|
-| `generation.attempted` | AI generation started |
-| `generation.completed` | AI generation finished |
+| `credential.created` | New provider credential added |
+| `credential.validated` | Credential validated against provider |
+| `credential.updated` | Credential modified |
+| `credential.deleted` | Credential removed |
+| `routing.selected` | Model routing decision made |
+| `generation.attempted` | AI generation pipeline started |
+| `generation.completed` | AI generation pipeline finished |
+| `generation.failed` | AI generation pipeline failed |
+| `budget.blocked` | Generation blocked by budget limit |
+| `budget.warning` | Budget threshold approaching |
 | `guardrail.rate_limited` | Rate limit triggered |
 | `guardrail.over_budget` | Budget exceeded |
 | `guardrail.circuit_open` | Circuit breaker opened |
-| `guardrail.abuse_blocked` | Abuse detected |
-| `circuit.state_change` | Circuit breaker state changed |
-| `provider.validation` | Credential validation |
+| `guardrail.abuse_blocked` | Abuse detection triggered |
+| `retry.attempt` | Retry attempt for failed operation |
+| `retry.exhausted` | All retries exhausted |
+| `circuit.state_change` | Circuit breaker state transition |
+| `snapshot.created` | Plan version snapshot created |
+| `snapshot.regenerated` | Full regeneration of a snapshot |
+| `snapshot.partial_regenerated` | Partial regeneration of a snapshot |
+| `export.exported` | Plan exported |
+| `project.updated` | Project metadata changed |
+
+### Redaction System
+
+All audit entry metadata passes through the redactor before storage:
+
+```typescript
+// From lib/audit/redactor.ts
+const SECRET_PATTERNS = [
+  /sk-[A-Za-z0-9]{20,}/g,        // OpenAI-style keys
+  /sk-ant-[A-Za-z0-9-]{20,}/g,   // Anthropic keys
+  /sk-or-[A-Za-z0-9]{20,}/g,     // OpenRouter keys
+  /[A-Za-z0-9+/]{40,}={0,2}/g,   // Base64-encoded blobs
+];
+
+const SENSITIVE_KEYS = new Set([
+  "apikey", "api_key", "secretkey", "secret_key",
+  "password", "token", "accesstoken", "access_token",
+  "authorization", "x-api-key",
+]);
+```
+
+### Redaction Rules
+
+| Rule | Behavior |
+|---|---|
+| **Sensitive key names** | Any key matching `SENSITIVE_KEYS` has its value replaced with `[REDACTED]` |
+| **Secret patterns** | String values matching known API key formats are replaced with `[REDACTED]` |
+| **Sensitive headers** | `Authorization`, `X-API-Key`, `Cookie`, `Set-Cookie` headers are redacted |
+| **URL credentials** | Passwords and usernames in URLs are replaced with `[REDACTED]` |
+| **Response bodies** | Large response bodies are truncated to 500 characters |
+
+> [!WARNING]
+> The audit log is capped at 10,000 entries. When the limit is exceeded, the oldest entries are evicted. For long-running deployments, export audit data periodically if you need a complete history.
+
+## Rate Limiting
+
+Orchestra enforces per-operation rate limits to prevent accidental or intentional abuse. Rate limiting is in-memory and per-server-instance.
+
+### Rate Limit Configuration
+
+| Operation | Default Limit | Window | Purpose |
+|---|---|---|---|
+| **Generation** | 10 requests | 60 seconds | Prevent runaway blueprint generation |
+| **Regeneration** | 5 requests | 60 seconds | Limit expensive re-generation |
+| **Export** | 30 requests | 60 seconds | Prevent export flooding |
+| **Provider Validation** | 20 requests | 60 seconds | Limit credential validation calls |
+
+### How Rate Limiting Works
+
+```typescript
+// From lib/budget/rate-limiter.ts
+class InMemoryRateLimiter {
+  private windows = new Map<string, { count: number; resetAt: number }>();
+
+  check(key: string): RateLimitResult {
+    // Sliding window: each key gets maxRequests per windowMs
+    // Returns { allowed, remaining, resetAt, reason }
+  }
+}
+```
+
+The rate limiter uses a **fixed-window** algorithm:
+
+1. Each request is keyed by operation type and user/credential identifier
+2. A counter tracks requests within the current window
+3. When the counter exceeds `maxRequests`, subsequent requests are rejected
+4. The window resets after `windowMs` milliseconds
+5. Expired windows are swept periodically to prevent memory leaks
+
+> [!NOTE]
+> Rate limits are per-server-instance. If you restart the server, all rate limit counters reset. Rate limits are not persisted to SQLite.
+
+### Rate Limit Response
+
+When a rate limit is exceeded, the API returns:
+
+```json
+{
+  "allowed": false,
+  "reason": "Rate limit exceeded. Try again after 2024-01-15T10:30:00.000Z",
+  "retryAfterMs": 45000,
+  "blockedBy": "rate_limit"
+}
+```
+
+## Circuit Breaker Pattern
+
+The circuit breaker protects against cascading failures when AI providers are down or degraded.
+
+### Circuit States
+
+```
+         ┌──────────────────────────────────────┐
+         │                                      │
+         ▼                                      │
+    ┌─────────┐   failures >= threshold   ┌─────────┐
+    │ CLOSED  │ ─────────────────────────▶ │  OPEN   │
+    │(normal) │                            │(blocked)│
+    └─────────┘                            └────┬────┘
+         ▲                                      │
+         │   successes >= threshold             │ timeout expires
+         │                                      ▼
+         │                                ┌───────────┐
+         └─────────────────────────────── │ HALF_OPEN │
+              test request succeeds       │ (testing) │
+                                          └───────────┘
+```
+
+| State | Behavior |
+|---|---|
+| **CLOSED** | Normal operation. All requests pass through. Failures are counted. |
+| **OPEN** | Requests are blocked immediately. No API calls are made. After `openTimeoutMs`, transitions to HALF_OPEN. |
+| **HALF_OPEN** | A test request is allowed through. If it succeeds, transitions to CLOSED. If it fails, transitions back to OPEN. |
+
+### Default Configuration
+
+| Parameter | Default | Description |
+|---|---|---|
+| `failureThreshold` | 5 | Failures before opening the circuit |
+| `successThreshold` | 3 | Successes in HALF_OPEN before closing |
+| `openTimeoutMs` | 30,000 (30s) | Time in OPEN state before testing |
+
+### Circuit Breaker per Provider
+
+Each AI provider gets its own circuit breaker instance. If OpenAI is down, its circuit opens while Anthropic and other providers continue operating normally.
+
+> [!TIP]
+> Circuit breaker state changes are logged in the audit trail as `circuit.state_change` events. Monitor these to detect provider reliability issues.
+
+## Abuse Detection
+
+The abuse detector provides an additional layer of protection beyond rate limiting. It tracks repeated failures and temporarily blocks scopes that exhibit abusive patterns.
+
+### How It Works
+
+| Parameter | Default | Description |
+|---|---|---|
+| `failureThreshold` | 10 | Failures before blocking |
+| `windowMs` | 300,000 (5 min) | Window for counting failures |
+| `blockDurationMs` | 600,000 (10 min) | How long the block lasts |
+
+### Abuse Detection Flow
+
+```
+Request fails → Record failure timestamp
+                    │
+                    ▼
+          Count failures in window
+                    │
+        ┌───────────┴───────────┐
+        │                       │
+    < threshold             >= threshold
+        │                       │
+    Allow request         Block scope for
+                          blockDurationMs
+```
+
+### Abuse Response
+
+When abuse is detected:
+
+1. The scope (typically a project ID) is blocked for 10 minutes
+2. An audit event `guardrail.abuse_blocked` is logged
+3. All subsequent requests from the blocked scope are rejected immediately
+4. After the block expires, the failure counter resets
+
+> [!WARNING]
+> Abuse detection is designed to catch misconfigured credentials or runaway scripts, not sophisticated attackers. Since Orchestra is local-first, the primary risk is accidental cost overrun, not malicious abuse.
+
+## Data Isolation (Project-Scoped)
+
+All data in Orchestra is scoped to a project. There is no cross-project data access in the normal code path.
+
+### Isolation Boundaries
+
+| Resource | Scope | Enforcement |
+|---|---|---|
+| Interview sessions | Project ID | Sessions are created under a project and cannot be reassigned |
+| Answers | Session ID | Answers belong to a session, which belongs to a project |
+| Blueprints | Project ID | Each blueprint references its project |
+| Task graphs | Blueprint ID | Tasks derive from a blueprint version |
+| Execution prompts | Task ID | Prompts are generated per-task |
+| Usage records | Project ID | Cost tracking is per-project |
+| Risk flags | Project ID | Risks are identified per-project |
+| Credentials | Global | API keys are shared across projects (scoped by provider, not project) |
+
+> [!NOTE]
+> Provider credentials are intentionally global — a single OpenAI key can be used across multiple projects. All other data is strictly project-scoped.
+
+## SQLite File Permissions
+
+The SQLite database file (`apps/api/orchestra.db`) contains all application data, including encrypted API keys.
+
+### File Location
+
+```
+apps/api/orchestra.db
+```
+
+### Recommended Permissions
+
+On Unix-like systems, restrict the database file to the owning user:
+
+```bash
+chmod 600 apps/api/orchestra.db
+```
+
+| Permission | Meaning |
+|---|---|
+| `600` (owner read/write) | Only the file owner can read or modify the database |
+| `640` (owner + group) | Acceptable if the group is trusted |
+| `644` or wider | **Not recommended** — other users on the system could read the database |
+
+> [!DANGER]
+> Even with `chmod 600`, the database file contains encrypted API keys. If an attacker gains access to both the database file and the `ENCRYPTION_KEY`, they can decrypt all stored API keys. Protect both.
+
+### What Is in the Database
+
+| Data | Encrypted? | Sensitivity |
+|---|---|---|
+| Project metadata | No | Low |
+| Interview answers | No | Medium — contains project ideas and requirements |
+| Blueprints and tasks | No | Low |
+| Execution prompts | No | Low |
+| API keys (`encrypted_api_key`) | **Yes** — AES-256-GCM | **High** |
+| Usage records | No | Low |
+| Audit logs | Redacted | Medium |
+
+## No External Network Calls Except to Configured AI Providers
+
+Orchestra makes **zero outbound network connections** except to AI providers you have explicitly configured.
+
+### What Does NOT Make Network Calls
+
+| Component | Network Activity |
+|---|---|
+| Database (SQLite) | None — local file |
+| Cache system | None — local SQLite |
+| Audit logger | None — local memory/SQLite |
+| Rate limiter | None — local in-memory |
+| Circuit breaker | None — local in-memory |
+| Frontend (Next.js) | Calls only the local API server |
+| Landing page (Astro) | Static site — no runtime calls |
+
+### What DOES Make Network Calls
+
+| Component | Destination | When |
+|---|---|---|
+| AI provider client | Configured provider endpoint (e.g., `api.openai.com`) | During generation pipeline stages |
+| Provider validation | Configured provider endpoint | When clicking "Validate" on a credential |
+
+> [!TIP]
+> For maximum data privacy, configure a local AI model (e.g., Ollama, LM Studio) as a custom provider. This keeps all data on your machine — no data leaves your network at all. See [Custom Providers](./custom-providers) for setup instructions.
+
+### Data Sent to AI Providers
+
+When generation runs, the following data is sent to the configured AI provider:
+
+| Data | Sent? | Details |
+|---|---|---|
+| Interview answers | Yes | As context for blueprint generation |
+| Project description | Yes | Included in system prompts |
+| Phase analysis results | Yes | Passed between pipeline stages |
+| Task metadata | Yes | Used to generate execution prompts |
+| API keys | **No** | Keys are used for authentication headers, not in prompt content |
+| Other projects' data | **No** | Only the current project's data is included |
+
+## Security Best Practices
+
+### 1. Set `ENCRYPTION_KEY`
+
+Always configure an encryption key. Without it, API keys are stored in plaintext.
+
+```bash
+# Generate a key
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+# Add to .env
+echo "ENCRYPTION_KEY=<your-key>" >> .env
+```
+
+### 2. Bind to localhost
+
+If you do not need remote access, bind the API to localhost only:
+
+```
+HOST=127.0.0.1
+```
+
+### 3. Restrict SQLite File Permissions
+
+```bash
+chmod 600 apps/api/orchestra.db
+```
+
+### 4. Back Up Your `.env` File
+
+The `.env` file contains your `ENCRYPTION_KEY`. Without it, encrypted API keys cannot be recovered.
+
+```bash
+cp .env .env.backup
+```
+
+### 5. Back Up the Database Regularly
+
+```bash
+cp apps/api/orchestra.db "backups/orchestra-$(date +%Y%m%d).db"
+```
+
+### 6. Use a Reverse Proxy for Remote Access
+
+If you must expose Orchestra beyond localhost, put it behind a reverse proxy with TLS:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name orchestra.example.com;
+
+    ssl_certificate     /path/to/cert.pem;
+    ssl_certificate_key /path/to/key.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+> [!WARNING]
+> If you expose Orchestra remotely, you must add your own authentication layer (e.g., HTTP basic auth, OAuth2 proxy). Orchestra does not include authentication.
+
+### 7. Use Local AI Models for Maximum Privacy
+
+For sensitive projects where no data should leave your network:
+
+1. Install a local model server (Ollama, LM Studio, vLLM)
+2. Configure it as a custom OpenAI-compatible provider in Orchestra
+3. All generation runs locally — zero external network calls
+
+### 8. Monitor Audit Logs
+
+Check the audit log periodically for unexpected events:
+
+```bash
+curl http://localhost:3000/api/v1/observability
+```
+
+Look for:
+
+- `guardrail.rate_limited` — may indicate a runaway script
+- `guardrail.circuit_open` — may indicate provider issues
+- `guardrail.abuse_blocked` — may indicate misconfigured credentials
+- `generation.failed` — may indicate API key problems
+
+### 9. Rotate API Keys Periodically
+
+Even though keys are encrypted, periodic rotation limits exposure if a key is compromised:
+
+1. Generate a new key at the provider
+2. Update the credential in Orchestra Settings
+3. Validate the new credential
+4. Delete the old key from the provider's dashboard
+
+### 10. Keep Dependencies Updated
+
+```bash
+pnpm update --interactive
+```
+
+Regularly update dependencies to patch security vulnerabilities. Orchestra uses `pnpm audit` to check for known vulnerabilities in dependencies.
+
+## Security Checklist
+
+Use this checklist to verify your Orchestra deployment:
+
+- [ ] `ENCRYPTION_KEY` is set in `.env`
+- [ ] `.env` file is not committed to Git (listed in `.gitignore`)
+- [ ] API is bound to `127.0.0.1` (if remote access is not needed)
+- [ ] SQLite file permissions are `600`
+- [ ] Database backups are configured and tested
+- [ ] `.env` backup exists in a secure location
+- [ ] Audit logs are monitored periodically
+- [ ] Dependencies are up to date
+- [ ] No unnecessary ports are exposed
+- [ ] Reverse proxy with TLS is configured (if remote access is needed)
 
 ## Next Steps
 
-- [Configuration](./configuration) — Environment variables
-- [Troubleshooting](./troubleshooting) — Common issues
-- [FAQ](./faq) — Security questions
+- [Configuration](./configuration) — Environment variables and provider setup
+- [Custom Providers](./custom-providers) — Connect local AI models for maximum privacy
+- [Troubleshooting](./troubleshooting) — Common issues and solutions
+- [FAQ](./faq) — Frequently asked questions

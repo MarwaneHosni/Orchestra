@@ -1,210 +1,1098 @@
 ---
 title: API Reference
-description: Complete API reference for Orchestra
+description: Complete REST API reference for Orchestra
 order: 9
 sidebarLabel: API Reference
 ---
 
 # API Reference
 
-Orchestra exposes a REST API at `http://localhost:3000/api/v1`.
+The Orchestra REST API provides programmatic access to all project management, interview orchestration, task execution, and provider credential management features.
+
+**Base URL:** `http://localhost:3000`
 
 ## Authentication
 
-No authentication required for local deployment. All endpoints are open.
+API endpoints do not require authentication by default. Provider credentials are managed through dedicated endpoints and encrypted at rest.
+
+## Error Format
+
+All errors follow a consistent structure:
+
+```json
+{
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable description of the error"
+  }
+}
+```
+
+### Error Codes
+
+| Code | HTTP Status | Description |
+|------|-------------|-------------|
+| `NOT_FOUND` | `404` | Requested resource does not exist |
+| `VALIDATION_ERROR` | `400` | Request body or parameters failed validation |
+| `RATE_LIMITED` | `429` | Too many requests — slow down |
+| `OVER_BUDGET` | `403` | Usage has exceeded the configured budget limit |
+| `CIRCUIT_OPEN` | `503` | Provider circuit breaker is open — service temporarily unavailable |
+| `INTERNAL_ERROR` | `500` | Unexpected server error |
+
+---
+
+## Health & Readiness
+
+### GET /health
+
+Returns the health status of the server.
+
+```
+GET /health
+```
+
+**Response:**
+
+```json
+{
+  "status": "ok"
+}
+```
+
+### GET /ready
+
+Returns the readiness status including database connectivity.
+
+```
+GET /ready
+```
+
+**Response:**
+
+```json
+{
+  "status": "ok",
+  "database": "connected"
+}
+```
+
+| `database` value | Description |
+|------------------|-------------|
+| `"connected"` | Database is available and responsive |
+| `"not_configured"` | No database has been configured |
+| `"disconnected"` | Database connection has been lost |
+
+---
+
+## Status
+
+### GET /api/v1/status
+
+Returns service metadata including version and environment.
+
+```
+GET /api/v1/status
+```
+
+**Response:**
+
+```json
+{
+  "service": "orchestra",
+  "version": "1.0.0",
+  "environment": "development"
+}
+```
+
+---
 
 ## Projects
 
-### List Projects
+### GET /api/v1/projects
 
-```bash
-GET /api/v1/projects
+List all projects with pagination.
+
+```
+GET /api/v1/projects?page=1&limit=20
 ```
 
-Response:
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `page` | `number` | `1` | Page number |
+| `limit` | `number` | `20` | Items per page |
+
+**Response:**
+
 ```json
 {
-  "projects": [
+  "data": [
     {
-      "id": "uuid",
-      "name": "string",
-      "description": "string",
-      "createdAt": "ISO8601",
-      "updatedAt": "ISO8601"
+      "id": "proj_abc123",
+      "name": "My Project",
+      "ideaText": "A brief description of the project idea...",
+      "createdAt": "2025-01-15T10:30:00Z",
+      "updatedAt": "2025-01-15T10:30:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 42,
+    "totalPages": 3
+  }
+}
+```
+
+### GET /api/v1/projects/:id
+
+Get a single project by ID.
+
+```
+GET /api/v1/projects/proj_abc123
+```
+
+**Response:**
+
+```json
+{
+  "id": "proj_abc123",
+  "name": "My Project",
+  "ideaText": "A brief description of the project idea...",
+  "createdAt": "2025-01-15T10:30:00Z",
+  "updatedAt": "2025-01-15T10:30:00Z"
+}
+```
+
+**Errors:** `NOT_FOUND` (404)
+
+### POST /api/v1/projects
+
+Create a new project from an idea.
+
+```
+POST /api/v1/projects
+Content-Type: application/json
+```
+
+**Request Body:**
+
+```json
+{
+  "ideaText": "Build a task management app with real-time collaboration",
+  "projectName": "TaskFlow"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `ideaText` | `string` | Yes | Free-text description of the project idea |
+| `projectName` | `string` | No | Optional project name (auto-generated if omitted) |
+
+**Response:** `201 Created`
+
+```json
+{
+  "id": "proj_abc123",
+  "name": "TaskFlow",
+  "ideaText": "Build a task management app with real-time collaboration",
+  "createdAt": "2025-01-15T10:30:00Z",
+  "updatedAt": "2025-01-15T10:30:00Z"
+}
+```
+
+**Errors:** `VALIDATION_ERROR` (400)
+
+### DELETE /api/v1/projects/:id
+
+Delete a project and all associated data.
+
+```
+DELETE /api/v1/projects/proj_abc123
+```
+
+**Response:** `204 No Content`
+
+**Errors:** `NOT_FOUND` (404)
+
+---
+
+## Interview Sessions
+
+### POST /api/v1/projects/:projectId/interviews
+
+Create a new interview session for a project.
+
+```
+POST /api/v1/projects/proj_abc123/interviews
+```
+
+**Response:** `201 Created`
+
+```json
+{
+  "id": "int_xyz789",
+  "projectId": "proj_abc123",
+  "status": "created",
+  "createdAt": "2025-01-15T10:30:00Z"
+}
+```
+
+**Errors:** `NOT_FOUND` (404), `VALIDATION_ERROR` (400)
+
+### POST /api/v1/interviews/:id/start
+
+Start an interview session. Generates the first question.
+
+```
+POST /api/v1/interviews/int_xyz789/start
+```
+
+**Response:**
+
+```json
+{
+  "id": "int_xyz789",
+  "status": "in_progress",
+  "currentQuestion": {
+    "id": "q_001",
+    "text": "What problem does your project solve?",
+    "category": "problem_statement"
+  },
+  "totalQuestions": 12,
+  "answeredCount": 0
+}
+```
+
+**Errors:** `NOT_FOUND` (404)
+
+### GET /api/v1/interviews/:id/resume
+
+Resume an in-progress interview and retrieve the current state.
+
+```
+GET /api/v1/interviews/int_xyz789/resume
+```
+
+**Response:**
+
+```json
+{
+  "id": "int_xyz789",
+  "status": "in_progress",
+  "currentQuestion": {
+    "id": "q_003",
+    "text": "What technology stack are you considering?",
+    "category": "technical_stack"
+  },
+  "totalQuestions": 12,
+  "answeredCount": 2,
+  "answers": [
+    {
+      "questionId": "q_001",
+      "text": "It helps teams coordinate tasks efficiently",
+      "category": "problem_statement"
+    },
+    {
+      "questionId": "q_002",
+      "text": "Project managers and development teams",
+      "category": "target_audience"
     }
   ]
 }
 ```
 
-### Create Project
+**Errors:** `NOT_FOUND` (404)
 
-```bash
-POST /api/v1/projects
-Content-Type: application/json
+### GET /api/v1/interviews/:id/next
 
-{
-  "name": "My Project",
-  "description": "A brief description"
-}
+Get the next question in the interview.
+
+```
+GET /api/v1/interviews/int_xyz789/next
 ```
 
-### Get Project
+**Response:**
 
-```bash
-GET /api/v1/projects/:id
-```
-
-### Delete Project
-
-```bash
-DELETE /api/v1/projects/:id
-```
-
-## Interview Sessions
-
-### Create Session
-
-```bash
-POST /api/v1/interview-sessions
-Content-Type: application/json
-
-{
-  "projectId": "uuid",
-  "mode": "quick" | "advanced"
-}
-```
-
-### Get Next Question
-
-```bash
-GET /api/v1/interview-sessions/:sessionId/next
-```
-
-Response:
 ```json
 {
-  "question": {
-    "id": "string",
-    "text": "string",
-    "phase": "string",
-    "type": "text" | "multiline" | "choice"
+  "id": "q_004",
+  "text": "How do you plan to handle user authentication?",
+  "category": "authentication"
+}
+```
+
+**Errors:** `NOT_FOUND` (404)
+
+### POST /api/v1/interviews/:id/answers
+
+Submit an answer to the current question.
+
+```
+POST /api/v1/interviews/int_xyz789/answers
+Content-Type: application/json
+```
+
+**Request Body:**
+
+```json
+{
+  "questionId": "q_003",
+  "text": "We're planning to use React for the frontend and Node.js for the backend"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `questionId` | `string` | Yes | ID of the question being answered |
+| `text` | `string` | Yes | The answer text |
+
+**Response:**
+
+```json
+{
+  "id": "ans_003",
+  "questionId": "q_003",
+  "text": "We're planning to use React for the frontend and Node.js for the backend",
+  "category": "technical_stack",
+  "createdAt": "2025-01-15T10:35:00Z"
+}
+```
+
+**Errors:** `NOT_FOUND` (404), `VALIDATION_ERROR` (400)
+
+### GET /api/v1/interviews/:id/answers
+
+Get all answers for an interview session.
+
+```
+GET /api/v1/interviews/int_xyz789/answers
+```
+
+**Response:**
+
+```json
+{
+  "answers": [
+    {
+      "id": "ans_001",
+      "questionId": "q_001",
+      "text": "It helps teams coordinate tasks efficiently",
+      "category": "problem_statement",
+      "createdAt": "2025-01-15T10:31:00Z"
+    }
+  ],
+  "total": 3
+}
+```
+
+**Errors:** `NOT_FOUND` (404)
+
+### POST /api/v1/interviews/:id/generate
+
+Generate a project blueprint from the collected interview answers.
+
+```
+POST /api/v1/interviews/int_xyz789/generate
+```
+
+**Response:**
+
+```json
+{
+  "id": "bp_001",
+  "interviewId": "int_xyz789",
+  "status": "generating",
+  "workflowId": "wf_gen_001"
+}
+```
+
+> [!NOTE]
+> Blueprint generation is asynchronous. Use the [SSE Progress](#sse-progress) endpoint with the returned `workflowId` to track progress.
+
+**Errors:** `NOT_FOUND` (404)
+
+### POST /api/v1/interviews/:id/refine
+
+Refine an existing blueprint with additional instructions.
+
+```
+POST /api/v1/interviews/int_xyz789/refine
+Content-Type: application/json
+```
+
+**Request Body:**
+
+```json
+{
+  "instructions": "Add a section on deployment strategy and CI/CD pipeline"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `instructions` | `string` | Yes | Additional instructions for refinement |
+
+**Response:**
+
+```json
+{
+  "id": "bp_001",
+  "interviewId": "int_xyz789",
+  "status": "refining",
+  "workflowId": "wf_refine_001"
+}
+```
+
+**Errors:** `NOT_FOUND` (404), `VALIDATION_ERROR` (400)
+
+### GET /api/v1/interviews/:id/blueprint
+
+Retrieve the generated blueprint for an interview.
+
+```
+GET /api/v1/interviews/int_xyz789/blueprint
+```
+
+**Response:**
+
+```json
+{
+  "id": "bp_001",
+  "interviewId": "int_xyz789",
+  "status": "completed",
+  "content": {
+    "overview": "Project overview...",
+    "architecture": "Architecture details...",
+    "techStack": ["React", "Node.js", "PostgreSQL"],
+    "phases": [
+      {
+        "name": "Phase 1: Foundation",
+        "tasks": ["task_001", "task_002"]
+      }
+    ]
   },
-  "progress": {
-    "answered": 5,
-    "total": 20
+  "planId": "plan_001",
+  "createdAt": "2025-01-15T11:00:00Z",
+  "updatedAt": "2025-01-15T11:05:00Z"
+}
+```
+
+**Errors:** `NOT_FOUND` (404)
+
+---
+
+## Execution Tasks
+
+### GET /api/v1/plans/:planId/tasks
+
+List all tasks for an execution plan.
+
+```
+GET /api/v1/plans/plan_001/tasks
+```
+
+**Response:**
+
+```json
+{
+  "tasks": [
+    {
+      "id": "task_001",
+      "planId": "plan_001",
+      "title": "Set up project scaffolding",
+      "description": "Initialize the project structure with necessary config files",
+      "status": "pending",
+      "phase": 1,
+      "order": 1,
+      "dependencies": [],
+      "createdAt": "2025-01-15T11:00:00Z"
+    },
+    {
+      "id": "task_002",
+      "planId": "plan_001",
+      "title": "Configure database schema",
+      "description": "Define and create the initial database schema",
+      "status": "pending",
+      "phase": 1,
+      "order": 2,
+      "dependencies": ["task_001"],
+      "createdAt": "2025-01-15T11:00:00Z"
+    }
+  ],
+  "total": 15,
+  "completed": 0,
+  "inProgress": 0,
+  "pending": 15
+}
+```
+
+**Errors:** `NOT_FOUND` (404)
+
+### GET /api/v1/plans/:planId/tasks/:taskId/prompt
+
+Get the full prompt for a specific task, suitable for passing to an LLM agent.
+
+```
+GET /api/v1/plans/plan_001/tasks/task_001/prompt
+```
+
+**Response:**
+
+```json
+{
+  "taskId": "task_001",
+  "prompt": "You are working on a project called TaskFlow...\n\n## Task\nSet up project scaffolding\n\n## Requirements\n- Initialize the project structure...\n- Create necessary config files...\n\n## Context\nPrevious tasks completed: none",
+  "context": {
+    "projectName": "TaskFlow",
+    "techStack": ["React", "Node.js"],
+    "previousTasks": []
   }
 }
 ```
 
-### Submit Answer
+**Errors:** `NOT_FOUND` (404)
 
-```bash
-POST /api/v1/interview-sessions/:sessionId/answers
+### PATCH /api/v1/plans/:planId/tasks/:taskId/status
+
+Update the status of a task.
+
+```
+PATCH /api/v1/plans/plan_001/tasks/task_001/status
 Content-Type: application/json
+```
 
+**Request Body:**
+
+```json
 {
-  "questionId": "string",
-  "answer": "string"
+  "status": "completed",
+  "output": "Project scaffolding created with React + Node.js structure"
 }
 ```
 
-### Generate Blueprint
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `status` | `"pending" \| "in_progress" \| "completed" \| "failed"` | Yes | New task status |
+| `output` | `string` | No | Optional output or notes from task execution |
 
-```bash
-POST /api/v1/interview-sessions/:sessionId/generate
+**Response:**
+
+```json
+{
+  "id": "task_001",
+  "status": "completed",
+  "output": "Project scaffolding created with React + Node.js structure",
+  "updatedAt": "2025-01-15T12:00:00Z"
+}
 ```
+
+**Errors:** `NOT_FOUND` (404), `VALIDATION_ERROR` (400)
+
+### GET /api/v1/plans/:planId/prompts/export
+
+Export all task prompts for a plan as a single document.
+
+```
+GET /api/v1/plans/plan_001/prompts/export?format=markdown
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `format` | `"markdown" \| "json"` | `"markdown"` | Export format |
+
+**Response (markdown):**
+
+```
+Content-Type: text/markdown
+
+# TaskFlow — Execution Plan
+
+## Task 1: Set up project scaffolding
+...
+
+## Task 2: Configure database schema
+...
+```
+
+**Errors:** `NOT_FOUND` (404)
+
+---
 
 ## Provider Credentials
 
-### List Credentials
+### GET /api/v1/provider-credentials
 
-```bash
+List all configured provider credentials (keys are masked).
+
+```
 GET /api/v1/provider-credentials
 ```
 
-### Create Credential
+**Response:**
 
-```bash
+```json
+{
+  "credentials": [
+    {
+      "id": "cred_001",
+      "provider": "openai",
+      "label": "OpenAI Production",
+      "maskedKey": "sk-...abc1",
+      "createdAt": "2025-01-10T08:00:00Z",
+      "lastValidated": "2025-01-15T09:00:00Z"
+    }
+  ]
+}
+```
+
+### GET /api/v1/provider-credentials/:id
+
+Get a single provider credential (key is masked).
+
+```
+GET /api/v1/provider-credentials/cred_001
+```
+
+**Response:**
+
+```json
+{
+  "id": "cred_001",
+  "provider": "openai",
+  "label": "OpenAI Production",
+  "maskedKey": "sk-...abc1",
+  "createdAt": "2025-01-10T08:00:00Z",
+  "lastValidated": "2025-01-15T09:00:00Z"
+}
+```
+
+**Errors:** `NOT_FOUND` (404)
+
+### POST /api/v1/provider-credentials
+
+Create a new provider credential.
+
+```
 POST /api/v1/provider-credentials
 Content-Type: application/json
+```
 
+**Request Body:**
+
+```json
 {
-  "provider": "openai" | "anthropic" | "openrouter" | "opencode-go" | "custom",
-  "apiKey": "string",
-  "displayName": "string",
-  "defaultModel": "string"
+  "provider": "openai",
+  "apiKey": "sk-proj-abc123...",
+  "label": "OpenAI Production"
 }
 ```
 
-### Validate Credential
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `provider` | `string` | Yes | Provider identifier (e.g., `"openai"`, `"anthropic"`) |
+| `apiKey` | `string` | Yes | The API key (encrypted at rest) |
+| `label` | `string` | No | Human-readable label |
 
-```bash
-POST /api/v1/provider-credentials/:id/validate
+**Response:** `201 Created`
+
+```json
+{
+  "id": "cred_002",
+  "provider": "openai",
+  "label": "OpenAI Production",
+  "maskedKey": "sk-...xyz9",
+  "createdAt": "2025-01-15T10:00:00Z"
+}
 ```
 
-## Progress
+**Errors:** `VALIDATION_ERROR` (400)
 
-### Stream Progress
+> [!DANGER]
+> The `apiKey` is encrypted at rest using AES-256-GCM. Ensure `ENCRYPTION_KEY` is configured. See [Encryption](/docs/configuration#encryption) for details.
 
-```bash
-GET /api/v1/progress/:workflowId
-Accept: text/event-stream
+### PUT /api/v1/provider-credentials/:id
+
+Update an existing provider credential.
+
 ```
-
-Events:
-- `stage_started`
-- `stage_completed`
-- `stage_failed`
-- `stage_retry`
-- `progress_update`
-- `heartbeat`
-- `complete`
-
-## Cache
-
-### Invalidate Cache
-
-```bash
-POST /api/v1/cache/invalidate
+PUT /api/v1/provider-credentials/cred_001
 Content-Type: application/json
-
-{
-  "all": true
-  // or
-  "provider": "openai"
-  // or
-  "model": "gpt-4o"
-}
 ```
 
-## Health
-
-```bash
-GET /api/v1/health
-```
-
-Response:
-```json
-{
-  "status": "healthy",
-  "version": "0.1.0",
-  "timestamp": "ISO8601"
-}
-```
-
-## Error Format
+**Request Body:**
 
 ```json
 {
-  "error": {
-    "code": "UPPER_SNAKE_CASE",
-    "message": "Human-readable description"
+  "apiKey": "sk-proj-new-key...",
+  "label": "OpenAI Updated"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `apiKey` | `string` | No | New API key (re-encrypted at rest) |
+| `label` | `string` | No | Updated label |
+
+**Response:**
+
+```json
+{
+  "id": "cred_001",
+  "provider": "openai",
+  "label": "OpenAI Updated",
+  "maskedKey": "sk-...new1",
+  "updatedAt": "2025-01-15T10:30:00Z"
+}
+```
+
+**Errors:** `NOT_FOUND` (404), `VALIDATION_ERROR` (400)
+
+### DELETE /api/v1/provider-credentials/:id
+
+Delete a provider credential.
+
+```
+DELETE /api/v1/provider-credentials/cred_001
+```
+
+**Response:** `204 No Content`
+
+**Errors:** `NOT_FOUND` (404)
+
+### POST /api/v1/provider-credentials/:id/validate
+
+Validate a provider credential by making a test API call.
+
+```
+POST /api/v1/provider-credentials/cred_001/validate
+```
+
+**Response:**
+
+```json
+{
+  "valid": true,
+  "provider": "openai",
+  "validatedAt": "2025-01-15T10:35:00Z",
+  "details": {
+    "models": ["gpt-4", "gpt-3.5-turbo"],
+    "rateLimit": "10000 RPM"
   }
 }
 ```
 
-## Next Steps
+**Response (invalid):**
 
-- [CLI Reference](./cli-reference) — Command-line usage
-- [Configuration](./configuration) — Environment variables
-- [Troubleshooting](./troubleshooting) — Common issues
+```json
+{
+  "valid": false,
+  "provider": "openai",
+  "validatedAt": "2025-01-15T10:35:00Z",
+  "error": "Invalid API key"
+}
+```
+
+**Errors:** `NOT_FOUND` (404)
+
+---
+
+## SSE Progress
+
+### GET /api/v1/progress/:workflowId
+
+Subscribe to real-time progress updates for a long-running workflow via Server-Sent Events.
+
+```
+GET /api/v1/progress/wf_gen_001
+Accept: text/event-stream
+```
+
+**SSE Event Types:**
+
+| Event | Description |
+|-------|-------------|
+| `progress` | General progress update with percentage |
+| `step_start` | A new step has begun |
+| `step_complete` | A step has finished successfully |
+| `step_error` | A step has encountered an error |
+| `token` | Streaming token for LLM output |
+| `complete` | Workflow completed successfully |
+| `error` | Workflow failed with an error |
+| `cancelled` | Workflow was cancelled by the user |
+| `heartbeat` | Keepalive ping to maintain connection |
+
+**Example SSE stream:**
+
+```
+event: step_start
+data: {"step": "analyzing_requirements", "message": "Analyzing interview responses..."}
+
+event: progress
+data: {"percent": 25, "step": "analyzing_requirements"}
+
+event: token
+data: {"text": "Based on the interview responses, "}
+
+event: step_complete
+data: {"step": "analyzing_requirements"}
+
+event: progress
+data: {"percent": 50, "step": "generating_architecture"}
+
+event: complete
+data: {"result": {"blueprintId": "bp_001"}}
+```
+
+### POST /api/v1/progress/:workflowId/cancel
+
+Cancel a running workflow.
+
+```
+POST /api/v1/progress/wf_gen_001/cancel
+```
+
+**Response:**
+
+```json
+{
+  "workflowId": "wf_gen_001",
+  "status": "cancelled",
+  "cancelledAt": "2025-01-15T11:02:00Z"
+}
+```
+
+**Errors:** `NOT_FOUND` (404)
+
+> [!TIP]
+> The SSE connection automatically sends `heartbeat` events every 15 seconds to prevent proxy timeouts.
+
+---
+
+## Cache
+
+### GET /api/v1/cache/stats
+
+Get cache hit/miss statistics.
+
+```
+GET /api/v1/cache/stats
+```
+
+**Response:**
+
+```json
+{
+  "hits": 1247,
+  "misses": 89,
+  "hitRate": 0.933,
+  "entries": 156,
+  "memoryUsageBytes": 245760
+}
+```
+
+### POST /api/v1/cache/invalidate
+
+Invalidate cache entries by pattern.
+
+```
+POST /api/v1/cache/invalidate
+Content-Type: application/json
+```
+
+**Request Body:**
+
+```json
+{
+  "pattern": "blueprint:proj_abc123:*"
+}
+```
+
+**Response:**
+
+```json
+{
+  "invalidated": 3
+}
+```
+
+### DELETE /api/v1/cache
+
+Clear the entire cache.
+
+```
+DELETE /api/v1/cache
+```
+
+**Response:**
+
+```json
+{
+  "cleared": true,
+  "entriesRemoved": 156
+}
+```
+
+---
+
+## Usage
+
+### GET /api/v1/usage
+
+Get current usage statistics.
+
+```
+GET /api/v1/usage?period=day
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `period` | `"hour" \| "day" \| "week" \| "month"` | `"day"` | Aggregation period |
+
+**Response:**
+
+```json
+{
+  "period": "day",
+  "tokensUsed": 45230,
+  "tokensBudget": 100000,
+  "requestsMade": 127,
+  "requestsBudget": 1000,
+  "costUsd": 0.68,
+  "costBudgetUsd": 5.00
+}
+```
+
+### GET /api/v1/usage/history
+
+Get historical usage data.
+
+```
+GET /api/v1/usage/history?days=7
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `days` | `number` | `7` | Number of days of history |
+
+**Response:**
+
+```json
+{
+  "history": [
+    {
+      "date": "2025-01-15",
+      "tokensUsed": 45230,
+      "requestsMade": 127,
+      "costUsd": 0.68
+    },
+    {
+      "date": "2025-01-14",
+      "tokensUsed": 38100,
+      "requestsMade": 98,
+      "costUsd": 0.57
+    }
+  ]
+}
+```
+
+---
+
+## Metrics
+
+### GET /api/v1/metrics
+
+Get internal performance metrics.
+
+```
+GET /api/v1/metrics
+```
+
+**Response:**
+
+```json
+{
+  "uptime": 86400,
+  "memory": {
+    "rss": 104857600,
+    "heapUsed": 52428800,
+    "heapTotal": 83886080
+  },
+  "requests": {
+    "total": 15420,
+    "perSecond": 0.18
+  },
+  "database": {
+    "queryCount": 8934,
+    "avgQueryTimeMs": 2.3
+  }
+}
+```
+
+---
+
+## Diagnostics
+
+### GET /api/v1/diagnostics
+
+Run a diagnostic check of all subsystems.
+
+```
+GET /api/v1/diagnostics
+```
+
+**Response:**
+
+```json
+{
+  "status": "healthy",
+  "checks": {
+    "database": { "status": "ok", "latencyMs": 1 },
+    "encryption": { "status": "ok" },
+    "providers": {
+      "status": "ok",
+      "configured": 2,
+      "validated": 2
+    },
+    "cache": { "status": "ok", "entries": 156 }
+  },
+  "timestamp": "2025-01-15T12:00:00Z"
+}
+```
+
+---
+
+## Phase Resolution
+
+### GET /api/v1/phases/:planId/resolve
+
+Resolve the current phase and next actionable task for a plan.
+
+```
+GET /api/v1/plans/plan_001/phases/resolve
+```
+
+**Response:**
+
+```json
+{
+  "planId": "plan_001",
+  "currentPhase": 1,
+  "phaseName": "Foundation",
+  "phaseProgress": {
+    "total": 5,
+    "completed": 3,
+    "percent": 60
+  },
+  "nextTask": {
+    "id": "task_004",
+    "title": "Set up authentication middleware",
+    "blocked": false
+  },
+  "blockedTasks": []
+}
+```
+
+**Errors:** `NOT_FOUND` (404)
+
+> [!NOTE]
+> Phase resolution considers task dependencies. A task is blocked if any of its dependencies are not yet completed.

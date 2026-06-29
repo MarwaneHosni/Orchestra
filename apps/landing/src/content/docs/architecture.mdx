@@ -1,132 +1,497 @@
 ---
 title: Architecture
-description: Deep dive into Orchestra's architecture
+description: System architecture and design decisions
 order: 11
 sidebarLabel: Architecture
 ---
 
 # Architecture
 
-## System Overview
+This page is a deep dive into Orchestra's system design, covering the monorepo structure, layered architecture, the 7-stage generation pipeline, and the key design decisions that shape the project.
 
-Orchestra is a monorepo with three main packages:
+## Monorepo Structure
+
+Orchestra is organized as a pnpm workspace monorepo with three applications and two shared packages:
 
 ```
 orchestra/
-├── apps/api/          # Fastify API server
-├── apps/web/          # Next.js frontend
-├── apps/landing/      # Astro docs site
-└── packages/          # Shared utilities
+├── apps/
+│   ├── api/              Fastify 5 HTTP API server (port 3000)
+│   │   ├── src/
+│   │   │   ├── routes/           HTTP route handlers
+│   │   │   ├── domains/          Business logic orchestration
+│   │   │   ├── lib/              Core services and utilities
+│   │   │   │   ├── provider/     AI provider abstraction layer
+│   │   │   │   ├── router/       Model routing and policy engine
+│   │   │   │   ├── budget/       Guardrails: rate limiting, circuit breakers, abuse detection
+│   │   │   │   ├── cache/        Content-addressable AI response cache
+│   │   │   │   ├── secrets/      AES-256-GCM encryption for API keys
+│   │   │   │   ├── audit/        Audit logging with redaction
+│   │   │   │   ├── synthesis/    Interview answer synthesis
+│   │   │   │   ├── blueprint/    Blueprint generation and normalization
+│   │   │   │   ├── task-graph/   DAG generation with cycle detection
+│   │   │   │   ├── prompt/       Execution prompt assembly
+│   │   │   │   ├── roadmap/      Roadmap generation
+│   │   │   │   ├── validation/   Structural validation and auto-repair
+│   │   │   │   ├── resolution/   Risk and phase resolution
+│   │   │   │   ├── credentials/  Credential store abstraction
+│   │   │   │   ├── repositories/ Data access layer
+│   │   │   │   └── accounting/   Cost tracking and pricing
+│   │   │   └── db/               Database initialization, migrations, seeding
+│   │   └── drizzle-sqlite/       Migration files
+│   ├── web/              Next.js 15 + React 19 frontend (port 3001)
+│   │   ├── app/                  App Router pages and layouts
+│   │   ├── components/           React components (server + client)
+│   │   └── lib/                  Frontend utilities and API client
+│   └── landing/          Astro docs & marketing site
+│       └── src/content/docs/     MDX documentation pages
+├── packages/
+│   ├── shared/           Shared types, utilities, and domain models
+│   └── config/           Shared configuration helpers
+├── scripts/
+│   ├── setup.mjs         Full environment setup
+│   ├── dev.mjs           Dev server launcher
+│   ├── reset-db.mjs      Database reset
+│   └── check-no-stubs.mjs  Regression guard
+└── docs/                 Architecture decisions and development guides
 ```
 
-## API Architecture
+> [!NOTE]
+> The monorepo uses pnpm workspaces for strict dependency resolution and disk-efficient package linking. Each package has its own `tsconfig.json`, `package.json`, and build pipeline.
 
-### Request Flow
+## Layered Architecture
+
+The API follows a strict four-layer architecture. Each layer depends only on the layer below it — never sideways or upward.
 
 ```
-HTTP Request → Fastify Router → Domain Handler → Service → Repository → SQLite
+┌─────────────────────────────────────────────────────┐
+│                    HTTP Request                      │
+└──────────────────────┬──────────────────────────────┘
+                       ▼
+┌─────────────────────────────────────────────────────┐
+│  Routes Layer                                        │
+│  Fastify route handlers, schema validation, errors   │
+└──────────────────────┬──────────────────────────────┘
+                       ▼
+┌─────────────────────────────────────────────────────┐
+│  Domains Layer                                       │
+│  Business logic orchestration, use-case coordination │
+└──────────────────────┬──────────────────────────────┘
+                       ▼
+┌─────────────────────────────────────────────────────┐
+│  Lib Layer                                           │
+│  Core services: AI providers, caching, routing,      │
+│  guardrails, encryption, audit, synthesis            │
+└──────────────────────┬──────────────────────────────┘
+                       ▼
+┌─────────────────────────────────────────────────────┐
+│  DB Layer                                            │
+│  SQLite via sql.js, Drizzle ORM, migrations          │
+└─────────────────────────────────────────────────────┘
 ```
 
-### Key Components
+### Layer Responsibilities
 
-| Component | Responsibility |
+| Layer | Responsibility | Examples |
+|---|---|---|
+| **Routes** | HTTP concerns: request parsing, schema validation (Zod), response serialization, error mapping | `routes/cache.ts`, `routes/health.ts`, `routes/usage.ts` |
+| **Domains** | Business logic orchestration: coordinate multiple services, enforce invariants, manage workflows | Interview flow, generation pipeline, risk resolution |
+| **Lib** | Core services: each module is self-contained with its own types, tests, and public API | `provider/`, `router/`, `cache/`, `budget/`, `secrets/` |
+| **DB** | Data access: repository pattern, migrations, seeding, connection management | `repositories/`, `db/sqlite/`, `db/migrate-sqlite.ts` |
+
+> [!TIP]
+> This layering means you can replace the database backend (e.g., SQLite to PostgreSQL) by changing only the DB layer. The lib and domain layers remain untouched because they depend on repository interfaces, not concrete implementations.
+
+## The 7-Stage Generation Pipeline
+
+The generation pipeline is Orchestra's core value proposition. It transforms raw interview answers into a complete, execution-ready development plan through seven deterministic stages.
+
+```
+┌────────────┐   ┌────────────┐   ┌────────────┐   ┌────────────┐
+│ 1.Synthesis │──▶│ 2.Analysis │──▶│ 3.Blueprint│──▶│ 4.Roadmap  │
+└────────────┘   └────────────┘   └────────────┘   └────────────┘
+                                                       │
+┌────────────┐   ┌────────────┐   ┌────────────┐      │
+│ 7.Summary  │◀──│6.PromptGen │◀──│5.TaskGraph │◀─────┘
+└────────────┘   └────────────┘   └────────────┘
+```
+
+### Stage Details
+
+| # | Stage | Input | Output | AI Required? |
+|---|---|---|---|---|
+| 1 | **Synthesis** | Raw interview answers | Structured context pack organized by lifecycle phase | No — deterministic |
+| 2 | **Analysis** | Context pack | Per-phase analysis with confidence scores, inferred requirements, identified risks | Yes |
+| 3 | **Blueprint** | Analysis results | Full project plan with 12 phases, tasks, risks, and key decisions | Yes |
+| 4 | **Roadmap** | Blueprint | Ordered execution roadmap with milestones | Yes |
+| 5 | **TaskGraph** | Blueprint + Roadmap | Dependency-aware DAG of execution tasks with cycle detection | Yes |
+| 6 | **PromptGen** | Task graph nodes | 7-section execution prompts per task (Objective, Context, Constraints, Expected Output, Validation, Architecture, Agent Tips) | Yes |
+| 7 | **Summary** | All previous outputs | Human-readable executive summary with project highlights | Yes |
+
+### Stage 1: Synthesis (Deterministic)
+
+The synthesizer takes all interview answers and organizes them into a structured context pack. No AI is involved — this is pure data transformation.
+
+```typescript
+// Simplified flow
+const contextPack = synthesizer.synthesize(answers);
+// contextPack.phases = { ideation: {...}, requirements: {...}, ... }
+```
+
+The context pack groups answers by lifecycle phase, identifies which phases have sufficient data, and flags gaps.
+
+### Stage 2: Analysis (AI-Powered)
+
+The analysis stage evaluates each of the 12 lifecycle phases:
+
+- **Input status**: `sufficient`, `partial`, or `insufficient`
+- **Confidence score**: 0.0 to 1.0
+- **Findings**: Structured observations extracted from answers
+- **Inferred requirements**: Requirements the AI derived from context
+- **Identified risks**: Potential problems flagged by the analysis
+- **Key decisions**: Important architectural or product decisions
+
+### Stages 3-6: Generation
+
+These stages produce the core artifacts. Each stage can use a different AI model based on the routing policy:
+
+| Stage | Default Tier | Example Models |
+|---|---|---|
+| Blueprint | cheap | `deepseek-v4-flash`, `gpt-4o-mini` |
+| Roadmap | balanced | `gpt-4o`, `claude-sonnet-4` |
+| Task Graph | balanced | `gpt-4o`, `claude-sonnet-4` |
+| Prompt Generation | balanced | `deepseek-v4-flash`, `gpt-4o` |
+
+### Stage 7: Summary (AI-Powered)
+
+The final stage produces a human-readable executive summary. It uses the cheap tier since it is primarily a formatting and condensation task.
+
+> [!NOTE]
+> Every stage emits real-time progress events via Server-Sent Events (SSE). The frontend shows live updates as each stage begins, progresses, and completes. If a stage fails, the error is captured and the pipeline can retry from the failed stage.
+
+### Deterministic Fallback Pattern
+
+Orchestra follows an **AI-first with deterministic fallback** pattern. Every pipeline stage attempts AI generation first. If no AI provider is available (or all providers fail), the stage falls back to a deterministic implementation that produces structurally valid but content-light output.
+
+```
+Stage Request → Try AI Provider → Success? → Return AI Output
+                                    │
+                                    No (fallback)
+                                    ▼
+                            Deterministic Generator → Return Placeholder Output
+```
+
+> [!WARNING]
+> Deterministic fallback output is structurally valid (passes all validation) but contains generic placeholder content. It is useful for testing the pipeline without AI costs, but should not be used for actual project planning.
+
+## AI-First with Deterministic Fallback
+
+This pattern is applied consistently across the codebase:
+
+| Component | AI Path | Fallback Path |
+|---|---|---|
+| **Blueprint generator** | AI generates phases, tasks, risks | Deterministic skeleton from lifecycle template |
+| **Task graph generator** | AI decomposes phases into DAG | Deterministic phase-to-task mapping |
+| **Prompt assembler** | AI writes 7-section prompts | Deterministic template fill from task metadata |
+| **Risk resolver** | AI rewrites prompts to address risks | Deterministic keyword injection |
+| **Summary generator** | AI writes executive summary | Deterministic concatenation of phase highlights |
+
+This design ensures Orchestra is **always usable** — even without any AI provider configured, the full pipeline runs and produces valid output.
+
+## Multi-Provider with Fallback Chains
+
+### RouterService
+
+The `RouterService` is the central model selection engine. It routes each pipeline task to the most appropriate AI model based on:
+
+1. **Task type** — each pipeline stage has a routing policy
+2. **Model tier** — cheap, balanced, or strong
+3. **Provider availability** — circuit breaker state
+4. **User preferences** — optional override from Settings
+
+```typescript
+// Simplified routing flow
+const decision = router.select(taskType, userPreferences);
+// decision.selection = { provider: "openai", model: "gpt-4o", tier: "balanced" }
+// decision.fallbackChain = [{ provider: "anthropic", model: "claude-sonnet-4", tier: "balanced" }]
+```
+
+### Routing Policies
+
+Each task type has a policy defining minimum tier, preferred models, and fallback chain:
+
+| Task Type | Min Tier | Preferred Models | Fallback |
+|---|---|---|---|
+| `clarification` | cheap | `deepseek-v4-flash`, `gpt-4o-mini` | `gpt-4o`, `claude-sonnet-4` |
+| `blueprint` | cheap | `deepseek-v4-flash`, `mimo-v2.5`, `gpt-4o-mini` | `claude-sonnet-4` |
+| `roadmap` | balanced | `gpt-4o`, `claude-sonnet-4` | `claude-sonnet-4` (via OpenRouter) |
+| `architecture` | strong | `gpt-4.1`, `claude-sonnet-4` | `gpt-4o`, `claude-sonnet-4` |
+| `prompt_generation` | balanced | `deepseek-v4-flash`, `gpt-4o`, `claude-sonnet-4` | `deepseek-v4-flash`, `gpt-4o-mini` |
+| `summary` | cheap | `deepseek-v4-flash`, `mimo-v2.5`, `gpt-4o-mini` | `gpt-4.1`, `claude-sonnet-4` |
+
+### Fallback Chain Execution
+
+When a provider fails, Orchestra follows a cascading strategy:
+
+```
+1. Retry same provider (up to 3 retries with exponential backoff)
+       │
+       ▼ (still failing)
+2. Switch to next preferred model in the policy chain
+       │
+       ▼ (still failing)
+3. Downgrade to the fallback chain (may cross providers/tiers)
+       │
+       ▼ (all exhausted)
+4. Fail with descriptive error
+```
+
+> [!TIP]
+> You can override the router's model selection per-generation by setting a preferred provider and model in the Settings UI. The router prioritizes your choice while still respecting the minimum tier threshold.
+
+## Content-Addressable Caching
+
+Orchestra includes a content-addressable cache for AI responses. Identical inputs produce cached outputs — no API call, no cost, no latency.
+
+### Cache Key Construction
+
+The cache key is a **SHA-256 hash** computed from a composite of seven components:
+
+```
+SHA-256(
+  promptVersion ::        // Cache format version (currently 1)
+  schemaVersion ::        // "orchestra-generated-v1"
+  systemPromptHash ::     // SHA-256 of the system prompt text
+  messagesHash ::         // SHA-256 of JSON-serialized messages array
+  model ::                // e.g., "gpt-4o"
+  provider ::             // e.g., "openai"
+  temperature             // e.g., 0.7
+)
+```
+
+```typescript
+// From lib/cache/key-builder.ts
+const composite = [
+  String(CACHE_PROMPT_VERSION),
+  CACHE_SCHEMA_VERSION,
+  systemPromptHash,
+  messagesHash,
+  input.model,
+  input.provider,
+  String(input.temperature),
+].join("::");
+
+const cacheKey = sha256Hex(composite);
+```
+
+### Cache Flow
+
+```
+Request → Build Cache Key → Lookup in SQLite
+                                │
+                    ┌───────────┴───────────┐
+                    │                       │
+                  HIT                     MISS
+                    │                       │
+              Return cached          Call AI Provider
+              response                    │
+              (increment           Store result in cache
+               hit_count)                  │
+                                    Return response
+```
+
+### Cache Properties
+
+| Property | Detail |
 |---|---|
-| **Router** | HTTP routing, validation, error handling |
-| **Domain** | Business logic, orchestration |
-| **Service** | Core operations (AI generation, caching) |
-| **Repository** | Data access, SQLite queries |
-| **Provider** | AI backend abstraction |
+| **Backend** | SQLite `ai_cache_entries` table |
+| **Key format** | 64-character hex string (SHA-256) |
+| **Stored data** | Response content, model, finish reason, token usage |
+| **Hit tracking** | `hit_count` and `last_accessed_at` columns |
+| **Deduplication** | `cache_key` has a unique index — re-storing overwrites |
+| **Persistence** | Survives server restarts (stored in SQLite) |
 
-### Database Schema
+> [!NOTE]
+> Because the cache is content-addressable, any change to the prompt, model, or temperature produces a different key. This means cache entries are never stale — they always correspond to the exact input that produced them.
 
-17 tables:
-- `projects` — Project metadata
-- `interview_sessions` — Interview state
-- `answers` — User answers
-- `blueprints` — Generated plans
-- `tasks` — Task graph
-- `execution_prompts` — AI prompts
-- `provider_credentials` — API keys (encrypted)
-- `ai_cache_entries` — AI response cache
-- `usage_records` — Cost tracking
-- `audit_logs` — Security events
-- `guardrail_events` — Rate limiting, budget
-- `workflow_runs` — Generation pipelines
-- `stage_snapshots` — Progress tracking
-- `risk_flags` — Identified risks
-- `mitigations` — Risk mitigation actions
-- `prompt_versions` — Prompt versioning
-- `system_settings` — Configuration
+## Event-Driven Progress (SSE with Replay)
 
-### AI Generation Pipeline
+Orchestra streams real-time progress updates to the frontend using Server-Sent Events (SSE). The implementation includes a replay mechanism so that clients connecting mid-pipeline receive the full history.
+
+### Event Flow
 
 ```
-1. Synthesis → 2. Analysis → 3. Blueprint → 4. Task Graph → 5. Prompt Assembly → 6. Summary
+Pipeline Stage → Emit SSE Event → Transport → Client Receives Event
+                                                    │
+                                          ┌─────────┴─────────┐
+                                          │                   │
+                                     Live event           Replay buffer
+                                     (real-time)          (catch-up)
 ```
 
-Each stage is tracked via SSE events with real-time progress updates.
+### Event Types
 
-## Frontend Architecture
+| Event | Description |
+|---|---|
+| `stage.started` | A pipeline stage has begun |
+| `stage.progress` | Incremental progress within a stage |
+| `stage.completed` | A stage has finished successfully |
+| `stage.failed` | A stage has failed with an error |
+| `pipeline.completed` | All stages finished |
+| `pipeline.failed` | The pipeline failed |
 
-### Component Hierarchy
+> [!TIP]
+> The SSE replay buffer ensures that if your browser tab loses connection during generation, reconnecting picks up exactly where it left off — no events are lost.
 
+## 17 SQLite Tables
+
+Orchestra's data model consists of 17 tables organized by domain:
+
+### Core Domain Tables
+
+| Table | Description | Key Columns |
+|---|---|---|
+| `projects` | Project metadata | `id`, `name`, `description`, `created_at` |
+| `interview_sessions` | Interview state and mode | `id`, `project_id`, `mode`, `status` |
+| `answers` | User interview answers | `id`, `session_id`, `question_id`, `value` |
+
+### Generation Artifact Tables
+
+| Table | Description | Key Columns |
+|---|---|---|
+| `blueprints` | Generated project plans | `id`, `project_id`, `version`, `content` |
+| `tasks` | Task graph nodes | `id`, `blueprint_id`, `phase_type`, `type`, `dependencies` |
+| `execution_prompts` | Per-task AI prompts | `id`, `task_id`, `content`, `sections` |
+| `workflow_runs` | Generation pipeline runs | `id`, `project_id`, `status`, `started_at` |
+| `stage_snapshots` | Per-stage progress tracking | `id`, `workflow_run_id`, `stage`, `status` |
+
+### Provider and Cache Tables
+
+| Table | Description | Key Columns |
+|---|---|---|
+| `provider_credentials` | API keys (encrypted) | `id`, `provider`, `encrypted_api_key`, `status` |
+| `ai_cache_entries` | AI response cache | `cache_key`, `response`, `model`, `hit_count` |
+| `usage_records` | Cost tracking | `id`, `provider`, `model`, `tokens`, `cost` |
+
+### Security and Observability Tables
+
+| Table | Description | Key Columns |
+|---|---|---|
+| `audit_logs` | Security event log | `id`, `event_type`, `actor`, `metadata` |
+| `guardrail_events` | Rate limit and budget events | `id`, `event_type`, `scope`, `details` |
+
+### Risk Management Tables
+
+| Table | Description | Key Columns |
+|---|---|---|
+| `risk_flags` | Identified project risks | `id`, `project_id`, `description`, `severity` |
+| `mitigations` | Risk mitigation actions | `id`, `risk_id`, `action`, `status` |
+
+### Configuration Tables
+
+| Table | Description | Key Columns |
+|---|---|---|
+| `prompt_versions` | Prompt template versioning | `id`, `version`, `template`, `created_at` |
+| `system_settings` | Runtime configuration | `key`, `value` |
+
+> [!NOTE]
+> All tables are created via Drizzle ORM migrations stored in `drizzle-sqlite/`. Migrations are run automatically on server startup if the schema is out of date.
+
+## Store Abstraction Pattern
+
+Orchestra uses a **store abstraction** that allows switching between in-memory and SQLite-backed implementations without changing calling code.
+
+### How It Works
+
+```typescript
+// Define an interface
+interface CredentialStore {
+  list(): ProviderCredential[];
+  get(id: string): ProviderCredential | undefined;
+  insert(credential: ProviderCredential): void;
+  update(id: string, partial: Partial<ProviderCredential>): void;
+  remove(id: string): void;
+}
+
+// In-memory implementation (for testing and startup bootstrap)
+function createInMemoryCredentialStore(): CredentialStore { ... }
+
+// SQLite implementation (for production persistence)
+function createSqliteCredentialStore(db): CredentialStore { ... }
+
+// Bootstrap: start in-memory, swap to SQLite when DB is ready
+let store = createInMemoryCredentialStore();
+// ... later, after DB init ...
+_replaceCredentialStore(createSqliteCredentialStore(db));
 ```
-Layout (Server)
-├── Navbar (Client)
-├── Main Content
-│   ├── Project List
-│   ├── Interview View
-│   ├── Blueprint View
-│   └── Settings
-└── Footer
-```
 
-### State Management
+### Benefits
 
-- **Server State**: React Query (TanStack Query) for API data
-- **Client State**: React hooks for UI state
-- **Progress**: Custom SSE hook for real-time updates
+| Benefit | Description |
+|---|---|
+| **Fast startup** | Server can handle requests immediately using in-memory stores |
+| **Testability** | Tests use in-memory stores — no database setup required |
+| **Graceful degradation** | If SQLite fails to initialize, the server still works with in-memory data |
+| **Zero-downtime migration** | Data is loaded from SQLite into memory at startup, then the store is swapped |
 
-### Key Features
+> [!WARNING]
+> In-memory stores are not persisted. If the server restarts without SQLite, all data is lost. The in-memory store is a bootstrap mechanism, not a production backend.
 
-- **Real-time progress**: SSE-based live updates during generation
-- **Interview**: Multi-step form with validation
-- **Blueprint**: Interactive tree view of phases and tasks
-- **Settings**: Provider management with encryption
+## Key Design Decisions and Tradeoffs
 
-## Provider System
+### 1. SQLite over PostgreSQL
 
-### Routing
+| Aspect | Decision | Rationale |
+|---|---|---|
+| **Database** | SQLite via sql.js | Zero configuration, no native compilation, pure JavaScript |
+| **Tradeoff** | No concurrent writes | Acceptable for single-user local-first tool |
+| **Tradeoff** | File-based backup | Simpler than database dumps for local use |
 
-```
-Task Request → Router → Policy → Provider Selection → API Call
-```
+> [!TIP]
+> SQLite was chosen because Orchestra is a local-first tool. Users should not need to install PostgreSQL to try it. For production deployments with concurrent users, the store abstraction makes migrating to PostgreSQL straightforward.
 
-### Fallback Chain
+### 2. No Authentication
 
-If a provider fails:
-1. Retry with same provider (max 2 retries)
-2. Switch to next preferred provider
-3. Switch to fallback tier
-4. Fail with error if all exhausted
+| Aspect | Decision | Rationale |
+|---|---|---|
+| **Auth** | None | Local-only deployment, no network exposure by design |
+| **Tradeoff** | Users must add their own auth if exposing externally | Documented in security guide |
+| **Tradeoff** | Simpler codebase | No session management, JWT, or OAuth complexity |
 
-### Cost Tracking
+### 3. AI-First with Deterministic Fallback
 
-Every API call is tracked:
-- `prompt_tokens` — Input tokens
-- `completion_tokens` — Output tokens
-- `total_tokens` — Sum
-- `cost` — Calculated from pricing table
+| Aspect | Decision | Rationale |
+|---|---|---|
+| **Generation** | Try AI first, fall back to deterministic | Always usable, even without API keys |
+| **Tradeoff** | Fallback output is generic | Acceptable for testing; users need AI for real plans |
+| **Tradeoff** | More code to maintain | Two paths per stage, but each is independently testable |
 
-## Security
+### 4. Content-Addressable Cache
 
-- **Encryption**: AES-256-GCM for API keys at rest
-- **No auth**: Local-only, no user authentication
-- **Audit logging**: All generation events tracked
-- **Guardrails**: Rate limiting, budget tracking, circuit breakers
+| Aspect | Decision | Rationale |
+|---|---|---|
+| **Cache strategy** | SHA-256 of full input composite | Impossible to serve stale data |
+| **Tradeoff** | Cache key computation cost | Negligible compared to AI API latency |
+| **Tradeoff** | No partial cache invalidation | Acceptable — prompts are regenerated entirely on changes |
+
+### 5. SSE over WebSockets
+
+| Aspect | Decision | Rationale |
+|---|---|---|
+| **Real-time** | Server-Sent Events | Simpler, HTTP-native, auto-reconnect, replay-friendly |
+| **Tradeoff** | Server-to-client only | Orchestra only needs server → client progress updates |
+| **Tradeoff** | No binary frames | Progress events are small JSON — no need for binary |
+
+### 6. Monorepo over Polyrepo
+
+| Aspect | Decision | Rationale |
+|---|---|---|
+| **Structure** | pnpm workspace monorepo | Shared types, atomic cross-package changes |
+| **Tradeoff** | Larger CI pipeline | Mitigated by per-package filtering (`--filter`) |
+| **Tradeoff** | Coupled releases | Acceptable — all packages version together |
 
 ## Next Steps
 
-- [Security](./security) — Security details
-- [Configuration](./configuration) — Environment variables
-- [API Reference](./api-reference) — API endpoints
+- [Security](./security) — Security model and data protection
+- [Configuration](./configuration) — Environment variables and provider setup
+- [API Reference](./api-reference) — API endpoints and data formats

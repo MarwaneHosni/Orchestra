@@ -1,90 +1,548 @@
 ---
 title: Troubleshooting
-description: Common errors and how to fix them
+description: Common issues and their solutions
 order: 13
 sidebarLabel: Troubleshooting
 ---
 
 # Troubleshooting
 
-## Common Errors
+This guide covers the most common issues encountered when installing, configuring, and running Orchestra. Each section includes the error message, root cause, and step-by-step resolution.
 
-### Port Already in Use
+## Installation Issues
 
-**Error:** `Error: listen EADDRINUSE: address already in use :::3000`
+### Node.js Version Too Old
 
-**Fix:**
-```bash
-# Find the process
-lsof -i :3000
+**Error:**
 
-# Kill it
-kill -9 <PID>
-
-# Or use a different port
-PORT=3002 pnpm dev
+```
+error orchestra@: The engine "node" is incompatible with this module.
+Expected version ">=20.0.0". Received "18.17.0".
 ```
 
-### Database Locked
-
-**Error:** `SQLITE_BUSY: database is locked`
+**Cause:** Orchestra requires Node.js 20 or later. The `engines` field in `package.json` enforces this.
 
 **Fix:**
-- Restart the server
-- Check for multiple processes accessing the same SQLite file
-- Consider using PostgreSQL for concurrent access
 
-### AI Generation Failed
+```bash
+# Check your current version
+node -v
 
-**Error:** `Generation failed: No valid provider`
+# Upgrade using nvm (recommended)
+nvm install 20
+nvm use 20
 
-**Fix:**
-- Check that at least one provider is configured in Settings
-- Validate the provider credentials
-- Check provider status (circuit breaker may have opened)
+# Or download from nodejs.org
+# https://nodejs.org/
+```
 
-### Budget Exceeded
+> [!NOTE]
+> Orchestra specifies `"engines": { "node": ">=20.0.0" }` in its root `package.json`. If `pnpm install` fails with an engine error, this is the cause.
 
-**Error:** `OverBudgetError: Budget exceeded`
+### pnpm Not Installed or Wrong Version
 
-**Fix:**
-- Budget guardrails are per-project and reset on server restart
-- Restart the server to reset
-- Use opencode-go (free model tier, requires opencode.ai API key) to avoid costs
+**Error:**
 
-### AI Returns Invalid JSON
+```
+pnpm: The term 'pnpm' is not recognized as the name of a cmdlet, function, or script file.
+```
 
-**Error:** Blueprint generation fails with validation error
+**Or:**
 
-**Fix:**
-- This is handled automatically by Orchestra with 3 retry attempts
-- If all retries fail, try a different provider
-- Check the provider's status
-
-### High Memory Usage
-
-**Symptoms:** Node.js process using >2GB RAM
+```
+ERR_PNPM Unsupported pnpm version. Expected ">=9.0.0".
+```
 
 **Fix:**
-- Reduce the number of concurrent generations
-- Clear the AI cache: `POST /api/v1/cache/invalidate {all: true}`
-- Restart the server
 
-### Stuck on "Analyzing your answers"
+```bash
+# Install pnpm globally
+npm install -g pnpm
 
-**Symptoms:** Generation stuck at synthesis stage
+# Verify version
+pnpm -v
+
+# Orchestra pins pnpm 9.15.4 via the packageManager field
+# Corepack will auto-use the correct version
+```
+
+> [!TIP]
+> If you use Corepack (bundled with Node.js 20+), pnpm is managed automatically. Run `corepack enable` to activate it.
+
+### VS Build Tools Not Needed
+
+If you are coming from projects that use `better-sqlite3` or other native Node.js addons, you might expect to need Visual Studio Build Tools, Python, or `node-gyp`.
+
+**You do not need any of these for Orchestra.**
+
+Orchestra uses **sql.js** — a pure JavaScript implementation of SQLite compiled from C source via Emscripten. This means:
+
+| Not Required | Why |
+|---|---|
+| Visual Studio Build Tools | No native compilation |
+| Python | No `node-gyp` |
+| `node-gyp` | No native addons |
+| C/C++ compiler | sql.js ships pre-compiled WASM |
+
+> [!TIP]
+> If `pnpm install` fails with native compilation errors, you likely have a stale `node_modules` from a different project. Run `pnpm clean:all` and try again.
+
+### Workspace Resolution Failures
+
+**Error:**
+
+```
+ERR_PNPM Missing workspace. Could not resolve "apps/api"
+```
+
+**Cause:** Using `npm` or `yarn` instead of `pnpm`. Orchestra is a pnpm workspace monorepo.
+
+**Fix:** Use `pnpm` for all package management operations. Do not use `npm install` or `yarn`.
+
+## Database Issues
+
+### SQLite Database Locked
+
+**Error:**
+
+```
+SQLITE_BUSY: database is locked
+```
+
+**Cause:** Another process is holding a write lock on the SQLite file. This can happen if:
+
+- Multiple instances of the API server are running against the same database file
+- A previous process crashed without releasing the lock
+- An external tool (e.g., DB Browser for SQLite) has the file open
 
 **Fix:**
-- Check API logs for error details
-- Verify provider credentials are valid
-- Try a different provider
-- Restart the server and retry
+
+```bash
+# 1. Find and kill any orphaned Node.js processes
+# On Linux/macOS:
+lsof -i :3000
+kill -9 <PID>
+
+# On Windows (PowerShell):
+Get-Process -Name node | Stop-Process -Force
+
+# 2. Restart the server
+pnpm dev
+```
+
+> [!NOTE]
+> Orchestra sets `PRAGMA busy_timeout=5000` (5 seconds) to handle transient locks automatically. If you see this error persistently, there is likely a second process holding the lock.
+
+### File Permission Errors
+
+**Error:**
+
+```
+EACCES: permission denied, open './orchestra.db'
+```
+
+**Or:**
+
+```
+SQLITE_DB_PATH permission denied
+```
+
+**Cause:** The directory containing the SQLite file is read-only, or the file is owned by a different user.
+
+**Fix:**
+
+```bash
+# Ensure the directory exists and is writable
+# Linux/macOS:
+chmod u+w .
+chown $(whoami) orchestra.db
+
+# Windows (PowerShell):
+icacls orchestra.db /grant %USERNAME%:F
+```
+
+> [!WARNING]
+> If you set `SQLITE_DB_PATH` to a custom location, ensure the parent directory exists before starting the server. Orchestra will not create intermediate directories.
+
+### ENCRYPTION_KEY Missing or Changed
+
+**Symptoms:**
+
+- Provider credentials fail to decrypt after a server restart
+- API keys appear as `invalid` in the Settings UI
+- Logs show decryption errors
+
+**Cause:** Orchestra auto-generates a random `ENCRYPTION_KEY` on each startup if one is not set in the environment. This means stored API keys become unreadable after every restart.
+
+**Fix:** Set a persistent `ENCRYPTION_KEY` in `apps/api/.env`:
+
+```bash
+# Generate a secure 64-character hex key
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Add the output to your `.env` file:
+
+```bash
+ENCRYPTION_KEY=abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789
+```
+
+> [!DANGER]
+> If you lose your `ENCRYPTION_KEY`, all stored provider credentials are permanently unrecoverable. You will need to re-enter your API keys. Back up your `.env` file securely.
+
+## Provider Issues
+
+### API Key Invalid
+
+**Error:**
+
+```
+Provider validation failed: 401 Unauthorized
+```
+
+**Cause:** The API key is incorrect, expired, or revoked.
+
+**Fix:**
+
+1. Log in to your provider's dashboard (OpenAI, Anthropic, OpenRouter, or opencode.ai)
+2. Verify the key is active and has not expired
+3. Re-enter the key in **Settings > Providers**
+4. Click **Validate** to confirm
+
+### Rate Limited
+
+**Error:**
+
+```
+Provider rate limited: 429 Too Many Requests
+```
+
+**Cause:** You have exceeded the provider's request quota. This can happen during rapid generation or when multiple pipeline stages run concurrently.
+
+**Fix:**
+
+- Wait 60 seconds and retry — most providers reset rate limits within a minute
+- Switch to a different provider in Settings
+- Use the **opencode-go** provider (free tier, higher rate limits)
+- Orchestra's circuit breaker will automatically skip rate-limited providers after repeated failures
+
+> [!TIP]
+> Orchestra's model router includes fallback chains. If one provider is rate-limited, the router automatically tries the next preferred model in the policy.
+
+### Request Timeout
+
+**Error:**
+
+```
+Provider request timed out after 120000ms
+```
+
+**Cause:** The AI provider took too long to respond. This can happen with:
+
+- Very large prompts (long interview answers)
+- Provider-side overload
+- Network connectivity issues
+
+**Fix:**
+
+- Retry the generation — transient timeouts often resolve on their own
+- Use a faster model (e.g., `gpt-4o-mini` instead of `gpt-4.1`)
+- Check your network connection
+- If using a custom provider, verify the endpoint is reachable
+
+### Validation Fails Repeatedly
+
+**Error:**
+
+```
+Blueprint generation failed: Zod validation error after 3 retries
+```
+
+**Cause:** The AI returned a response that does not match the expected schema. This can happen when:
+
+- The model produces malformed JSON
+- The response structure does not match the blueprint schema
+- The model hallucinates fields or omits required ones
+
+**Fix:**
+
+- Try a different provider — stronger models (e.g., `gpt-4.1`, `claude-sonnet-4`) produce more reliable structured output
+- Orchestra automatically retries up to 3 times with JSON repair
+- If all retries fail, the deterministic fallback produces a structurally valid (but less detailed) blueprint
+
+## Generation Issues
+
+### Blueprint Generation Fails
+
+**Symptoms:** Generation starts but fails at the blueprint stage with an error.
+
+**Possible Causes and Fixes:**
+
+| Cause | Fix |
+|---|---|
+| No provider configured | Add at least one provider in Settings |
+| Provider credential invalid | Re-validate the credential |
+| Provider circuit breaker open | Wait for the circuit to close, or switch providers |
+| Budget exceeded | Restart the server to reset per-session budget |
+| Interview answers too short | Provide more detailed answers — aim for 2-3 sentences per question |
+
+> [!WARNING]
+> If no AI provider is available, Orchestra falls back to deterministic placeholder generation. The resulting blueprint is structurally valid but contains generic, non-specific content.
+
+### JSON Extraction Errors
+
+**Error:**
+
+```
+Failed to extract JSON from AI response
+```
+
+**Cause:** The AI model returned text that could not be parsed as valid JSON. This is most common with:
+
+- Smaller or less capable models
+- Very long responses that get truncated
+- Models that wrap JSON in markdown code fences with extra content
+
+**Fix:**
+
+- Orchestra includes automatic JSON repair that strips markdown fences and extracts the JSON body
+- If repair fails, try a stronger model
+- Check the provider's response for truncation — some models have output token limits
+
+### Zod Validation Failures
+
+**Error:**
+
+```
+ZodError: Invalid blueprint structure
+  - phases[2].tasks[0].title: Required
+  - phases[3].confidence: Expected number, received string
+```
+
+**Cause:** The AI-generated JSON is syntactically valid but does not conform to the blueprint schema.
+
+**Fix:**
+
+- Orchestra retries up to 3 times with the validation error fed back to the model as context
+- If all retries fail, the task is marked as `failed` with the validation error details
+- Switch to a stronger model for more reliable structured output
+
+## Frontend Issues
+
+### Port Conflicts
+
+**Error:**
+
+```
+Error: listen EADDRINUSE: address already in use :::3001
+```
+
+**Cause:** Port 3001 (frontend) or 3000 (API) is already in use by another process.
+
+**Fix:**
+
+```bash
+# Find the process using the port
+# Linux/macOS:
+lsof -i :3001
+
+# Windows (PowerShell):
+Get-NetTCPConnection -LocalPort 3001 | Select-Object OwningProcess
+
+# Kill the process, or use a different port:
+WEB_PORT=3002 pnpm dev
+```
+
+### API URL Misconfiguration
+
+**Symptoms:** Frontend loads but shows "Failed to fetch" or "Network error" for all API calls.
+
+**Cause:** The frontend cannot reach the API server. This happens when:
+
+- The API server is not running
+- `NEXT_PUBLIC_API_URL` points to the wrong address
+- A firewall or proxy is blocking the connection
+
+**Fix:**
+
+1. Verify the API server is running: `curl http://localhost:3000/health`
+2. Check that `NEXT_PUBLIC_API_URL` is set correctly (default: `http://localhost:3000`)
+3. During development, the frontend uses Next.js rewrites to proxy `/api/v1/*` requests — no CORS configuration is needed
+
+> [!NOTE]
+> If you change the API port, update both `PORT` (for the API server) and the Next.js rewrite target in `apps/web/next.config.ts`.
+
+### Theme Not Persisting
+
+**Symptoms:** Theme preference (light/dark) resets on page reload.
+
+**Cause:** The browser's `localStorage` is disabled or cleared between sessions.
+
+**Fix:**
+
+- Ensure your browser allows `localStorage` for `localhost`
+- Clear browser extensions that block storage (privacy extensions, ad blockers)
+- Orchestra stores the theme preference under the key `orchestra-theme` in `localStorage`
+
+## Windows-Specific Issues
+
+### CRLF Line Endings
+
+**Symptoms:** Unexpected test failures or lint errors related to line endings.
+
+**Cause:** Git on Windows defaults to CRLF (`\r\n`) line endings. Orchestra's tooling (ESLint, Prettier, Vitest) handles both CRLF and LF transparently, but some edge cases can cause issues.
+
+**Fix:**
+
+```bash
+# Ensure Git handles line endings correctly
+git config core.autocrlf true
+
+# If issues persist, normalize the repository
+git add . --renormalize
+git commit -m "chore: normalize line endings"
+```
+
+> [!TIP]
+> Orchestra's Prettier configuration uses `"endOfLine": "auto"` to handle both CRLF and LF without errors.
+
+### Path Separators
+
+**Symptoms:** File not found errors or module resolution failures on Windows.
+
+**Cause:** Mixing forward slashes (`/`) and backslashes (`\`) in paths.
+
+**Fix:**
+
+```bash
+# Both work on Windows for environment variables
+SQLITE_DB_PATH=./orchestra.db
+SQLITE_DB_PATH=.\\orchestra.db
+
+# In code, always use forward slashes or path.join()
+# Orchestra handles this internally
+```
+
+### Long Paths
+
+**Error:**
+
+```
+ENAMETOOLONG: name too long
+```
+
+**Cause:** Windows has a default maximum path length of 260 characters. Deep `node_modules` trees can exceed this.
+
+**Fix:**
+
+```powershell
+# Enable long paths in Windows 10+
+# Run PowerShell as Administrator:
+New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" `
+  -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
+
+# Restart your terminal after enabling
+```
+
+> [!NOTE]
+> pnpm's content-addressable store helps mitigate long path issues by using hard links instead of deep nested copies.
+
+## Debugging Tips
+
+### Enable Debug Logging
+
+The single most useful debugging step is increasing the log level:
+
+```bash
+LOG_LEVEL=debug pnpm dev
+```
+
+This outputs detailed internal logs including:
+
+- SQL queries and execution times
+- AI cache hit/miss events
+- Provider API requests and responses
+- Model routing decisions
+- SSE event dispatches
+- Encryption/decryption operations
+
+### Diagnostics Endpoint
+
+The API exposes a health check endpoint that includes system status:
+
+```bash
+# Basic health check
+curl http://localhost:3000/health
+
+# Readiness check with database status
+curl http://localhost:3000/ready
+```
+
+Expected responses:
+
+```json
+// /health
+{ "status": "ok" }
+
+// /ready (SQLite)
+{ "status": "ok", "database": "not_configured" }
+
+// /ready (PostgreSQL)
+{ "status": "ok", "database": "connected" }
+```
+
+### Cache Statistics
+
+To inspect the AI response cache:
+
+```bash
+# Get cache stats
+curl http://localhost:3000/api/v1/cache/stats
+
+# Clear the entire cache
+curl -X POST http://localhost:3000/api/v1/cache/invalidate \
+  -H "Content-Type: application/json" \
+  -d '{"all": true}'
+```
+
+> [!TIP]
+> Clearing the cache forces Orchestra to re-call AI providers for all future generations. This is useful when debugging prompt changes but will incur additional API costs.
+
+### Clean Slate
+
+If you encounter persistent issues that survive restarts, reset everything:
+
+```bash
+# Remove node_modules and database
+pnpm clean:all
+
+# Reinstall dependencies
+pnpm install
+
+# Start fresh
+pnpm dev
+```
+
+> [!WARNING]
+> `pnpm clean:all` deletes `orchestra.db` and all `node_modules` directories. All data — projects, blueprints, provider credentials, and cache entries — will be lost. Back up your database file first if needed.
 
 ## Getting Help
 
-- [GitHub Issues](https://github.com/orchestra/orchestra/issues)
-- [FAQ](./faq)
-- [Configuration](./configuration)
+If this guide does not resolve your issue:
+
+1. **Search existing issues** on [GitHub](https://github.com/orchestra/orchestra/issues) — your problem may already be reported
+2. **Open a new issue** with:
+   - Your Node.js version (`node -v`)
+   - Your pnpm version (`pnpm -v`)
+   - Your operating system and version
+   - The full error message and stack trace
+   - Steps to reproduce the issue
+   - Your `LOG_LEVEL=debug` output (redact any API keys)
+3. **Check the [FAQ](./faq)** for common questions
+4. **Review the [Configuration](./configuration)** reference for environment variable details
+
+> [!NOTE]
+> Never include API keys, encryption keys, or other secrets in GitHub issues. Redact sensitive values before posting.
 
 ## Next Steps
 

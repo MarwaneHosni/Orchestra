@@ -7,17 +7,25 @@ sidebarLabel: Getting Started
 
 # Getting Started
 
-Orchestra is an open-source, local-first tool that uses AI to turn project ideas into structured development plans. This guide will get you from zero to a generated blueprint.
+This guide walks you through cloning Orchestra, starting the development servers, and generating your first AI-powered project plan from scratch.
+
+> [!NOTE]
+> Orchestra runs entirely on your local machine. There is no cloud service to sign up for — you just need Node.js, pnpm, and an AI provider API key.
 
 ## Prerequisites
 
 | Requirement | Version | Notes |
 |---|---|---|
-| Node.js | >= 20.0.0 | LTS recommended |
-| pnpm | >= 9.0.0 | Recommended package manager |
-| Git | any | For cloning |
+| **Node.js** | >= 20.0.0 | LTS recommended. Check with `node --version` |
+| **pnpm** | >= 9.0.0 | Install with `npm install -g pnpm` |
+| **Git** | any | For cloning the repository |
+
+> [!TIP]
+> If you're on Windows, we recommend using PowerShell or Windows Terminal. All scripts are cross-platform and tested on Windows, macOS, and Linux.
 
 ## Quick Start
+
+Clone the repository and install dependencies:
 
 ```bash
 git clone https://github.com/orchestra/orchestra.git
@@ -25,37 +33,194 @@ cd orchestra
 pnpm install
 ```
 
-Start the development server:
+Start the development servers:
 
 ```bash
 pnpm dev
 ```
 
-This starts both the API server and the web frontend. Open `http://localhost:3001` in your browser.
+This launches both the API and the web frontend in parallel:
+
+| Service | URL | Purpose |
+|---|---|---|
+| **Web Frontend** | `http://localhost:3001` | Main application UI |
+| **API Server** | `http://localhost:3000` | REST API + health checks |
+| **API Health** | `http://localhost:3000/health` | Server status check |
+
+> [!WARNING]
+> Make sure ports 3000 and 3001 are available. If port 3000 is in use, set `PORT=3002` in your `.env` file.
+
+### One-Command Bootstrap
+
+Alternatively, use the setup script which handles everything in one step:
+
+```bash
+pnpm setup
+```
+
+This copies `.env.example` to `.env`, starts the database, installs dependencies, and builds all packages.
+
+## Configure a Provider
+
+Before generating a plan, you need at least one AI provider. Orchestra supports 9 providers out of the box.
+
+1. Open `http://localhost:3001` in your browser
+2. Navigate to **Settings** in the sidebar
+3. Click **Add Provider**
+4. Select a provider type and enter your API key:
+
+| Provider | Where to Get a Key | Free Models? |
+|---|---|---|
+| **opencode-go** | [opencode.ai](https://opencode.ai) | Yes — all 10 models are $0 |
+| **openai** | [platform.openai.com](https://platform.openai.com) | No |
+| **anthropic** | [console.anthropic.com](https://console.anthropic.com) | No |
+| **openrouter** | [openrouter.ai](https://openrouter.ai) | Some free models available |
+| **custom** | Your own OpenAI-compatible endpoint | Depends on your setup |
+
+5. Click **Validate** to test the connection
+6. The status should change to `valid`
+
+> [!TIP]
+> New to Orchestra? Start with the **opencode-go** provider — all models are free, so you can explore without spending anything.
 
 ## Create Your First Project
 
-1. Click **"New Project"** on the dashboard
-2. Enter a project name and brief description
-3. Answer the interview questions (Quick Mode: ~16–20 questions)
-4. Click **"Generate Plan"** when finished
-5. Watch the real-time progress as Orchestra builds your blueprint
+### Step 1: Create the Project
+
+1. On the dashboard, click **"New Project"**
+2. Enter a project name (e.g., "TaskFlow")
+3. Write a brief description of your idea (1-3 sentences)
+4. Choose your interview mode:
+
+| Mode | Questions | Best For |
+|---|---|---|
+| **Quick** | 16-20 | Getting a plan fast, well-understood projects |
+| **Advanced** | 24-28 | Deep architectural analysis, complex systems |
+
+### Step 2: Answer the Interview
+
+Orchestra asks targeted questions about your project. The interview is adaptive — your answers influence which follow-up questions are asked.
+
+Example questions you might see:
+
+- *What problem does your project solve?*
+- *Who are the target users?*
+- *What technology stack do you prefer?*
+- *What are the performance requirements?*
+- *Are there any compliance or security constraints?*
+
+> [!TIP]
+> Be specific. "Next.js 15 with App Router and PostgreSQL" is much more useful than "a React app with a database." The more concrete your answers, the better the generated plan.
+
+### Step 3: Generate the Plan
+
+Once you've answered all questions:
+
+1. Click **"Generate Plan"**
+2. Watch the real-time progress bar as Orchestra works through each pipeline stage
+3. When complete, review the generated blueprint
+
+The blueprint includes:
+
+- **Phases** — major project stages mapped to the 12-phase lifecycle
+- **Tasks** — individual work items within each phase
+- **Dependencies** — what must be completed before each task can start
+- **Risks** — identified potential issues with mitigation strategies
+- **Execution Prompts** — detailed instructions for each task, ready for AI coding assistants
 
 ## What Happens Behind the Scenes
 
-1. **Synthesis** — your answers are compiled into a context pack
-2. **Analysis** — deterministic analysis identifies phases, requirements, and constraints
-3. **Blueprint Generation** — AI generates a structured project plan with phases, tasks, and execution prompts
-4. **Task Graph** — phases are decomposed into a dependency-aware task graph
-5. **Prompt Assembly** — per-task execution prompts are built and validated
+When you click "Generate Plan", Orchestra runs a 7-stage pipeline. Each stage streams progress to the UI via Server-Sent Events (SSE).
+
+```
+┌────────────┐   ┌────────────┐   ┌────────────┐   ┌────────────┐
+│ 1.Synthesis │──▶│ 2.Analysis  │──▶│ 3.Blueprint │──▶│ 4.Task Graph│
+└────────────┘   └────────────┘   └────────────┘   └────────────┘
+                                                        │
+┌────────────┐   ┌────────────┐   ┌────────────┐       │
+│ 7.Persist   │◀──│ 6.Summary   │◀──│ 5.Prompts   │◀──────┘
+└────────────┘   └────────────┘   └────────────┘
+```
+
+### Stage Breakdown
+
+| Stage | Name | What It Does |
+|---|---|---|
+| **1** | **Synthesis** | Compiles your interview answers into a structured context pack. Deduplicates, resolves contradictions, and fills gaps. |
+| **2** | **Analysis** | Deterministic analysis identifies project phases, requirements, constraints, technology choices, and potential risks. |
+| **3** | **Blueprint Generation** | AI generates a structured project plan — phases with ordered tasks, each with descriptions, acceptance criteria, and effort estimates. |
+| **4** | **Task Graph** | Phases are decomposed into a dependency-aware DAG. Automatic cycle detection ensures the graph is valid. |
+| **5** | **Prompt Assembly** | Per-task execution prompts are built with full context — requirements, constraints, dependencies, and acceptance criteria baked in. |
+| **6** | **Summary** | A human-readable summary is generated: key decisions, risks, and next steps. |
+| **7** | **Persistence** | The complete plan is saved as an immutable snapshot. Cost and token usage are recorded. |
+
+> [!NOTE]
+> The content-addressable cache means if you regenerate a plan with unchanged inputs, previously computed stages are served from cache — saving time and API costs.
+
+## Interview Modes
+
+### Quick Mode (16-20 questions)
+
+Best for projects you already understand well. Covers:
+
+- Core problem and target users
+- Technology preferences
+- Key features and scope
+- Basic constraints (timeline, budget)
+- High-level architecture preferences
+
+Takes approximately 5-10 minutes to complete.
+
+### Advanced Mode (24-28 questions)
+
+Best for complex systems or when you want thorough analysis. Covers everything in Quick Mode plus:
+
+- Detailed security and compliance requirements
+- Performance targets and scalability expectations
+- Data model and integration requirements
+- Deployment and infrastructure preferences
+- Team structure and skill availability
+- Risk tolerance and mitigation preferences
+
+Takes approximately 15-25 minutes to complete.
+
+> [!TIP]
+> Not sure which to pick? Start with Quick Mode. You can always refine the plan later with additional context.
+
+## Useful Scripts
+
+| Command | Description |
+|---|---|
+| `pnpm dev` | Start API + web in development mode with hot reload |
+| `pnpm build` | Build all packages for production |
+| `pnpm test` | Run the full test suite (Vitest) |
+| `pnpm typecheck` | Type-check all workspace packages |
+| `pnpm lint` | Lint all files (ESLint) |
+| `pnpm format:fix` | Auto-fix formatting (Prettier) |
+| `pnpm clean` | Remove build artifacts from all workspaces |
+
+## Troubleshooting
+
+| Issue | Solution |
+|---|---|
+| `PORT already in use` | Set `PORT=3002` in `.env` at the project root |
+| `pnpm install fails` | Verify Node.js >= 20.0.0 with `node --version` |
+| `API not responding` | Check that `apps/api` started successfully in terminal logs |
+| `Provider validation fails` | Verify your API key is correct and you have network access |
+| `Blank page at localhost:3001` | Wait a few seconds for Next.js to compile, then refresh |
+
+> [!WARNING]
+> If you see `ENCRYPTION_KEY not set` in the logs, Orchestra will generate a temporary key. This means your stored API keys won't persist across restarts. Generate a persistent key with:
+> ```bash
+> node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+> ```
+> Then add it to your `.env` file as `ENCRYPTION_KEY=<value>`.
 
 ## Next Steps
 
-- Read the [Installation Guide](./installation) for detailed setup options
-- Learn about [Usage](./usage) patterns and advanced features
-- Explore the [Architecture](./architecture) documentation
-
-## Getting Help
-
-- Open an issue on [GitHub](https://github.com/orchestra/orchestra/issues)
-- Check the [FAQ](./faq) for common questions
+- [Installation](./installation) — Detailed setup for production and advanced configurations
+- [Core Concepts](./core-concepts) — Understand blueprints, task graphs, providers, and routing
+- [Usage Guide](./usage) — Refining plans, exporting, and advanced patterns
+- [Configuration](./configuration) — All environment variables and provider settings
+- [Architecture](./architecture) — Deep dive into the system design
+- [Custom Providers](./custom-providers) — Connect your own AI backend (Ollama, LM Studio, etc.)

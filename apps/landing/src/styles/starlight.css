@@ -667,3 +667,89 @@ tr:last-child td {
 .doc-content h3:hover .anchor {
   opacity: 1;
 }
+
+/* ============================================
+   CALLOUTS / ADMONITIONS
+   ============================================ */
+
+.doc-content .callout {
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  border-left: 4px solid;
+}
+
+.doc-content .callout-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.doc-content .callout-icon {
+  font-size: 1rem;
+}
+
+.doc-content .callout-body {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.doc-content .callout-body p {
+  margin-bottom: 0.5rem;
+}
+
+.doc-content .callout-body p:last-child {
+  margin-bottom: 0;
+}
+
+.doc-content .callout-note {
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  border-color: var(--color-accent);
+}
+
+.doc-content .callout-note .callout-title {
+  color: var(--color-accent);
+}
+
+.doc-content .callout-tip {
+  background: var(--color-accent-green-dim);
+  border-color: var(--color-accent-green);
+}
+
+.doc-content .callout-tip .callout-title {
+  color: var(--color-accent-green);
+}
+
+.doc-content .callout-warning,
+.doc-content .callout-caution {
+  background: var(--color-accent-amber-dim);
+  border-color: var(--color-accent-amber);
+}
+
+.doc-content .callout-warning .callout-title,
+.doc-content .callout-caution .callout-title {
+  color: var(--color-accent-amber);
+}
+
+.doc-content .callout-danger {
+  background: var(--color-accent-red-dim);
+  border-color: var(--color-accent-red);
+}
+
+.doc-content .callout-danger .callout-title {
+  color: var(--color-accent-red);
+}
+
+.doc-content .callout-info {
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  border-color: var(--color-accent);
+}
+
+.doc-content .callout-info .callout-title {
+  color: var(--color-accent);
+}
