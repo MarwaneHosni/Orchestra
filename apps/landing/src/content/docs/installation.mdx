@@ -34,10 +34,10 @@ This installs all dependencies across the monorepo workspaces:
 
 ```
 orchestra/
-├── apps/api/          # Fastify 5 API server
-├── apps/web/          # Next.js 15 frontend
-├── apps/landing/      # Astro docs site
-└── packages/          # Shared utilities
++--+ --  apps/api/          # Fastify 5 API server
++--+ --  apps/web/          # Next.js 15 frontend
++--+ --  apps/landing/      # Astro docs site
++|-+ --  packages/          # Shared utilities
 ```
 
 > [!TIP]
@@ -45,7 +45,7 @@ orchestra/
 
 ## Environment Variables
 
-Create a `.env` file in `apps/api/` to override defaults. All variables are optional — Orchestra works with sensible defaults out of the box.
+Create a `.env` file in `apps/api/` to override defaults. All variables are optional  -- Orchestra works with sensible defaults out of the box.
 
 ### Core Application
 
@@ -137,13 +137,13 @@ Expected response:
 curl http://localhost:3000/ready
 ```
 
-Expected response (SQLite — default):
+Expected response (SQLite  -- default):
 
 ```json
 { "status": "ok", "database": "not_configured" }
 ```
 
-Expected response (PostgreSQL — if `DATABASE_URL` is set):
+Expected response (PostgreSQL  -- if `DATABASE_URL` is set):
 
 ```json
 { "status": "ok", "database": "connected" }
@@ -162,7 +162,7 @@ Orchestra supports two database backends. SQLite is the default and recommended 
 
 ### SQLite (Default)
 
-Orchestra uses **sql.js** — a pure JavaScript implementation of SQLite compiled from the C source via Emscripten. This has important implications:
+Orchestra uses **sql.js**  -- a pure JavaScript implementation of SQLite compiled from the C source via Emscripten. This has important implications:
 
 | Characteristic | Detail |
 |---|---|
@@ -172,7 +172,7 @@ Orchestra uses **sql.js** — a pure JavaScript implementation of SQLite compile
 | **Foreign keys enforced** | `PRAGMA foreign_keys=ON` is set on every connection |
 | **Busy timeout** | 5-second busy timeout (`PRAGMA busy_timeout=5000`) to handle transient locks |
 
-Schemas auto-create on first startup — no manual migration step is required.
+Schemas auto-create on first startup  -- no manual migration step is required.
 
 ### PostgreSQL (Optional)
 
@@ -229,7 +229,7 @@ SQLITE_DB_PATH=.\\orchestra.db
 | `pnpm: command not found` | pnpm is not installed globally | Run `npm install -g pnpm` |
 | `API not responding` on localhost:3000 | API server failed to start | Check terminal logs for errors in `apps/api` startup |
 | `ECONNREFUSED` from frontend | API server is not running | Ensure `pnpm dev` is running and both services started |
-| `ENCRYPTION_KEY` errors after restart | Key was not persisted | Set a fixed `ENCRYPTION_KEY` in `.env` — see [Encryption](#encryption) |
+| `ENCRYPTION_KEY` errors after restart | Key was not persisted | Set a fixed `ENCRYPTION_KEY` in `.env`  -- see [Encryption](#encryption) |
 | `SQLITE_DB_PATH` permission denied | Directory does not exist or is read-only | Ensure the parent directory exists and is writable |
 | Blank page on localhost:3001 | Frontend failed to compile | Check terminal for Next.js compilation errors |
 
@@ -277,7 +277,7 @@ All API keys are encrypted at rest using AES-256-GCM with the `ENCRYPTION_KEY`.
 
 ## Next Steps
 
-- [Core Concepts](./core-concepts) — Understand blueprints, tasks, and the generation pipeline
-- [Usage Guide](./usage) — Create your first project and generate a plan
-- [Configuration](./configuration) — Full reference for all environment variables
-- [Troubleshooting](./troubleshooting) — Extended troubleshooting guide
+- [Core Concepts](./core-concepts)  -- Understand blueprints, tasks, and the generation pipeline
+- [Usage Guide](./usage)  -- Create your first project and generate a plan
+- [Configuration](./configuration)  -- Full reference for all environment variables
+- [Troubleshooting](./troubleshooting)  -- Extended troubleshooting guide

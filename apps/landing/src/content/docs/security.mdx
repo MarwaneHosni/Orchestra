@@ -18,7 +18,7 @@ Orchestra makes a fundamental architectural choice: **everything runs locally**.
 | Property | Detail |
 |---|---|
 | **No cloud services** | No data is sent to Orchestra-operated servers |
-| **No authentication** | No login, no sessions, no tokens — the API binds to localhost |
+| **No authentication** | No login, no sessions, no tokens  -- the API binds to localhost |
 | **No telemetry** | No usage analytics, no crash reporting, no phone-home |
 | **No external logging** | All logs stay on your filesystem |
 | **Single-user** | Designed for one developer on one machine |
@@ -27,12 +27,12 @@ Orchestra makes a fundamental architectural choice: **everything runs locally**.
 
 | Threat | Mitigation |
 |---|---|
-| Remote attacker accessing API | API binds to `0.0.0.0` by default — use `HOST=127.0.0.1` to restrict |
+| Remote attacker accessing API | API binds to `0.0.0.0` by default  -- use `HOST=127.0.0.1` to restrict |
 | API key theft from database | AES-256-GCM encryption at rest with per-record random IVs |
 | API key leakage via API responses | `stripSecrets()` removes all key material before serialization |
 | Secrets in audit logs | Automatic redaction of sensitive keys and patterns |
 | Runaway API costs | Rate limiting, budget caps, circuit breakers, abuse detection |
-| Data exfiltration | Only configured AI providers receive data — no other outbound connections |
+| Data exfiltration | Only configured AI providers receive data  -- no other outbound connections |
 | SQLite file access | OS-level file permissions; no world-readable defaults |
 
 > [!WARNING]
@@ -57,16 +57,12 @@ Provider API keys are encrypted at rest using **AES-256-GCM**, a NIST-approved a
 
 ```
 ENCRYPTION_KEY (env var)
-        │
-        ▼
+        +        +|
    SHA-256 hash
-        │
-        ▼
-   256-bit key ──┐
-                  ▼
-   Random 16-byte IV → AES-256-GCM Encrypt → ciphertext + auth tag
-                                                    │
-                                                    ▼
+        +        +|
+   256-bit key + -- + -- +                  +|
+   Random 16-byte IV →AES-256-GCM Encrypt →ciphertext + auth tag
+                                                    +                                                    +|
                                           Store as "iv:ciphertext:tag"
                                           in provider_credentials table
 ```
@@ -103,7 +99,7 @@ Every encryption operation generates a fresh 16-byte random IV. This means:
 
 - The same API key encrypted twice produces different ciphertexts
 - IVs are stored alongside the ciphertext (in the `iv:ciphertext:tag` format)
-- IVs are not secret — they are safe to store in plaintext
+- IVs are not secret  -- they are safe to store in plaintext
 
 > [!DANGER]
 > Without the `ENCRYPTION_KEY` environment variable, credentials cannot be decrypted. If you lose this key, all stored API keys are permanently unrecoverable. Back up your `.env` file.
@@ -141,15 +137,15 @@ Every credential retrieval path passes through `stripSecrets()`:
 
 | Operation | Secret Stripped? |
 |---|---|
-| `GET /api/v1/providers` (list all) | Yes — `stripSecrets()` applied to each credential |
-| `GET /api/v1/providers/:id` (get one) | Yes — `stripSecrets()` applied |
-| `POST /api/v1/providers` (create) | Yes — response returns stripped credential |
-| `PUT /api/v1/providers/:id` (update) | Yes — response returns stripped credential |
-| `POST /api/v1/providers/:id/validate` | Yes — validation result does not include the key |
-| Internal decryption (for API calls) | No — the raw key is used in-memory only for AI provider calls |
+| `GET /api/v1/providers` (list all) | Yes  -- `stripSecrets()` applied to each credential |
+| `GET /api/v1/providers/:id` (get one) | Yes  -- `stripSecrets()` applied |
+| `POST /api/v1/providers` (create) | Yes  -- response returns stripped credential |
+| `PUT /api/v1/providers/:id` (update) | Yes  -- response returns stripped credential |
+| `POST /api/v1/providers/:id/validate` | Yes  -- validation result does not include the key |
+| Internal decryption (for API calls) | No  -- the raw key is used in-memory only for AI provider calls |
 
 > [!TIP]
-> The `getRaw()` method exists for internal use only — it returns the full credential including the encrypted key. This method is never exposed through HTTP routes.
+> The `getRaw()` method exists for internal use only  -- it returns the full credential including the encrypted key. This method is never exposed through HTTP routes.
 
 ### Fields Removed
 
@@ -282,21 +278,9 @@ The circuit breaker protects against cascading failures when AI providers are do
 ### Circuit States
 
 ```
-         ┌──────────────────────────────────────┐
-         │                                      │
-         ▼                                      │
-    ┌─────────┐   failures >= threshold   ┌─────────┐
-    │ CLOSED  │ ─────────────────────────▶ │  OPEN   │
-    │(normal) │                            │(blocked)│
-    └─────────┘                            └────┬────┘
-         ▲                                      │
-         │   successes >= threshold             │ timeout expires
-         │                                      ▼
-         │                                ┌───────────┐
-         └─────────────────────────────── │ HALF_OPEN │
-              test request succeeds       │ (testing) │
-                                          └───────────┘
-```
+         +--+ -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- +         +                                     +         +|                                      +    +--+ -- + -- + -- + -- + -- + -- + -- + -- +  failures >= threshold   +--+ -- + -- + -- + -- + -- + -- + -- + -- +    +CLOSED  ++ -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- +- + OPEN   +    +normal) +                           +blocked)+    +|-+ -- + -- + -- + -- + -- + -- + -- + -- +                           +|-+ -- + -- + -- +-+ -- + -- + -- + -- +         +-                                      +         +  successes >= threshold             +timeout expires
+         +                                     +|
+         +                               +--+ -- + -- + -- + -- + -- + -- + -- + -- + -- + -- +         +|-+ -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + --  +HALF_OPEN +              test request succeeds       +(testing) +                                          +|-+ -- + -- + -- + -- + -- + -- + -- + -- + -- + -- +```
 
 | State | Behavior |
 |---|---|
@@ -334,16 +318,11 @@ The abuse detector provides an additional layer of protection beyond rate limiti
 ### Abuse Detection Flow
 
 ```
-Request fails → Record failure timestamp
-                    │
-                    ▼
+Request fails →Record failure timestamp
+                    +                    +|
           Count failures in window
-                    │
-        ┌───────────┴───────────┐
-        │                       │
-    < threshold             >= threshold
-        │                       │
-    Allow request         Block scope for
+                    +        +--+ -- + -- + -- + -- + -- + -- + -- + -- + -- + -- +|+ -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- +        +                      +    < threshold             >= threshold
+        +                      +    Allow request         Block scope for
                           blockDurationMs
 ```
 
@@ -377,7 +356,7 @@ All data in Orchestra is scoped to a project. There is no cross-project data acc
 | Credentials | Global | API keys are shared across projects (scoped by provider, not project) |
 
 > [!NOTE]
-> Provider credentials are intentionally global — a single OpenAI key can be used across multiple projects. All other data is strictly project-scoped.
+> Provider credentials are intentionally global  -- a single OpenAI key can be used across multiple projects. All other data is strictly project-scoped.
 
 ## SQLite File Permissions
 
@@ -401,7 +380,7 @@ chmod 600 apps/api/orchestra.db
 |---|---|
 | `600` (owner read/write) | Only the file owner can read or modify the database |
 | `640` (owner + group) | Acceptable if the group is trusted |
-| `644` or wider | **Not recommended** — other users on the system could read the database |
+| `644` or wider | **Not recommended**  -- other users on the system could read the database |
 
 > [!DANGER]
 > Even with `chmod 600`, the database file contains encrypted API keys. If an attacker gains access to both the database file and the `ENCRYPTION_KEY`, they can decrypt all stored API keys. Protect both.
@@ -411,10 +390,10 @@ chmod 600 apps/api/orchestra.db
 | Data | Encrypted? | Sensitivity |
 |---|---|---|
 | Project metadata | No | Low |
-| Interview answers | No | Medium — contains project ideas and requirements |
+| Interview answers | No | Medium  -- contains project ideas and requirements |
 | Blueprints and tasks | No | Low |
 | Execution prompts | No | Low |
-| API keys (`encrypted_api_key`) | **Yes** — AES-256-GCM | **High** |
+| API keys (`encrypted_api_key`) | **Yes**  -- AES-256-GCM | **High** |
 | Usage records | No | Low |
 | Audit logs | Redacted | Medium |
 
@@ -426,13 +405,13 @@ Orchestra makes **zero outbound network connections** except to AI providers you
 
 | Component | Network Activity |
 |---|---|
-| Database (SQLite) | None — local file |
-| Cache system | None — local SQLite |
-| Audit logger | None — local memory/SQLite |
-| Rate limiter | None — local in-memory |
-| Circuit breaker | None — local in-memory |
+| Database (SQLite) | None  -- local file |
+| Cache system | None  -- local SQLite |
+| Audit logger | None  -- local memory/SQLite |
+| Rate limiter | None  -- local in-memory |
+| Circuit breaker | None  -- local in-memory |
 | Frontend (Next.js) | Calls only the local API server |
-| Landing page (Astro) | Static site — no runtime calls |
+| Landing page (Astro) | Static site  -- no runtime calls |
 
 ### What DOES Make Network Calls
 
@@ -442,7 +421,7 @@ Orchestra makes **zero outbound network connections** except to AI providers you
 | Provider validation | Configured provider endpoint | When clicking "Validate" on a credential |
 
 > [!TIP]
-> For maximum data privacy, configure a local AI model (e.g., Ollama, LM Studio) as a custom provider. This keeps all data on your machine — no data leaves your network at all. See [Custom Providers](./custom-providers) for setup instructions.
+> For maximum data privacy, configure a local AI model (e.g., Ollama, LM Studio) as a custom provider. This keeps all data on your machine  -- no data leaves your network at all. See [Custom Providers](./custom-providers) for setup instructions.
 
 ### Data Sent to AI Providers
 
@@ -528,7 +507,7 @@ For sensitive projects where no data should leave your network:
 
 1. Install a local model server (Ollama, LM Studio, vLLM)
 2. Configure it as a custom OpenAI-compatible provider in Orchestra
-3. All generation runs locally — zero external network calls
+3. All generation runs locally  -- zero external network calls
 
 ### 8. Monitor Audit Logs
 
@@ -540,10 +519,10 @@ curl http://localhost:3000/api/v1/observability
 
 Look for:
 
-- `guardrail.rate_limited` — may indicate a runaway script
-- `guardrail.circuit_open` — may indicate provider issues
-- `guardrail.abuse_blocked` — may indicate misconfigured credentials
-- `generation.failed` — may indicate API key problems
+- `guardrail.rate_limited`  -- may indicate a runaway script
+- `guardrail.circuit_open`  -- may indicate provider issues
+- `guardrail.abuse_blocked`  -- may indicate misconfigured credentials
+- `generation.failed`  -- may indicate API key problems
 
 ### 9. Rotate API Keys Periodically
 
@@ -579,7 +558,7 @@ Use this checklist to verify your Orchestra deployment:
 
 ## Next Steps
 
-- [Configuration](./configuration) — Environment variables and provider setup
-- [Custom Providers](./custom-providers) — Connect local AI models for maximum privacy
-- [Troubleshooting](./troubleshooting) — Common issues and solutions
-- [FAQ](./faq) — Frequently asked questions
+- [Configuration](./configuration)  -- Environment variables and provider setup
+- [Custom Providers](./custom-providers)  -- Connect local AI models for maximum privacy
+- [Troubleshooting](./troubleshooting)  -- Common issues and solutions
+- [FAQ](./faq)  -- Frequently asked questions

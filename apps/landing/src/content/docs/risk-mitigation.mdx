@@ -7,7 +7,7 @@ sidebarLabel: Risk Mitigation
 
 # Risk Mitigation
 
-Orchestra identifies potential risks during the analysis and blueprint generation phases, then provides two distinct mitigation strategies to resolve them. Risk mitigation in Orchestra is **surgical prompt rewriting** — not full blueprint regeneration — preserving the good content while fixing what's broken.
+Orchestra identifies potential risks during the analysis and blueprint generation phases, then provides two distinct mitigation strategies to resolve them. Risk mitigation in Orchestra is **surgical prompt rewriting**  -- not full blueprint regeneration  -- preserving the good content while fixing what's broken.
 
 ## How Risks Are Identified
 
@@ -18,7 +18,7 @@ Risks surface during the **analysis phase** of blueprint generation. The AI revi
 | `id` | `string` | Unique identifier (e.g. `risk-auth-001`) |
 | `description` | `string` | What could go wrong and why |
 
-Risks are derived from interview answers — gaps, ambiguities, or missing requirements in the user's responses become risk items. Common sources include:
+Risks are derived from interview answers  -- gaps, ambiguities, or missing requirements in the user's responses become risk items. Common sources include:
 
 - Missing authentication or authorization requirements
 - No test coverage strategy mentioned
@@ -28,7 +28,7 @@ Risks are derived from interview answers — gaps, ambiguities, or missing requi
 - Compliance or regulatory requirements absent
 
 > [!NOTE]
-> Risks are identified automatically. You don't need to ask for them — they appear in every generated blueprint based on what the interview revealed (or didn't reveal).
+> Risks are identified automatically. You don't need to ask for them  -- they appear in every generated blueprint based on what the interview revealed (or didn't reveal).
 
 ## The Two Mitigation Flows
 
@@ -39,7 +39,7 @@ Orchestra provides two distinct flows for addressing risks. They differ in scope
 This is the **default and recommended** approach. It surgically rewrites only the execution prompts that are affected by the selected risks.
 
 ```
-User selects risks → Keyword extraction → Prompt matching → Surgical AI rewrite → Unchanged-text guard → Summary update → Plan version increment
+User selects risks →Keyword extraction →Prompt matching →Surgical AI rewrite →Unchanged-text guard →Summary update →Plan version increment
 ```
 
 **What it does:**
@@ -47,7 +47,7 @@ User selects risks → Keyword extraction → Prompt matching → Surgical AI re
 1. Extracts keywords from all selected risk descriptions
 2. Finds matching execution prompts via keyword search
 3. Rewrites each matching prompt surgically (temperature 0.3)
-4. AI decides relevance — not a keyword filter
+4. AI decides relevance  -- not a keyword filter
 5. Updates the project summary to reflect resolved risks
 6. Increments the plan version
 
@@ -58,7 +58,7 @@ User selects risks → Keyword extraction → Prompt matching → Surgical AI re
 This is a **full regeneration** flow. The entire blueprint JSON is regenerated with risk context injected into the prompt.
 
 ```
-User selects risks → Risk-to-phase mapping → Full blueprint regeneration → Phase content validation → Deterministic repair (if needed) → Zod validation → Plan version increment
+User selects risks →Risk-to-phase mapping →Full blueprint regeneration →Phase content validation →Deterministic repair (if needed) →Zod validation →Plan version increment
 ```
 
 **What it does:**
@@ -78,7 +78,7 @@ User selects risks → Risk-to-phase mapping → Full blueprint regeneration →
 
 ## Flow A: Surgical Prompt Rewriting (In Detail)
 
-### Step 1 — Keyword Extraction
+### Step 1  -- Keyword Extraction
 
 Keywords are extracted from all selected risk descriptions. A stop-word filter removes common English words (articles, prepositions, generic verbs) to isolate domain-relevant terms.
 
@@ -90,7 +90,7 @@ Keywords: ["user", "authentication", "implemented"]
 > [!TIP]
 > Keywords from ALL selected risks are merged into a single set. This means selecting multiple related risks (e.g. "no auth" + "no test coverage") will match a broader set of prompts in a single pass.
 
-### Step 2 — Prompt Matching
+### Step 2  -- Prompt Matching
 
 Each execution prompt's text is searched for keyword matches. A prompt matches if **any** extracted keyword appears in its text (case-insensitive substring match).
 
@@ -102,7 +102,7 @@ Prompt: "Set up PostgreSQL database schema and migrations"
 Match: NO (no keyword overlap)
 ```
 
-### Step 3 — Surgical AI Rewrite
+### Step 3  -- Surgical AI Rewrite
 
 Each matching prompt is sent to the AI with a system prompt that instructs it to:
 
@@ -116,35 +116,35 @@ The rewrite uses **temperature 0.3** for deterministic, focused output.
 
 ```
 System: "You are editing execution prompts for a software project plan.
-         A RISK was identified — something that was WRONG or MISSING.
+         A RISK was identified  -- something that was WRONG or MISSING.
          The user wants to MITIGATE it. The OPPOSITE of the risk is now the new reality.
 
          Example:
            Risk: 'No user authentication'
-           → RESOLVED: 'Project NOW HAS authentication implemented'
+           →RESOLVED: 'Project NOW HAS authentication implemented'
 
          Your job:
          1. Read the resolved risk(s)
          2. Read the full prompt
          3. DECIDE if this prompt is related
-         4. If YES → rewrite sentences describing the OLD problem
-         5. If NO → return the prompt unchanged"
+         4. If YES →rewrite sentences describing the OLD problem
+         5. If NO →return the prompt unchanged"
 ```
 
-### Step 4 — AI Judges Relevance
+### Step 4  -- AI Judges Relevance
 
-The AI is explicitly told it is the judge of relevance, not a keyword filter. It is instructed to be generous — if the prompt touches security, auth, access control, users, permissions, API keys, data protection, or similar concepts, it IS related.
+The AI is explicitly told it is the judge of relevance, not a keyword filter. It is instructed to be generous  -- if the prompt touches security, auth, access control, users, permissions, API keys, data protection, or similar concepts, it IS related.
 
 > [!NOTE]
 > False positives from keyword search are harmless. If the AI determines a prompt is genuinely unrelated, it returns it unchanged. The unchanged-text guard (Step 5) then discards it.
 
-### Step 5 — The Unchanged-Text Guard
+### Step 5  -- The Unchanged-Text Guard
 
 After the AI returns a rewritten prompt, the system compares it against the original. **If the text is identical (after trimming whitespace), the prompt is not saved.** This means:
 
-- AI says "not related" and returns the original → discarded (no wasted write)
-- AI rewrites but the changes are trivial → discarded
-- AI makes meaningful changes → saved as a new prompt version
+- AI says "not related" and returns the original →discarded (no wasted write)
+- AI rewrites but the changes are trivial →discarded
+- AI makes meaningful changes →saved as a new prompt version
 
 ```typescript
 if (rp.newText.trim() !== existing.promptText.trim()) {
@@ -156,7 +156,7 @@ if (rp.newText.trim() !== existing.promptText.trim()) {
 > [!TIP]
 > The unchanged-text guard is why false positives from keyword search are harmless. Even if a prompt is sent to the AI unnecessarily, the worst case is the AI returns it unchanged and it's discarded.
 
-### Step 6 — Project Summary Update
+### Step 6  -- Project Summary Update
 
 If a project summary exists, the AI rewrites it to reflect the resolved risks. Each of the 6 summary fields is evaluated independently:
 
@@ -171,7 +171,7 @@ If a project summary exists, the AI rewrites it to reflect the resolved risks. E
 
 If no field needs updating, the summary is returned unchanged and discarded.
 
-### Step 7 — Plan Version Increment
+### Step 7  -- Plan Version Increment
 
 Every risk resolution creates a new plan version. Previous versions are preserved and can be compared.
 
@@ -221,8 +221,8 @@ After refinement, a change summary is computed by diffing the old and new bluepr
 | Scope | Only matching prompts | Entire blueprint |
 | Cost | Low (few API calls) | High (full regeneration) |
 | Speed | Fast | Slow |
-| Preserves good content | Yes — untouched prompts stay | Risk of altering unrelated content |
-| Structural changes | No — text-level only | Yes — can restructure phases |
+| Preserves good content | Yes  -- untouched prompts stay | Risk of altering unrelated content |
+| Structural changes | No  -- text-level only | Yes  -- can restructure phases |
 | Best for | Specific, targeted fixes | Architectural risk concerns |
 
 > [!TIP]
@@ -237,8 +237,8 @@ After refinement, a change summary is computed by diffing the old and new bluepr
 **Flow A resolution:**
 - Keywords extracted: `["user", "authentication"]`
 - Matching prompts: API middleware prompt, user management prompt
-- AI rewrites: "Set up basic API routes" → "Implement JWT authentication middleware with RBAC for all API routes"
-- Non-matching prompts: Database schema, frontend layout — returned unchanged, discarded by guard
+- AI rewrites: "Set up basic API routes" →"Implement JWT authentication middleware with RBAC for all API routes"
+- Non-matching prompts: Database schema, frontend layout  -- returned unchanged, discarded by guard
 
 ### Example 2: No Test Coverage
 
@@ -247,7 +247,7 @@ After refinement, a change summary is computed by diffing the old and new bluepr
 **Flow A resolution:**
 - Keywords extracted: `["automated", "test", "coverage", "strategy"]`
 - Matching prompts: CI/CD pipeline prompt, development workflow prompt
-- AI rewrites: "Set up basic CI pipeline" → "Set up CI pipeline with automated test suite including unit, integration, and E2E tests"
+- AI rewrites: "Set up basic CI pipeline" →"Set up CI pipeline with automated test suite including unit, integration, and E2E tests"
 - Project summary: `keyFeatures` gains "Automated test suite with CI integration"
 
 ### Example 3: Slow Database Queries
@@ -257,7 +257,7 @@ After refinement, a change summary is computed by diffing the old and new bluepr
 **Flow A resolution:**
 - Keywords extracted: `["database", "queries", "slow", "data", "grows"]`
 - Matching prompts: Database schema prompt, performance optimization prompt
-- AI rewrites: "Create PostgreSQL schema" → "Create PostgreSQL schema with indexed columns, query optimization, and connection pooling"
+- AI rewrites: "Create PostgreSQL schema" →"Create PostgreSQL schema with indexed columns, query optimization, and connection pooling"
 
 ### Example 4: Structural Architecture Risk
 
@@ -284,16 +284,16 @@ After refinement, a change summary is computed by diffing the old and new bluepr
 > [!DANGER]
 > **Review rewritten prompts.** After surgical resolution, review the changed prompts before proceeding to implementation. The AI may interpret risks differently than you intended.
 
-1. **Select risks selectively** — not every risk needs mitigation. Some can be accepted.
-2. **Use Flow A first** — surgical rewriting preserves good content and is cost-effective.
-3. **Escalate to Flow B only when needed** — structural risks that affect multiple phases may require full regeneration.
-4. **Review the change summary** — it tells you exactly what changed and why.
-5. **Compare plan versions** — use the version history to diff before/after and verify the mitigation had the intended effect.
-6. **Iterate** — you can run multiple rounds of risk resolution. Each round creates a new plan version.
+1. **Select risks selectively**  -- not every risk needs mitigation. Some can be accepted.
+2. **Use Flow A first**  -- surgical rewriting preserves good content and is cost-effective.
+3. **Escalate to Flow B only when needed**  -- structural risks that affect multiple phases may require full regeneration.
+4. **Review the change summary**  -- it tells you exactly what changed and why.
+5. **Compare plan versions**  -- use the version history to diff before/after and verify the mitigation had the intended effect.
+6. **Iterate**  -- you can run multiple rounds of risk resolution. Each round creates a new plan version.
 
 ## Next Steps
 
-- [Core Concepts](./core-concepts) — Understand blueprints, plans, and task graphs
-- [Custom Providers](./custom-providers) — Configure AI providers for risk resolution
-- [Usage Guide](./usage) — General usage patterns
-- [Troubleshooting](./troubleshooting) — When things go wrong
+- [Core Concepts](./core-concepts)  -- Understand blueprints, plans, and task graphs
+- [Custom Providers](./custom-providers)  -- Configure AI providers for risk resolution
+- [Usage Guide](./usage)  -- General usage patterns
+- [Troubleshooting](./troubleshooting)  -- When things go wrong

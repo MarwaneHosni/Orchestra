@@ -11,7 +11,7 @@ sidebarLabel: FAQ
 
 ### What is Orchestra?
 
-Orchestra is an open-source, local-first AI project planning tool. It interviews you about your software idea, analyzes your answers, and generates a structured development plan — complete with phases, tasks, dependencies, risk assessments, and per-task execution prompts for AI coding assistants.
+Orchestra is an open-source, local-first AI project planning tool. It interviews you about your software idea, analyzes your answers, and generates a structured development plan  -- complete with phases, tasks, dependencies, risk assessments, and per-task execution prompts for AI coding assistants.
 
 Think of it as a senior software architect that asks the right questions before you start building, then writes the spec while you listen.
 
@@ -26,10 +26,10 @@ However, AI generation requires an AI provider, and providers have their own pri
 
 | Provider | Cost | Notes |
 |---|---|---|
-| **opencode-go** | **Free** | 10 models at $0.00 — requires API key from opencode.ai |
+| **opencode-go** | **Free** | 10 models at $0.00  -- requires API key from opencode.ai |
 | **OpenRouter** | Varies | Includes free models like `deepseek-v4-flash:free` |
-| **OpenAI** | Per-token | Standard API pricing — no markup from Orchestra |
-| **Anthropic** | Per-token | Standard API pricing — no markup from Orchestra |
+| **OpenAI** | Per-token | Standard API pricing  -- no markup from Orchestra |
+| **Anthropic** | Per-token | Standard API pricing  -- no markup from Orchestra |
 
 > [!TIP]
 > The **opencode-go** provider offers 10 free models. You can run the entire Orchestra generation pipeline at zero cost using this provider alone.
@@ -70,9 +70,9 @@ Cost depends on the provider and model you use. Here are typical ranges for a fu
 | Model Tier | Example Models | Typical Cost |
 |---|---|---|
 | **Free** | opencode-go (all models), `deepseek-v4-flash:free` | **$0.00** |
-| **Cheap** | `gpt-4o-mini`, `claude-3-5-haiku` | $0.005 – $0.02 |
-| **Balanced** | `gpt-4o`, `claude-sonnet-4` | $0.05 – $0.20 |
-| **Strong** | `gpt-4.1`, `claude-sonnet-4` (architecture) | $0.20 – $1.00 |
+| **Cheap** | `gpt-4o-mini`, `claude-3-5-haiku` | $0.005  -- $0.02 |
+| **Balanced** | `gpt-4o`, `claude-sonnet-4` | $0.05  -- $0.20 |
+| **Strong** | `gpt-4.1`, `claude-sonnet-4` (architecture) | $0.20  -- $1.00 |
 
 Orchestra's content-addressable cache means identical inputs are served from cache at zero cost. If you regenerate a plan without changing your interview answers, you pay nothing for cached stages.
 
@@ -83,9 +83,9 @@ Orchestra's content-addressable cache means identical inputs are served from cac
 
 **Not fully.** Orchestra requires an internet connection to call AI providers during generation. However:
 
-- **All data is stored locally** in SQLite — no cloud sync, no accounts
+- **All data is stored locally** in SQLite  -- no cloud sync, no accounts
 - **After generation**, you can view, export, and browse your plans entirely offline
-- **The cache persists** across restarts — cached responses do not require network access
+- **The cache persists** across restarts  -- cached responses do not require network access
 
 A fully offline mode (using local LLMs like Ollama) is on the roadmap but not yet implemented.
 
@@ -123,10 +123,10 @@ See [Installation](./installation) for full database configuration details.
 
 Orchestra has multiple layers of resilience:
 
-1. **Automatic retry** — Each pipeline stage retries up to 3 times with the error fed back to the model
-2. **Fallback chain** — If a provider fails, the router tries the next preferred model in the policy
-3. **Tier downgrade** — If all preferred models fail, the router downgrades to a fallback tier
-4. **Deterministic fallback** — If all AI options are exhausted, Orchestra generates a structurally valid placeholder blueprint
+1. **Automatic retry**  -- Each pipeline stage retries up to 3 times with the error fed back to the model
+2. **Fallback chain**  -- If a provider fails, the router tries the next preferred model in the policy
+3. **Tier downgrade**  -- If all preferred models fail, the router downgrades to a fallback tier
+4. **Deterministic fallback**  -- If all AI options are exhausted, Orchestra generates a structurally valid placeholder blueprint
 
 > [!NOTE]
 > The deterministic fallback produces plans that are correct in structure (all 12 phases, valid task graphs, 7-section prompts) but contain generic content rather than project-specific analysis.
@@ -181,9 +181,9 @@ See [Custom Providers](./custom-providers) for setup instructions.
 
 Orchestra does not have a dedicated CLI binary. However, all functionality is accessible via:
 
-1. **pnpm scripts** — Development and utility commands from the repository root
-2. **REST API** — All operations are available via `curl` or any HTTP client
-3. **Web UI** — The primary interface at `http://localhost:3001`
+1. **pnpm scripts**  -- Development and utility commands from the repository root
+2. **REST API**  -- All operations are available via `curl` or any HTTP client
+3. **Web UI**  -- The primary interface at `http://localhost:3001`
 
 Common API operations:
 
@@ -210,19 +210,19 @@ See the [API Reference](./api-reference) and [CLI Reference](./cli-reference) fo
 
 ### How does risk mitigation work?
 
-When you identify a risk in a generated plan, Orchestra performs **surgical prompt rewriting** — not full regeneration.
+When you identify a risk in a generated plan, Orchestra performs **surgical prompt rewriting**  -- not full regeneration.
 
 The process:
 
-1. **Keyword extraction** — The risk description is tokenized and filtered to extract meaningful keywords
-2. **Prompt matching** — Execution prompts containing those keywords are identified as affected
-3. **Targeted rewrite** — Only the matched prompts are sent to the AI for rewriting
-4. **Summary update** — The project summary is also rewritten to reflect the risk resolution
+1. **Keyword extraction**  -- The risk description is tokenized and filtered to extract meaningful keywords
+2. **Prompt matching**  -- Execution prompts containing those keywords are identified as affected
+3. **Targeted rewrite**  -- Only the matched prompts are sent to the AI for rewriting
+4. **Summary update**  -- The project summary is also rewritten to reflect the risk resolution
 
 Key rules:
 
 - The **opposite** of the risk becomes the new reality
-- Features are **never removed** to eliminate a risk — mitigations are added instead
+- Features are **never removed** to eliminate a risk  -- mitigations are added instead
 - Rewritten prompts must remain structurally valid (all 7 sections intact)
 
 See [Risk Mitigation](./risk-mitigation) for the full workflow.
@@ -233,9 +233,9 @@ See [Risk Mitigation](./risk-mitigation) for the full workflow.
 
 Workarounds:
 
-- **Share exports** — Export your plan as JSON and share it with teammates
-- **Shared database** — Point multiple instances at the same PostgreSQL database (not recommended — no conflict resolution)
-- **Version control** — Commit exported JSON bundles to a shared repository
+- **Share exports**  -- Export your plan as JSON and share it with teammates
+- **Shared database**  -- Point multiple instances at the same PostgreSQL database (not recommended  -- no conflict resolution)
+- **Version control**  -- Commit exported JSON bundles to a shared repository
 
 > [!NOTE]
 > Multi-user collaboration is not on the immediate roadmap. Orchestra's design philosophy prioritizes simplicity and local-first operation over collaborative features.
@@ -261,20 +261,20 @@ The database file is `orchestra.db` by default, configurable via `SQLITE_DB_PATH
 
 ### Does my data leave my computer?
 
-**Only during AI generation.** Your interview answers are sent to the AI provider you select (OpenAI, Anthropic, etc.) as part of the generation prompt. Everything else — project metadata, cached responses, exported plans — stays on your machine.
+**Only during AI generation.** Your interview answers are sent to the AI provider you select (OpenAI, Anthropic, etc.) as part of the generation prompt. Everything else  -- project metadata, cached responses, exported plans  -- stays on your machine.
 
 Orchestra itself sends no telemetry, analytics, or tracking data.
 
 ### What's the difference between a blueprint and a plan?
 
-- **Blueprint** — The AI-generated project document with phases, tasks, risks, and decisions
-- **Plan** — A versioned container for blueprints. Each generation creates a new plan version, preserving the full lineage
+- **Blueprint**  -- The AI-generated project document with phases, tasks, risks, and decisions
+- **Plan**  -- A versioned container for blueprints. Each generation creates a new plan version, preserving the full lineage
 
 You can have multiple plan versions for a single project. Each version is an immutable snapshot.
 
 ### Can Orchestra generate code?
 
-**No.** Orchestra generates **execution prompts** — detailed, structured instructions for AI coding assistants (Cursor, Copilot, Aider, etc.) or human developers. Each prompt contains 7 sections: Objective, Context, Constraints, Expected Output, Validation Criteria, Architectural Alignment, and Agent Tips.
+**No.** Orchestra generates **execution prompts**  -- detailed, structured instructions for AI coding assistants (Cursor, Copilot, Aider, etc.) or human developers. Each prompt contains 7 sections: Objective, Context, Constraints, Expected Output, Validation Criteria, Architectural Alignment, and Agent Tips.
 
 The prompts are designed to be copy-pasted directly into your AI coding tool of choice.
 
@@ -293,6 +293,6 @@ Accuracy depends on three factors:
 
 ## Next Steps
 
-- [Getting Started](./getting-started) — Clone, install, and generate your first plan
-- [Troubleshooting](./troubleshooting) — Common errors and fixes
-- [Configuration](./configuration) — Full environment variable reference
+- [Getting Started](./getting-started)  -- Clone, install, and generate your first plan
+- [Troubleshooting](./troubleshooting)  -- Common errors and fixes
+- [Configuration](./configuration)  -- Full environment variable reference

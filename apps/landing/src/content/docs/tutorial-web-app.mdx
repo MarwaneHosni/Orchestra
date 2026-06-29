@@ -7,11 +7,11 @@ sidebarLabel: Tutorial
 
 # Tutorial: Build a Web App
 
-This tutorial walks you through creating a complete project plan from scratch. By the end, you will have a fully generated blueprint with tasks, execution prompts, and risk mitigation — ready to hand off to an AI coding agent.
+This tutorial walks you through creating a complete project plan from scratch. By the end, you will have a fully generated blueprint with tasks, execution prompts, and risk mitigation  -- ready to hand off to an AI coding agent.
 
 ## What you will build
 
-A project plan for a **real-time collaborative code editor** — think Google Docs for code, with live cursors, multi-language support, and conflict-free editing.
+A project plan for a **real-time collaborative code editor**  -- think Google Docs for code, with live cursors, multi-language support, and conflict-free editing.
 
 > [!NOTE]
 > You do not need to build the actual editor. This tutorial covers the planning process. The output is a structured blueprint you can execute with any AI coding tool.
@@ -77,7 +77,7 @@ concurrent sessions per instance.
 Choose **Advanced** mode for this tutorial. We want comprehensive coverage since this is a complex project with real-time sync, multiple integrations, and strict performance requirements.
 
 > [!TIP]
-> The idea description is 10–5,000 characters. Be as specific as possible — mention your tech stack, performance targets, user count, and any constraints. The AI uses every detail.
+> The idea description is 10 -- ,000 characters. Be as specific as possible  -- mention your tech stack, performance targets, user count, and any constraints. The AI uses every detail.
 
 Click **"Create Project"**. Orchestra creates the project and starts the interview session.
 
@@ -89,7 +89,7 @@ You are now in the interview. Orchestra presents one question at a time, organiz
 
 Each phase begins with an **intro banner** explaining what the phase covers. For example, the ideation phase intro reads:
 
-> *"First, let's understand your project idea — what you're building, who it's for, and what success looks like."*
+> *"First, let's understand your project idea  -- what you're building, who it's for, and what success looks like."*
 
 Click **"Got it"** to dismiss the intro and see the first question.
 
@@ -147,7 +147,7 @@ Orchestra's interview engine adapts as you answer:
 | **Category filtering** | Advanced mode asks critical, high-value, optional, and contextual questions. Quick mode skips optional. |
 | **Phase progression** | Questions flow through 12 phases: ideation, requirements, architecture, security, database, backend, frontend, core-features, ai-systems, testing, deployment, monitoring |
 | **Skip logic** | If you answer "Not sure yet" or give a very short answer, the engine notes the gap and may flag it later |
-| **Optional questions** | Marked `[optional]` — you can click **"Skip"** without penalty |
+| **Optional questions** | Marked `[optional]`  -- you can click **"Skip"** without penalty |
 
 > [!NOTE]
 > Each question shows a **"Why this matters"** hint below the question text. For example, the core-features question explains: *"The most complex feature determines the critical path in the execution plan."* This helps you understand what level of detail to provide.
@@ -166,29 +166,29 @@ When you click **"Generate project plan"**, Orchestra transitions the session to
 
 ```
 Stage 1: Analyzing your answers          (1-2s)
-  └ Building context pack from interview answers
+  +Building context pack from interview answers
 
 Stage 2: Building project analysis        (2-3s)
-  └ Running deterministic analysis on synthesized data
+  +Running deterministic analysis on synthesized data
 
 Stage 3: Generating project plan with AI  (30-60s)
-  └ Calling AI provider to generate blueprint and roadmap
+  +Calling AI provider to generate blueprint and roadmap
 
 Stage 4: Creating roadmap                 (2-5s)
-  └ Generating phase roadmap from blueprint
+  +Generating phase roadmap from blueprint
 
 Stage 5: Decomposing into tasks           (3-8s)
-  └ Breaking phases into executable tasks
+  +Breaking phases into executable tasks
 
 Stage 6: Assembling execution prompts     (10-30s)
-  └ Building per-task execution prompts
+  +Building per-task execution prompts
 
 Stage 7: Generating project summary       (2-5s)
-  └ Synthesizing project overview and key decisions
+  +Synthesizing project overview and key decisions
 ```
 
 > [!WARNING]
-> Stage 3 (blueprint generation) is the longest. If your provider is slow or rate-limited, you may see an `attempt 2` badge appear — Orchestra automatically retries with a fallback model.
+> Stage 3 (blueprint generation) is the longest. If your provider is slow or rate-limited, you may see an `attempt 2` badge appear  -- Orchestra automatically retries with a fallback model.
 
 ### Real-time progress
 
@@ -217,33 +217,33 @@ confidence: 72% | phases: 10 | flags: 3 ambiguity items
 |---|---|
 | **Confidence: 72%** | The AI is fairly confident in the plan based on your answers. Green (>= 60%) is good. |
 | **Phases: 10** | Ten project phases were generated (some phases may be merged if not relevant). |
-| **Flags: 3** | Three ambiguity items were detected — areas where the AI had to make assumptions. |
+| **Flags: 3** | Three ambiguity items were detected  -- areas where the AI had to make assumptions. |
 
 ### Project summary
 
 The project summary section provides:
 
-- **Project overview** — a concise description of what you are building
-- **Key features** — the main capabilities (real-time sync, cursor presence, voice chat, etc.)
-- **Technical constraints** — your stack choices, latency targets, file size limits
-- **Architecture highlights** — notable decisions like CRDT-based sync, Redis pub/sub
-- **Risk summary** — the most significant risks in 1-2 sentences
+- **Project overview**  -- a concise description of what you are building
+- **Key features**  -- the main capabilities (real-time sync, cursor presence, voice chat, etc.)
+- **Technical constraints**  -- your stack choices, latency targets, file size limits
+- **Architecture highlights**  -- notable decisions like CRDT-based sync, Redis pub/sub
+- **Risk summary**  -- the most significant risks in 1-2 sentences
 
 ### Phase progress
 
 Each phase is listed with its status and confidence:
 
 ```
-✓ Ideation & Discovery          [sufficient]    85%
-✓ Requirements Engineering      [sufficient]    78%
-✓ System Architecture           [sufficient]    71%
++Ideation & Discovery          [sufficient]    85%
++Requirements Engineering      [sufficient]    78%
++System Architecture           [sufficient]    71%
 ~ Security Planning             [insufficient]   42%
-✓ Database Design               [sufficient]    68%
-✓ Backend Design                [sufficient]    74%
-✓ Frontend Design               [sufficient]    80%
-✓ Core Features                 [sufficient]    65%
-✓ Testing                       [sufficient]    55%
-✓ Deployment                    [sufficient]    70%
++Database Design               [sufficient]    68%
++Backend Design                [sufficient]    74%
++Frontend Design               [sufficient]    80%
++Core Features                 [sufficient]    65%
++Testing                       [sufficient]    55%
++Deployment                    [sufficient]    70%
 ```
 
 > [!TIP]
@@ -253,25 +253,25 @@ Each phase is listed with its status and confidence:
 
 Scroll down to see:
 
-- **Assumptions** — things the AI inferred (e.g., "Assuming WebSocket reconnection with exponential backoff")
-- **Constraints** — hard limits from your answers (e.g., "Must support files up to 50MB")
+- **Assumptions**  -- things the AI inferred (e.g., "Assuming WebSocket reconnection with exponential backoff")
+- **Constraints**  -- hard limits from your answers (e.g., "Must support files up to 50MB")
 
 ### Risks
 
 The risks section lists potential issues:
 
 ```
-⚠ CRDT library may not handle 50MB files within latency target
-  ◆ source: core-features
++- CRDT library may not handle 50MB files within latency target
+  +source: core-features
 
-⚠ Voice chat adds significant infrastructure complexity
-  ◆ source: ai-systems
++- Voice chat adds significant infrastructure complexity
+  +source: ai-systems
 
-⚠ Auto-scaling to 500 sessions may require custom Redis cluster setup
-  ◆ source: deployment
++- Auto-scaling to 500 sessions may require custom Redis cluster setup
+  +source: deployment
 ```
 
-Leave these for now — you will mitigate them in Step 8.
+Leave these for now  -- you will mitigate them in Step 8.
 
 ## Step 6: Navigate the Task Graph
 
@@ -282,27 +282,27 @@ Click **"[ view task graph ]"** at the bottom of the summary page to open the ta
 Tasks are organized by phase in a timeline view:
 
 ```
-● IDEATION (2)
-  ○ Set up project repository and CI/CD pipeline
-  ○ Define project structure and monorepo configuration
++IDEATION (2)
+  +Set up project repository and CI/CD pipeline
+  +Define project structure and monorepo configuration
 
-● REQUIREMENTS (3)
-  ○ Implement user authentication with OAuth 2.0
-  ○ Build session management and invitation system
-  ○ Create user preferences and settings panel
++REQUIREMENTS (3)
+  +Implement user authentication with OAuth 2.0
+  +Build session management and invitation system
+  +Create user preferences and settings panel
 
-● ARCHITECTURE (4)
-  ○ Configure Next.js 15 App Router with TypeScript
++ARCHITECTURE (4)
+  +Configure Next.js 15 App Router with TypeScript
   ...
 ```
 
 Each task node shows:
 
-- **Status glyph** — `○` pending, `●` blocked, `◉` ready, `✓` complete
-- **Title** — the task description
-- **Type pill** — `ai` for AI-generated tasks, `manual` for human-only tasks
-- **Dependency count** — `+2 deps` or `no deps`
-- **Priority** — `priority: high`
+- **Status glyph**  -- `+- pending, `+- blocked, `++ ready, `+- complete
+- **Title**  -- the task description
+- **Type pill**  -- `ai` for AI-generated tasks, `manual` for human-only tasks
+- **Dependency count**  -- `+2 deps` or `no deps`
+- **Priority**  -- `priority: high`
 
 ### Using keyboard navigation
 
@@ -323,10 +323,10 @@ Press `j` a few times to move through tasks, then press `Enter` to select one.
 With a task selected, the right panel shows:
 
 - **Title** and metadata (phase, type, priority, status)
-- **Dependencies** — clickable list of upstream tasks
-- **Acceptance criteria** — numbered checklist for the task
-- **Blocked by** — tasks that must complete first
-- **Mark as complete** — checkbox to track your progress
+- **Dependencies**  -- clickable list of upstream tasks
+- **Acceptance criteria**  -- numbered checklist for the task
+- **Blocked by**  -- tasks that must complete first
+- **Mark as complete**  -- checkbox to track your progress
 
 > [!TIP]
 > Click any dependency in the "Dependencies" section to jump directly to that task. This is useful for tracing the critical path.
@@ -336,9 +336,9 @@ With a task selected, the right panel shows:
 If you have phases marked `insufficient`, some tasks appear as `pending_input` type. Select one to see a textarea in the detail panel:
 
 ```
-── provide additional input (optional)
++ -- + --  provide additional input (optional)
 
-Describe what's missing for this phase — technologies, requirements,
+Describe what's missing for this phase  -- technologies, requirements,
 constraints, or any detail that would help the AI generate better tasks...
 ```
 
@@ -346,7 +346,7 @@ Write a few sentences of context and click **"[ resolve & regenerate tasks ]"**.
 
 ## Step 7: View Execution Prompts
 
-With a task selected in the task graph, click **"→ view execution prompt"** at the bottom of the detail panel (or press `p` on the keyboard).
+With a task selected in the task graph, click **"→view execution prompt"** at the bottom of the detail panel (or press `p` on the keyboard).
 
 ### The 7-section structure
 
@@ -378,20 +378,20 @@ Click **"[ copy raw ]"** in the prompt header to copy the full prompt as markdow
 ```
 
 > [!TIP]
-> Each prompt is designed to be **self-contained**. You do not need to provide additional context — the prompt includes everything the AI agent needs to implement the task correctly.
+> Each prompt is designed to be **self-contained**. You do not need to provide additional context  -- the prompt includes everything the AI agent needs to implement the task correctly.
 
 ## Step 8: Mitigate Risks
 
-Navigate back to the plan summary page (click **"← Back to plan"** or use the breadcrumb).
+Navigate back to the plan summary page (click **"→Back to plan"** or use the breadcrumb).
 
 ### Select risks to mitigate
 
 Scroll to the **risks** section. Each risk has a checkbox:
 
 ```
-☐ ⚠ CRDT library may not handle 50MB files within latency target
-☐ ⚠ Voice chat adds significant infrastructure complexity
-☐ ⚠ Auto-scaling to 500 sessions may require custom Redis cluster setup
+++- CRDT library may not handle 50MB files within latency target
+++- Voice chat adds significant infrastructure complexity
+++- Auto-scaling to 500 sessions may require custom Redis cluster setup
 ```
 
 Check the risks you want to address. For this tutorial, select all three.
@@ -418,7 +418,7 @@ Orchestra sends the selected risks to the AI, which:
 After mitigation completes, a green banner appears at the top:
 
 ```
-✓ PLAN REFINED
++PLAN REFINED
 Updated 3 phases to address selected risks. Security phase now includes
 CRDT performance benchmarks, voice chat is deferred to Phase 2 with a
 simplified MVP scope, and deployment phase adds Redis cluster configuration
@@ -426,7 +426,7 @@ with auto-scaling policies.
 ```
 
 > [!NOTE]
-> The risks are not deleted — they remain in the risks section for reference. The plan itself is updated to account for them. Scroll through the phases to see the updated content.
+> The risks are not deleted  -- they remain in the risks section for reference. The plan itself is updated to account for them. Scroll through the phases to see the updated content.
 
 You can now return to the task graph to see updated execution prompts that include the mitigation strategies.
 
@@ -436,7 +436,7 @@ Navigate back to the **task graph** view one final time.
 
 ### Export the JSON bundle
 
-Click **"[ ↑ export bundle ]"** in the top-right corner. The browser downloads a file named `prompts-<session-id>.json`.
+Click **"[ →export bundle ]"** in the top-right corner. The browser downloads a file named `prompts-<session-id>.json`.
 
 The bundle contains:
 
@@ -471,12 +471,12 @@ You now have a complete project plan. Here are some ways to use it:
 |---|---|
 | **AI-assisted implementation** | Copy individual prompts from the task graph and paste them into OpenCode, Claude Code, Cursor, or Codex |
 | **Manual implementation** | Use the phase structure and acceptance criteria as a development checklist |
-| **Team coordination** | Share the JSON bundle with your team — each task is self-contained with dependencies clearly mapped |
+| **Team coordination** | Share the JSON bundle with your team  -- each task is self-contained with dependencies clearly mapped |
 | **Iterative refinement** | Return to the interview to add more detail, then regenerate specific phases |
 
 ## Next Steps
 
-- [Usage Guide](./usage) — Advanced patterns and feature reference
-- [Risk Mitigation](./risk-mitigation) — Deep dive into risk handling strategies
-- [Custom Providers](./custom-providers) — Adding your own AI backend
-- [Configuration](./configuration) — Environment variables and advanced settings
+- [Usage Guide](./usage)  -- Advanced patterns and feature reference
+- [Risk Mitigation](./risk-mitigation)  -- Deep dive into risk handling strategies
+- [Custom Providers](./custom-providers)  -- Adding your own AI backend
+- [Configuration](./configuration)  -- Environment variables and advanced settings

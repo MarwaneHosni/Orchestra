@@ -19,7 +19,7 @@ A **project** is the top-level container in Orchestra. Everything lives inside a
 - Execution prompts for each task
 - Cost and usage tracking records
 
-Projects are local and persistent — all data is stored in your SQLite database (`orchestra.db` by default). There is no cloud sync, no authentication, and no multi-user support. Each project is independent.
+Projects are local and persistent  -- all data is stored in your SQLite database (`orchestra.db` by default). There is no cloud sync, no authentication, and no multi-user support. Each project is independent.
 
 > [!NOTE]
 > A project represents a single software product. If you are planning two unrelated applications, create two separate projects.
@@ -53,7 +53,7 @@ The interview is Orchestra's adaptive questionnaire. Instead of asking every pos
 The interview engine includes several intelligent behaviors:
 
 - **Gate dependencies**: Some questions only appear if a prior answer matches an expected value. For example, security questions may be gated on whether the project handles user data.
-- **Inference engine**: Questions marked as `derivable` are never shown to you — the AI infers the answer from your other responses with a confidence level (high, medium, low).
+- **Inference engine**: Questions marked as `derivable` are never shown to you  -- the AI infers the answer from your other responses with a confidence level (high, medium, low).
 - **Contradiction detection**: If your answers conflict (e.g., selecting "API/service only" as platform but describing a complex UI), the engine flags the contradiction with a severity level.
 - **Freeform extraction**: Open-text answers are scanned for implicit requirements, constraints, and suggested follow-up questions.
 
@@ -68,11 +68,11 @@ Every question in the 47-question bank belongs to one of six categories:
 | `contextual` | 4 | Always asked in both modes |
 | `optional` | 8 | Skipped in Quick Mode |
 | `advanced-only` | 5 | Deferred to post-generation refinement in both modes |
-| `derivable` | 11 | Never asked — AI infers from other answers |
+| `derivable` | 11 | Never asked  -- AI infers from other answers |
 
 ## The 12 Lifecycle Phases
 
-Orchestra organizes every project into a fixed sequence of 12 lifecycle phases. This order is encoded in the schema and cannot be reordered by the AI — it represents a proven software delivery sequence.
+Orchestra organizes every project into a fixed sequence of 12 lifecycle phases. This order is encoded in the schema and cannot be reordered by the AI  -- it represents a proven software delivery sequence.
 
 | # | Phase Key | Label | Description |
 |---|---|---|---|
@@ -106,7 +106,7 @@ After the interview, Orchestra runs an analysis pass over all answers. For each 
 
 ## Blueprints
 
-A **blueprint** is the AI-generated plan document. It is the central artifact of Orchestra — everything else (task graphs, execution prompts, risk mitigations) derives from it.
+A **blueprint** is the AI-generated plan document. It is the central artifact of Orchestra  -- everything else (task graphs, execution prompts, risk mitigations) derives from it.
 
 ### Blueprint Structure
 
@@ -148,7 +148,7 @@ A blueprint contains:
 Blueprints are produced by the AI generation pipeline, which runs in 6 stages:
 
 ```
-1. Synthesis → 2. Analysis → 3. Blueprint → 4. Task Graph → 5. Prompt Assembly → 6. Summary
+1. Synthesis →2. Analysis →3. Blueprint →4. Task Graph →5. Prompt Assembly →6. Summary
 ```
 
 | Stage | Description | Output |
@@ -175,13 +175,13 @@ Every task has a type that determines how execution prompts are tailored:
 
 | Type | Description | Prompt Tailoring |
 |---|---|---|
-| `code` | Implementation work — write features, services, components | Emphasizes error handling, SRP, edge cases |
-| `config` | Configuration — environment setup, build tools, infrastructure | Emphasizes env vars, no hardcoded secrets |
-| `test` | Testing — unit, integration, E2E, performance | Emphasizes reproducibility, 80%+ coverage target |
-| `docs` | Documentation — README, API docs, architecture decisions | Standard documentation guidance |
+| `code` | Implementation work  -- write features, services, components | Emphasizes error handling, SRP, edge cases |
+| `config` | Configuration  -- environment setup, build tools, infrastructure | Emphasizes env vars, no hardcoded secrets |
+| `test` | Testing  -- unit, integration, E2E, performance | Emphasizes reproducibility, 80%+ coverage target |
+| `docs` | Documentation  -- README, API docs, architecture decisions | Standard documentation guidance |
 | `review` | Code review, security audit, architecture review | Review checklists and validation criteria |
-| `deploy` | Deployment tasks — CI/CD, infrastructure, releases | Deployment-specific constraints and validation |
-| `pending_input` | Blocked on user input — requires clarification | Skipped in prompt generation until resolved |
+| `deploy` | Deployment tasks  -- CI/CD, infrastructure, releases | Deployment-specific constraints and validation |
+| `pending_input` | Blocked on user input  -- requires clarification | Skipped in prompt generation until resolved |
 | `other` | General tasks that do not fit other categories | Generic guidance |
 
 ### Task Properties
@@ -223,11 +223,11 @@ Every execution prompt is a markdown document with exactly 7 sections, validated
 
 | # | Section | Required | Min Length | Description |
 |---|---|---|---|---|
-| 1 | **Objective** | Yes | 100 chars | What needs to be built — the task verb and title, phase context, acceptance criteria |
+| 1 | **Objective** | Yes | 100 chars | What needs to be built  -- the task verb and title, phase context, acceptance criteria |
 | 2 | **Context** | Yes | 200 chars | Project description, phase goal, predecessor outputs, related tasks |
-| 3 | **Constraints** | Yes | 1+ items | All constraints, assumptions, and risks from the interview — bullet list |
-| 4 | **Expected Output** | Yes | 120 chars | What the execution should produce — numbered implementation steps |
-| 5 | **Validation Criteria** | Yes | 1+ items | Specific, testable acceptance criteria — bullet list |
+| 3 | **Constraints** | Yes | 1+ items | All constraints, assumptions, and risks from the interview  -- bullet list |
+| 4 | **Expected Output** | Yes | 120 chars | What the execution should produce  -- numbered implementation steps |
+| 5 | **Validation Criteria** | Yes | 1+ items | Specific, testable acceptance criteria  -- bullet list |
 | 6 | **Architectural Alignment** | Yes | 100 chars | How this task fits the overall project architecture |
 | 7 | **Agent Tips** | Yes | 1+ items | Security, edge cases, dependency warnings, and common bugs |
 
@@ -243,7 +243,7 @@ After generation (whether AI or deterministic), every prompt is validated:
 If validation fails, the prompt is either auto-repaired (using available phase data) or marked as `failed` with a descriptive error.
 
 > [!TIP]
-> Execution prompts are designed to be copy-pasted directly into AI coding tools like Cursor, Copilot, or Claude. Each prompt is self-contained — it includes all the context needed to complete the task without referencing other prompts.
+> Execution prompts are designed to be copy-pasted directly into AI coding tools like Cursor, Copilot, or Claude. Each prompt is self-contained  -- it includes all the context needed to complete the task without referencing other prompts.
 
 ### Agent Tips Breakdown
 
@@ -268,12 +268,12 @@ Orchestra supports 9 AI providers through a unified abstraction layer. Each prov
 |---|---|---|---|
 | **openai** | GPT-4o, GPT-4o-mini, GPT-4.1 | OpenAI API | Industry standard, broad model range |
 | **anthropic** | Claude Sonnet 4, Claude 3.5 Haiku | Anthropic API | Strong reasoning, long context |
-| **openrouter** | 100+ models via single API | OpenAI-compatible | Aggregator — access many models with one key |
-| **opencode-go** | 10 free models | OpenAI-compatible | All models at $0 — requires key from opencode.ai |
+| **openrouter** | 100+ models via single API | OpenAI-compatible | Aggregator  -- access many models with one key |
+| **opencode-go** | 10 free models | OpenAI-compatible | All models at $0  -- requires key from opencode.ai |
 | **google** | Gemini models | Google AI API | Google Cloud integration |
 | **aws_bedrock** | Claude, Titan, Llama | AWS Bedrock API | Enterprise AWS environments |
 | **azure_openai** | Azure-hosted OpenAI models | Azure OpenAI API | Enterprise Azure deployments |
-| **custom** | Any OpenAI-compatible endpoint | OpenAI-compatible | Your own API — any model, any endpoint |
+| **custom** | Any OpenAI-compatible endpoint | OpenAI-compatible | Your own API  -- any model, any endpoint |
 | **mock** | Deterministic test responses | In-memory | Testing and development without API calls |
 
 ### Provider Lifecycle
@@ -302,9 +302,9 @@ Models are classified into three cost/quality tiers:
 
 | Tier | Description | Example Models |
 |---|---|---|
-| **cheap** | Fast, low-cost — suitable for high-volume, low-complexity tasks | `deepseek-v4-flash`, `gpt-4o-mini`, `claude-3-5-haiku` |
-| **balanced** | Good quality at moderate cost — the default for most tasks | `gpt-4o`, `claude-sonnet-4` |
-| **strong** | Best quality, highest cost — reserved for complex reasoning | `gpt-4.1`, `claude-sonnet-4` (architecture) |
+| **cheap** | Fast, low-cost  -- suitable for high-volume, low-complexity tasks | `deepseek-v4-flash`, `gpt-4o-mini`, `claude-3-5-haiku` |
+| **balanced** | Good quality at moderate cost  -- the default for most tasks | `gpt-4o`, `claude-sonnet-4` |
+| **strong** | Best quality, highest cost  -- reserved for complex reasoning | `gpt-4.1`, `claude-sonnet-4` (architecture) |
 
 ### Per-Task-Type Policies
 
@@ -333,12 +333,12 @@ When a provider fails, Orchestra follows a cascading fallback strategy:
 
 ## AI Response Cache
 
-Orchestra includes a content-addressable cache for AI responses. If the same prompt is sent to the same model with the same parameters, the cached response is returned instantly — no API call, no cost, no latency.
+Orchestra includes a content-addressable cache for AI responses. If the same prompt is sent to the same model with the same parameters, the cached response is returned instantly  -- no API call, no cost, no latency.
 
 ### How It Works
 
 ```
-Request → Build Cache Key → Lookup in SQLite → Hit? Return cached : Call API → Store result
+Request →Build Cache Key →Lookup in SQLite →Hit? Return cached : Call API →Store result
 ```
 
 ### Cache Key Construction
@@ -355,7 +355,7 @@ The cache key is a **SHA-256 hash** computed from a composite of:
 | `provider` | Provider identifier (e.g., `openai`) |
 | `temperature` | Sampling temperature |
 
-This means the cache is **content-addressable** — any change to the prompt, model, or temperature produces a different key.
+This means the cache is **content-addressable**  -- any change to the prompt, model, or temperature produces a different key.
 
 ### Cache Storage
 
@@ -365,20 +365,20 @@ This means the cache is **content-addressable** — any change to the prompt, mo
 | **Key format** | 64-character hex string (SHA-256) |
 | **Stored data** | Response content, model, finish reason, token usage |
 | **Hit tracking** | `hit_count` and `last_accessed_at` columns |
-| **Deduplication** | `cache_key` has a unique index — re-storing overwrites |
+| **Deduplication** | `cache_key` has a unique index  -- re-storing overwrites |
 
 > [!NOTE]
 > The cache persists across restarts because it is stored in SQLite. This means you will not re-pay for the same prompt after restarting Orchestra.
 
 ## Risk Mitigation
 
-When you identify risks in a generated plan, Orchestra does not regenerate the entire blueprint. Instead, it performs **surgical prompt rewriting** — targeted edits to only the affected execution prompts and project summary.
+When you identify risks in a generated plan, Orchestra does not regenerate the entire blueprint. Instead, it performs **surgical prompt rewriting**  -- targeted edits to only the affected execution prompts and project summary.
 
 ### How Surgical Rewriting Works
 
 1. **Keyword extraction**: The risk description is tokenized and filtered (stop words removed) to extract meaningful keywords
 2. **Prompt matching**: Execution prompts containing those keywords are identified as affected
-3. **Targeted rewrite**: Only the matched prompts are sent to the AI for rewriting — unaffected prompts are left untouched
+3. **Targeted rewrite**: Only the matched prompts are sent to the AI for rewriting  -- unaffected prompts are left untouched
 4. **Summary update**: The project summary is also rewritten to reflect the risk resolution
 
 ### Rewrite Rules
@@ -386,8 +386,8 @@ When you identify risks in a generated plan, Orchestra does not regenerate the e
 The AI rewriter follows strict rules:
 
 - The **opposite** of the risk becomes the new reality (e.g., "No authentication" becomes "Authentication is implemented")
-- Only sentences describing the old problem are rewritten — unaffected sentences are preserved
-- Features are **never removed or weakened** to eliminate a risk — mitigations are added instead
+- Only sentences describing the old problem are rewritten  -- unaffected sentences are preserved
+- Features are **never removed or weakened** to eliminate a risk  -- mitigations are added instead
 - Rewritten prompts must remain structurally valid (all 7 sections intact)
 
 > [!WARNING]
@@ -396,9 +396,9 @@ The AI rewriter follows strict rules:
 ### Risk Resolution Flow
 
 ```
-User identifies risk → Extract keywords → Find matching prompts
-    → Rewrite each prompt (AI) → Validate structure → Store updated prompt
-    → Rewrite project summary → Done
+User identifies risk →Extract keywords →Find matching prompts
+    →Rewrite each prompt (AI) →Validate structure →Store updated prompt
+    →Rewrite project summary →Done
 ```
 
 ## Cost Tracking
@@ -446,17 +446,17 @@ Costs are calculated from a centralized pricing table with 19 models across 4 pr
 | opencode-go | qwen3.5-plus | $0.00000 | $0.00000 |
 
 > [!TIP]
-> The **opencode-go** provider offers 10 models at $0.00 — the entire Orchestra generation pipeline can run for free using this provider alone.
+> The **opencode-go** provider offers 10 models at $0.00  -- the entire Orchestra generation pipeline can run for free using this provider alone.
 
 ### Cost Reports
 
 Usage records can be aggregated into reports showing:
 
 - **Total cost** across all generations
-- **Cost by model** — which models consumed the most budget
-- **Cost by task type** — which pipeline stages were most expensive
-- **Cost by provider** — spending breakdown per provider
-- **Total tokens** — prompt, completion, and combined
+- **Cost by model**  -- which models consumed the most budget
+- **Cost by task type**  -- which pipeline stages were most expensive
+- **Cost by provider**  -- spending breakdown per provider
+- **Total tokens**  -- prompt, completion, and combined
 
 ### Guardrails
 
@@ -468,7 +468,7 @@ Orchestra includes guardrails to prevent unexpected costs:
 
 ## Next Steps
 
-- [Architecture](./architecture) — Deep dive into the system internals
-- [Usage Guide](./usage) — Create your first project end-to-end
-- [Risk Mitigation](./risk-mitigation) — Detailed risk management workflows
-- [Custom Providers](./custom-providers) — Connect your own AI backend
+- [Architecture](./architecture)  -- Deep dive into the system internals
+- [Usage Guide](./usage)  -- Create your first project end-to-end
+- [Risk Mitigation](./risk-mitigation)  -- Detailed risk management workflows
+- [Custom Providers](./custom-providers)  -- Connect your own AI backend

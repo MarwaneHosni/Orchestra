@@ -75,7 +75,7 @@ If you are coming from projects that use `better-sqlite3` or other native Node.j
 
 **You do not need any of these for Orchestra.**
 
-Orchestra uses **sql.js** — a pure JavaScript implementation of SQLite compiled from C source via Emscripten. This means:
+Orchestra uses **sql.js**  -- a pure JavaScript implementation of SQLite compiled from C source via Emscripten. This means:
 
 | Not Required | Why |
 |---|---|
@@ -221,7 +221,7 @@ Provider rate limited: 429 Too Many Requests
 
 **Fix:**
 
-- Wait 60 seconds and retry — most providers reset rate limits within a minute
+- Wait 60 seconds and retry  -- most providers reset rate limits within a minute
 - Switch to a different provider in Settings
 - Use the **opencode-go** provider (free tier, higher rate limits)
 - Orchestra's circuit breaker will automatically skip rate-limited providers after repeated failures
@@ -245,7 +245,7 @@ Provider request timed out after 120000ms
 
 **Fix:**
 
-- Retry the generation — transient timeouts often resolve on their own
+- Retry the generation  -- transient timeouts often resolve on their own
 - Use a faster model (e.g., `gpt-4o-mini` instead of `gpt-4.1`)
 - Check your network connection
 - If using a custom provider, verify the endpoint is reachable
@@ -266,7 +266,7 @@ Blueprint generation failed: Zod validation error after 3 retries
 
 **Fix:**
 
-- Try a different provider — stronger models (e.g., `gpt-4.1`, `claude-sonnet-4`) produce more reliable structured output
+- Try a different provider  -- stronger models (e.g., `gpt-4.1`, `claude-sonnet-4`) produce more reliable structured output
 - Orchestra automatically retries up to 3 times with JSON repair
 - If all retries fail, the deterministic fallback produces a structurally valid (but less detailed) blueprint
 
@@ -284,7 +284,7 @@ Blueprint generation failed: Zod validation error after 3 retries
 | Provider credential invalid | Re-validate the credential |
 | Provider circuit breaker open | Wait for the circuit to close, or switch providers |
 | Budget exceeded | Restart the server to reset per-session budget |
-| Interview answers too short | Provide more detailed answers — aim for 2-3 sentences per question |
+| Interview answers too short | Provide more detailed answers  -- aim for 2-3 sentences per question |
 
 > [!WARNING]
 > If no AI provider is available, Orchestra falls back to deterministic placeholder generation. The resulting blueprint is structurally valid but contains generic, non-specific content.
@@ -307,7 +307,7 @@ Failed to extract JSON from AI response
 
 - Orchestra includes automatic JSON repair that strips markdown fences and extracts the JSON body
 - If repair fails, try a stronger model
-- Check the provider's response for truncation — some models have output token limits
+- Check the provider's response for truncation  -- some models have output token limits
 
 ### Zod Validation Failures
 
@@ -367,7 +367,7 @@ WEB_PORT=3002 pnpm dev
 
 1. Verify the API server is running: `curl http://localhost:3000/health`
 2. Check that `NEXT_PUBLIC_API_URL` is set correctly (default: `http://localhost:3000`)
-3. During development, the frontend uses Next.js rewrites to proxy `/api/v1/*` requests — no CORS configuration is needed
+3. During development, the frontend uses Next.js rewrites to proxy `/api/v1/*` requests  -- no CORS configuration is needed
 
 > [!NOTE]
 > If you change the API port, update both `PORT` (for the API server) and the Next.js rewrite target in `apps/web/next.config.ts`.
@@ -524,13 +524,13 @@ pnpm dev
 ```
 
 > [!WARNING]
-> `pnpm clean:all` deletes `orchestra.db` and all `node_modules` directories. All data — projects, blueprints, provider credentials, and cache entries — will be lost. Back up your database file first if needed.
+> `pnpm clean:all` deletes `orchestra.db` and all `node_modules` directories. All data  -- projects, blueprints, provider credentials, and cache entries  -- will be lost. Back up your database file first if needed.
 
 ## Getting Help
 
 If this guide does not resolve your issue:
 
-1. **Search existing issues** on [GitHub](https://github.com/orchestra/orchestra/issues) — your problem may already be reported
+1. **Search existing issues** on [GitHub](https://github.com/orchestra/orchestra/issues)  -- your problem may already be reported
 2. **Open a new issue** with:
    - Your Node.js version (`node -v`)
    - Your pnpm version (`pnpm -v`)
@@ -546,6 +546,6 @@ If this guide does not resolve your issue:
 
 ## Next Steps
 
-- [FAQ](./faq) — Common questions
-- [API Reference](./api-reference) — API endpoints
-- [CLI Reference](./cli-reference) — Command-line usage
+- [FAQ](./faq)  -- Common questions
+- [API Reference](./api-reference)  -- API endpoints
+- [CLI Reference](./cli-reference)  -- Command-line usage

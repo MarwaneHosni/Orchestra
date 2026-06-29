@@ -10,7 +10,7 @@ sidebarLabel: Getting Started
 This guide walks you through cloning Orchestra, starting the development servers, and generating your first AI-powered project plan from scratch.
 
 > [!NOTE]
-> Orchestra runs entirely on your local machine. There is no cloud service to sign up for — you just need Node.js, pnpm, and an AI provider API key.
+> Orchestra runs entirely on your local machine. There is no cloud service to sign up for  -- you just need Node.js, pnpm, and an AI provider API key.
 
 ## Prerequisites
 
@@ -71,7 +71,7 @@ Before generating a plan, you need at least one AI provider. Orchestra supports 
 
 | Provider | Where to Get a Key | Free Models? |
 |---|---|---|
-| **opencode-go** | [opencode.ai](https://opencode.ai) | Yes — all 10 models are $0 |
+| **opencode-go** | [opencode.ai](https://opencode.ai) | Yes  -- all 10 models are $0 |
 | **openai** | [platform.openai.com](https://platform.openai.com) | No |
 | **anthropic** | [console.anthropic.com](https://console.anthropic.com) | No |
 | **openrouter** | [openrouter.ai](https://openrouter.ai) | Some free models available |
@@ -81,7 +81,7 @@ Before generating a plan, you need at least one AI provider. Orchestra supports 
 6. The status should change to `valid`
 
 > [!TIP]
-> New to Orchestra? Start with the **opencode-go** provider — all models are free, so you can explore without spending anything.
+> New to Orchestra? Start with the **opencode-go** provider  -- all models are free, so you can explore without spending anything.
 
 ## Create Your First Project
 
@@ -99,7 +99,7 @@ Before generating a plan, you need at least one AI provider. Orchestra supports 
 
 ### Step 2: Answer the Interview
 
-Orchestra asks targeted questions about your project. The interview is adaptive — your answers influence which follow-up questions are asked.
+Orchestra asks targeted questions about your project. The interview is adaptive  -- your answers influence which follow-up questions are asked.
 
 Example questions you might see:
 
@@ -122,25 +122,18 @@ Once you've answered all questions:
 
 The blueprint includes:
 
-- **Phases** — major project stages mapped to the 12-phase lifecycle
-- **Tasks** — individual work items within each phase
-- **Dependencies** — what must be completed before each task can start
-- **Risks** — identified potential issues with mitigation strategies
-- **Execution Prompts** — detailed instructions for each task, ready for AI coding assistants
+- **Phases**  -- major project stages mapped to the 12-phase lifecycle
+- **Tasks**  -- individual work items within each phase
+- **Dependencies**  -- what must be completed before each task can start
+- **Risks**  -- identified potential issues with mitigation strategies
+- **Execution Prompts**  -- detailed instructions for each task, ready for AI coding assistants
 
 ## What Happens Behind the Scenes
 
 When you click "Generate Plan", Orchestra runs a 7-stage pipeline. Each stage streams progress to the UI via Server-Sent Events (SSE).
 
 ```
-┌────────────┐   ┌────────────┐   ┌────────────┐   ┌────────────┐
-│ 1.Synthesis │──▶│ 2.Analysis  │──▶│ 3.Blueprint │──▶│ 4.Task Graph│
-└────────────┘   └────────────┘   └────────────┘   └────────────┘
-                                                        │
-┌────────────┐   ┌────────────┐   ┌────────────┐       │
-│ 7.Persist   │◀──│ 6.Summary   │◀──│ 5.Prompts   │◀──────┘
-└────────────┘   └────────────┘   └────────────┘
-```
++--+ -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- +  +--+ -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- +  +--+ -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- +  +--+ -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- ++1.Synthesis +--+ -- +-+2.Analysis  +--+ -- +-+3.Blueprint +--+ -- +-+4.Task Graph++|-+ -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- +  +|-+ -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- +  +|-+ -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- +  +|-+ -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- +                                                        ++--+ -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- +  +--+ -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- +  +--+ -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- +      ++7.Persist   +--+ -- + -- +6.Summary   +--+ -- + -- +5.Prompts   +--+ -- + -- + -- + -- + -- + -- ++|-+ -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- +  +|-+ -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- +  +|-+ -- + -- + -- + -- + -- + -- + -- + -- + -- + -- + -- +```
 
 ### Stage Breakdown
 
@@ -148,14 +141,14 @@ When you click "Generate Plan", Orchestra runs a 7-stage pipeline. Each stage st
 |---|---|---|
 | **1** | **Synthesis** | Compiles your interview answers into a structured context pack. Deduplicates, resolves contradictions, and fills gaps. |
 | **2** | **Analysis** | Deterministic analysis identifies project phases, requirements, constraints, technology choices, and potential risks. |
-| **3** | **Blueprint Generation** | AI generates a structured project plan — phases with ordered tasks, each with descriptions, acceptance criteria, and effort estimates. |
+| **3** | **Blueprint Generation** | AI generates a structured project plan  -- phases with ordered tasks, each with descriptions, acceptance criteria, and effort estimates. |
 | **4** | **Task Graph** | Phases are decomposed into a dependency-aware DAG. Automatic cycle detection ensures the graph is valid. |
-| **5** | **Prompt Assembly** | Per-task execution prompts are built with full context — requirements, constraints, dependencies, and acceptance criteria baked in. |
+| **5** | **Prompt Assembly** | Per-task execution prompts are built with full context  -- requirements, constraints, dependencies, and acceptance criteria baked in. |
 | **6** | **Summary** | A human-readable summary is generated: key decisions, risks, and next steps. |
 | **7** | **Persistence** | The complete plan is saved as an immutable snapshot. Cost and token usage are recorded. |
 
 > [!NOTE]
-> The content-addressable cache means if you regenerate a plan with unchanged inputs, previously computed stages are served from cache — saving time and API costs.
+> The content-addressable cache means if you regenerate a plan with unchanged inputs, previously computed stages are served from cache  -- saving time and API costs.
 
 ## Interview Modes
 
@@ -218,9 +211,9 @@ Takes approximately 15-25 minutes to complete.
 
 ## Next Steps
 
-- [Installation](./installation) — Detailed setup for production and advanced configurations
-- [Core Concepts](./core-concepts) — Understand blueprints, task graphs, providers, and routing
-- [Usage Guide](./usage) — Refining plans, exporting, and advanced patterns
-- [Configuration](./configuration) — All environment variables and provider settings
-- [Architecture](./architecture) — Deep dive into the system design
-- [Custom Providers](./custom-providers) — Connect your own AI backend (Ollama, LM Studio, etc.)
+- [Installation](./installation)  -- Detailed setup for production and advanced configurations
+- [Core Concepts](./core-concepts)  -- Understand blueprints, task graphs, providers, and routing
+- [Usage Guide](./usage)  -- Refining plans, exporting, and advanced patterns
+- [Configuration](./configuration)  -- All environment variables and provider settings
+- [Architecture](./architecture)  -- Deep dive into the system design
+- [Custom Providers](./custom-providers)  -- Connect your own AI backend (Ollama, LM Studio, etc.)

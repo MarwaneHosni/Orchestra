@@ -34,9 +34,9 @@ All errors follow a consistent structure:
 |------|-------------|-------------|
 | `NOT_FOUND` | `404` | Requested resource does not exist |
 | `VALIDATION_ERROR` | `400` | Request body or parameters failed validation |
-| `RATE_LIMITED` | `429` | Too many requests — slow down |
+| `RATE_LIMITED` | `429` | Too many requests  -- slow down |
 | `OVER_BUDGET` | `403` | Usage has exceeded the configured budget limit |
-| `CIRCUIT_OPEN` | `503` | Provider circuit breaker is open — service temporarily unavailable |
+| `CIRCUIT_OPEN` | `503` | Provider circuit breaker is open  -- service temporarily unavailable |
 | `INTERNAL_ERROR` | `500` | Unexpected server error |
 
 ---
@@ -605,7 +605,7 @@ GET /api/v1/plans/plan_001/prompts/export?format=markdown
 ```
 Content-Type: text/markdown
 
-# TaskFlow — Execution Plan
+# TaskFlow  -- Execution Plan
 
 ## Task 1: Set up project scaffolding
 ...

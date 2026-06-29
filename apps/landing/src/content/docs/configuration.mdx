@@ -17,11 +17,11 @@ Orchestra is configured through environment variables. All configuration is vali
 | `PORT` | `number` (positive integer) | `3000` | Backend API server port |
 | `HOST` | `string` | `"0.0.0.0"` | Backend API server bind address |
 | `LOG_LEVEL` | `"fatal" \| "error" \| "warn" \| "info" \| "debug" \| "trace" \| "silent"` | `"info"` | Pino logger verbosity level |
-| `DATABASE_URL` | `string` (optional) | — | PostgreSQL connection string. If omitted, SQLite is used |
+| `DATABASE_URL` | `string` (optional) |  -- | PostgreSQL connection string. If omitted, SQLite is used |
 | `SQLITE_DB_PATH` | `string` | `"./orchestra.db"` | Path to the SQLite database file |
-| `ENCRYPTION_KEY` | `string` | — | AES-256-GCM key for encrypting provider API keys at rest |
+| `ENCRYPTION_KEY` | `string` |  -- | AES-256-GCM key for encrypting provider API keys at rest |
 | `WEB_PORT` | `number` | `3001` | Frontend development server port |
-| `NEXT_PUBLIC_API_URL` | `string` | — | Base URL the frontend uses to reach the API |
+| `NEXT_PUBLIC_API_URL` | `string` |  -- | Base URL the frontend uses to reach the API |
 
 > [!NOTE]
 > All variables are validated at startup. Invalid or missing required values cause the process to exit with code `1`.
@@ -56,7 +56,7 @@ Orchestra supports two database backends:
 
 When `DATABASE_URL` is not set, Orchestra uses SQLite via [sql.js](https://sql.js.org/), a pure JavaScript SQLite implementation compiled to WebAssembly.
 
-- **No native compilation required** — works on any platform Node.js supports
+- **No native compilation required**  -- works on any platform Node.js supports
 - **Auto-creates** the database file on first startup if it doesn't exist
 - **File location** controlled by `SQLITE_DB_PATH` (default: `./orchestra.db`)
 
@@ -139,7 +139,7 @@ LOG_LEVEL=info
 # DATABASE_URL=postgresql://user:password@localhost:5432/orchestra
 SQLITE_DB_PATH=./orchestra.db
 
-# Encryption (required — used to encrypt provider API keys at rest)
+# Encryption (required  -- used to encrypt provider API keys at rest)
 ENCRYPTION_KEY=your-secret-encryption-key-here
 
 # Frontend

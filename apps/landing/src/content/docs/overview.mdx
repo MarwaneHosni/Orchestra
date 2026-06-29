@@ -7,10 +7,10 @@ sidebarLabel: Overview
 
 # What is Orchestra?
 
-Orchestra is an open-source, local-first AI project planning tool that transforms vague software ideas into structured, execution-ready development plans. It interviews you about your project, analyzes your answers, and generates a complete blueprint with phases, tasks, dependencies, risk assessments, and per-task AI prompts — all running entirely on your machine.
+Orchestra is an open-source, local-first AI project planning tool that transforms vague software ideas into structured, execution-ready development plans. It interviews you about your project, analyzes your answers, and generates a complete blueprint with phases, tasks, dependencies, risk assessments, and per-task AI prompts -- all running entirely on your machine.
 
 > [!NOTE]
-> Orchestra is not a project management tool or issue tracker. It is a **planning engine** — it produces the structured plan you hand to your team, your AI coding assistant, or yourself before writing a single line of code.
+> Orchestra is not a project management tool or issue tracker. It is a **planning engine** -- it produces the structured plan you hand to your team, your AI coding assistant, or yourself before writing a single line of code.
 
 ## The Problem
 
@@ -18,32 +18,32 @@ Most software projects fail not because of bad code, but because of bad planning
 
 Orchestra solves this by forcing structured thinking early:
 
-- **Vague idea** → targeted interview questions that surface hidden assumptions
-- **Hidden assumptions** → explicit requirements, constraints, and risks
-- **Requirements** → a phased blueprint with dependency-aware tasks
-- **Tasks** → execution prompts ready for AI coding assistants or human developers
+- **Vague idea** -> targeted interview questions that surface hidden assumptions
+- **Hidden assumptions** -> explicit requirements, constraints, and risks
+- **Requirements** -> a phased blueprint with dependency-aware tasks
+- **Tasks** -> execution prompts ready for AI coding assistants or human developers
 
 > [!TIP]
-> Think of Orchestra as a senior architect who asks the right questions before you start building — and writes the spec while you listen.
+> Think of Orchestra as a senior architect who asks the right questions before you start building -- and writes the spec while you listen.
 
 ## How It Works
 
 The end-to-end flow is straightforward:
 
 ```
-┌──────────┐    ┌───────────┐    ┌────────────┐    ┌──────────┐    ┌──────────┐
-│ Interview │───▶│  Analysis  │───▶│  Blueprint  │───▶│   Tasks   │───▶│  Prompts  │
-└──────────┘    └───────────┘    └────────────┘    └──────────┘    └──────────┘
++------------------+    +-------------------+    +------------------+    +----------+    +----------+
+|    Interview     |--->|     Analysis      |--->|    Blueprint     |--->|   Tasks   |--->|  Prompts  |
++------------------+    +-------------------+    +------------------+    +----------+    +----------+
 ```
 
-1. **Interview** — Answer targeted questions about your project (Quick Mode: 16-20 questions, Advanced Mode: 24-28 questions)
-2. **Analysis** — Your answers are synthesized and analyzed to identify phases, requirements, constraints, and risks
-3. **Blueprint** — AI generates a structured project plan with ordered phases and detailed tasks
-4. **Task Graph** — Phases are decomposed into a dependency-aware directed acyclic graph (DAG)
-5. **Prompts** — Each task gets a detailed execution prompt optimized for AI coding assistants
+1. **Interview** -- Answer targeted questions about your project (Quick Mode: 16-20 questions, Advanced Mode: 24-28 questions)
+2. **Analysis** -- Your answers are synthesized and analyzed to identify phases, requirements, constraints, and risks
+3. **Blueprint** -- AI generates a structured project plan with ordered phases and detailed tasks
+4. **Task Graph** -- Phases are decomposed into a dependency-aware directed acyclic graph (DAG)
+5. **Prompts** -- Each task gets a detailed execution prompt optimized for AI coding assistants
 
 > [!NOTE]
-> Every stage streams real-time progress via Server-Sent Events (SSE). You see exactly what Orchestra is doing — no black boxes.
+> Every stage streams real-time progress via Server-Sent Events (SSE). You see exactly what Orchestra is doing -- no black boxes.
 
 ## Architecture
 
@@ -51,15 +51,15 @@ Orchestra is a monorepo built with modern, battle-tested tools:
 
 ```
 orchestra/
-├── apps/
-│   ├── api/          Fastify 5 HTTP API server (port 3000)
-│   ├── web/          Next.js 15 + React 19 frontend (port 3001)
-│   └── landing/      Astro docs & marketing site
-├── packages/
-│   ├── shared/       Shared types, utilities, and domain models
-│   └── config/       Shared configuration helpers
-├── docs/             Architecture decisions and development guides
-└── scripts/          Development helper scripts
+|-- apps/
+|   |-- api/          Fastify 5 HTTP API server (port 3000)
+|   |-- web/          Next.js 15 + React 19 frontend (port 3001)
+|   |-- landing/      Astro docs & marketing site
+|-- packages/
+|   |-- shared/       Shared types, utilities, and domain models
+|   |-- config/       Shared configuration helpers
+|-- docs/             Architecture decisions and development guides
+|-- scripts/          Development helper scripts
 ```
 
 ### Tech Stack
@@ -69,7 +69,7 @@ orchestra/
 | **Frontend** | Next.js 15 + React 19 | App Router, Server Components, streaming |
 | **Styling** | Tailwind CSS v4 | Utility-first, zero-runtime CSS |
 | **API** | Fastify 5 | High-performance Node.js framework with schema-based validation |
-| **Database** | SQLite via sql.js | Pure JavaScript — no native compilation, zero config |
+| **Database** | SQLite via sql.js | Pure JavaScript -- no native compilation, zero config |
 | **ORM** | Drizzle ORM | Type-safe queries, lightweight, migration support |
 | **Validation** | Zod v4 | Runtime type checking and schema validation |
 | **AI Providers** | Pluggable system | OpenAI, Anthropic, OpenRouter, opencode-go, custom |
@@ -89,7 +89,7 @@ orchestra/
 | **9 provider support** | OpenAI, Anthropic, OpenRouter, opencode-go, and custom OpenAI-compatible endpoints. |
 | **Cost tracking** | Per-call token accounting with pricing tables. Know exactly what each generation costs. |
 | **Risk mitigation** | Automatic identification of technical, business, and operational risks with mitigation strategies. |
-| **Content-addressable cache** | Identical inputs produce cached outputs — regenerate without re-paying for unchanged sections. |
+| **Content-addressable cache** | Identical inputs produce cached outputs -- regenerate without re-paying for unchanged sections. |
 | **Dependency-aware tasks** | Task graph is a proper DAG with automatic cycle detection and topological ordering. |
 | **Versioned snapshots** | Every generation creates an immutable snapshot with full lineage tracking. |
 | **Structured diffs** | Compare any two plan versions to see exactly what changed in tasks, prompts, and blueprints. |
@@ -137,24 +137,20 @@ Orchestra maps every project through a fixed software development lifecycle. AI 
 
 Orchestra is designed for local-first use with no network exposure by default:
 
-- **No authentication** — the API binds to localhost. No login, no sessions.
-- **Encrypted credentials** — API keys are encrypted at rest with AES-256-GCM
-- **Audit logging** — all generation events are tracked in an immutable log
-- **Guardrails** — rate limiting, budget caps, and circuit breakers prevent runaway API costs
-- **No telemetry** — nothing leaves your machine unless you configure an AI provider
+- **No authentication** -- the API binds to localhost. No login, no sessions.
+- **Encrypted credentials** -- API keys are encrypted at rest with AES-256-GCM
+- **Audit logging** -- all generation events are tracked in an immutable log
+- **Guardrails** -- rate limiting, budget caps, and circuit breakers prevent runaway API costs
+- **No telemetry** -- nothing leaves your machine unless you configure an AI provider
 
 > [!WARNING]
 > If you expose the API server beyond localhost, you are responsible for adding your own authentication and transport security. Orchestra does not include auth by design.
 
 ## Next Steps
 
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-
-- [Getting Started](./getting-started) — Clone, install, and generate your first plan
-- [Installation](./installation) — Detailed setup for all platforms
-- [Core Concepts](./core-concepts) — Blueprints, tasks, providers, and more
-- [Architecture](./architecture) — Deep dive into the system design
-- [Configuration](./configuration) — Environment variables and provider setup
-- [Usage Guide](./usage) — Advanced patterns and tips
-
-</div>
+- [Getting Started](./getting-started) -- Clone, install, and generate your first plan
+- [Installation](./installation) -- Detailed setup for all platforms
+- [Core Concepts](./core-concepts) -- Blueprints, tasks, providers, and more
+- [Architecture](./architecture) -- Deep dive into the system design
+- [Configuration](./configuration) -- Environment variables and provider setup
+- [Usage Guide](./usage) -- Advanced patterns and tips

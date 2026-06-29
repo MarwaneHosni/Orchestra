@@ -17,10 +17,10 @@ Orchestra supports multiple AI providers through a unified interface. Each provi
 | `anthropic` | `api.anthropic.com/v1` | `x-api-key` header | Claude Sonnet 4, Claude 3.5 Haiku | Available |
 | `openrouter` | `openrouter.ai/api/v1` | `Authorization: Bearer` | All models (100+) | Available |
 | `opencode-go` | `opencode.ai/zen/go/v1` | `Authorization: Bearer` | 10 Go models (free tier) | Available |
-| `google` | — | — | — | Not implemented |
-| `aws_bedrock` | — | — | — | Not implemented |
-| `azure_openai` | — | — | — | Not implemented |
-| `custom` | — | — | — | Not implemented |
+| `google` |  -- |  -- |  -- | Not implemented |
+| `aws_bedrock` |  -- |  -- |  -- | Not implemented |
+| `azure_openai` |  -- |  -- |  -- | Not implemented |
+| `custom` |  -- |  -- |  -- | Not implemented |
 | `mock` | No network | None | `mock-blueprint-v1` | Available (testing) |
 
 > [!NOTE]
@@ -84,7 +84,7 @@ Validate: GET /auth/key + GET /models
 | `deepseek/deepseek-v4-flash:free` | $0.00 | $0.00 |
 
 > [!TIP]
-> OpenRouter is useful when you want access to models from multiple providers through a single API key. Pricing is pass-through (approximate) — actual costs depend on OpenRouter's current rates.
+> OpenRouter is useful when you want access to models from multiple providers through a single API key. Pricing is pass-through (approximate)  -- actual costs depend on OpenRouter's current rates.
 
 ### OpenCode Go
 
@@ -166,13 +166,11 @@ curl -X POST http://localhost:3000/api/v1/provider-credentials/<id>/validate
 ### Credential Lifecycle
 
 ```
-Created → unverified
-         ↓
-    Validate → valid (success)
-             → invalid (bad key)
-             → failed (connection error)
-         ↓
-    Update API key → unverified (re-validates)
+Created →unverified
+         →    Validate →valid (success)
+             →invalid (bad key)
+             →failed (connection error)
+         →    Update API key →unverified (re-validates)
 ```
 
 | Status | Meaning |
@@ -194,10 +192,10 @@ Each provider has a provider-specific validation strategy:
 
 | Provider | Validation Method |
 |---|---|
-| `openai` | `GET /models` — lists available GPT models |
-| `anthropic` | `GET /models` — lists available Claude models |
-| `openrouter` | `GET /auth/key` + `GET /models` — checks key and lists models |
-| `opencode-go` | `POST /chat/completions` — sends "Say OK" test message (30s timeout) |
+| `openai` | `GET /models`  -- lists available GPT models |
+| `anthropic` | `GET /models`  -- lists available Claude models |
+| `openrouter` | `GET /auth/key` + `GET /models`  -- checks key and lists models |
+| `opencode-go` | `POST /chat/completions`  -- sends "Say OK" test message (30s timeout) |
 | `mock` | Always returns `{ valid: true }` |
 
 On success, the credential status is set to `valid` and available models are stored. On failure, the status is set to `invalid` and the error message is recorded.
@@ -267,7 +265,7 @@ Orchestra uses a router to select the best provider and model for each task. The
 If the primary provider fails, the router automatically falls back through a chain:
 
 ```
-Primary selection → Fallback 1 → Fallback 2 → ...
+Primary selection →Fallback 1 →Fallback 2 →...
 ```
 
 Each fallback attempt:
@@ -434,7 +432,7 @@ Tests the stored API key against the provider. Returns the updated credential wi
 
 ## Next Steps
 
-- [Configuration](./configuration) — Environment variables and settings
-- [Security](./security) — Encryption and data handling details
-- [Risk Mitigation](./risk-mitigation) — How providers are used during risk resolution
-- [Troubleshooting](./troubleshooting) — Common provider issues
+- [Configuration](./configuration)  -- Environment variables and settings
+- [Security](./security)  -- Encryption and data handling details
+- [Risk Mitigation](./risk-mitigation)  -- How providers are used during risk resolution
+- [Troubleshooting](./troubleshooting)  -- Common provider issues
