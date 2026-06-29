@@ -2,11 +2,52 @@
 import Layout from '../../layouts/landing.astro';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { Marked } from 'marked';
+
+const SIDEBAR = [
+  {
+    label: 'Start Here',
+    pages: [
+      { label: 'Overview', slug: 'overview' },
+      { label: 'Getting Started', slug: 'getting-started' },
+      { label: 'Installation', slug: 'installation' },
+      { label: 'Core Concepts', slug: 'core-concepts' },
+    ],
+  },
+  {
+    label: 'Guides',
+    pages: [
+      { label: 'Usage', slug: 'usage' },
+      { label: 'Tutorial: Web App', slug: 'tutorial-web-app' },
+      { label: 'Risk Mitigation', slug: 'risk-mitigation' },
+      { label: 'Custom Providers', slug: 'custom-providers' },
+    ],
+  },
+  {
+    label: 'Reference',
+    pages: [
+      { label: 'Configuration', slug: 'configuration' },
+      { label: 'API Reference', slug: 'api-reference' },
+      { label: 'CLI Reference', slug: 'cli-reference' },
+      { label: 'Architecture', slug: 'architecture' },
+      { label: 'Security', slug: 'security' },
+      { label: 'Troubleshooting', slug: 'troubleshooting' },
+      { label: 'FAQ', slug: 'faq' },
+      { label: 'Changelog', slug: 'changelog' },
+    ],
+  },
+  {
+    label: 'Contributing',
+    pages: [
+      { label: 'Contributing', slug: 'contributing' },
+    ],
+  },
+];
+
+const ALL_PAGES = SIDEBAR.flatMap(s => s.pages);
 
 export async function getStaticPaths() {
   const docsDir = join(process.cwd(), 'src', 'content', 'docs');
-  const files = readFileSync;
-  // Use a simple approach: list all .mdx files
   const glob = await import('glob');
   const docs = glob.globSync('*.mdx', { cwd: docsDir });
   return docs.map((file) => {
@@ -22,93 +63,178 @@ const { slug } = Astro.props;
 const docsDir = join(process.cwd(), 'src', 'content', 'docs');
 const content = readFileSync(join(docsDir, `${slug}.mdx`), 'utf8');
 
+// Handle CRLF and LF line endings
+const normalized = content.replace(/\r\n/g, '\n');
+
 // Parse frontmatter
-const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n/);
+const frontmatterMatch = normalized.match(/^---\n([\s\S]*?)\n---\n/);
 let frontmatter = { title: slug, description: '' };
 if (frontmatterMatch) {
   const fm = frontmatterMatch[1];
   const titleMatch = fm.match(/title:\s*(.+)/);
   const descMatch = fm.match(/description:\s*(.+)/);
-  if (titleMatch) frontmatter.title = titleMatch[1].trim();
-  if (descMatch) frontmatter.description = descMatch[1].trim();
+  if (titleMatch) frontmatter.title = titleMatch[1].trim().replace(/^["']|["']$/g, '');
+  if (descMatch) frontmatter.description = descMatch[1].trim().replace(/^["']|["']$/g, '');
 }
 
-// Remove frontmatter for rendering
-const body = content.replace(/^---\n[\s\S]*?\n---\n/, '');
+// Remove frontmatter
+const body = normalized.replace(/^---\n[\s\S]*?\n---\n/, '');
 
-// Convert markdown to HTML
-function markdownToHtml(md) {
-  return md
-    .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-    .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-    .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-    .replace(/^#### (.*$)/gm, '<h4>$1</h4>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-    .replace(/^\| (.+) \|$/gm, (match) => {
-      const cells = match.slice(1, -1).split(' | ').map(c => `<td>${c.trim()}</td>`).join('');
-      return `<tr>${cells}</tr>`;
-    })
-    .replace(/^- (.*$)/gm, '<li>$1</li>')
-    .replace(/^\d+\. (.*$)/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
-    .replace(/\n\n/g, '</p><p>')
-    .replace(/^<p>(.*)<\/p>$/g, '$1');
-}
+// Render markdown with marked
+const tocItems = [];
+const marked = new Marked({ gfm: true });
+marked.use({
+  renderer: {
+    heading(token) {
+      const text = this.parser.parseInline(token.tokens);
+      const rawText = token.raw || text;
+      const id = rawText.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      if (token.depth >= 2) tocItems.push({ level: token.depth, text, id });
+      return `<h${token.depth} id="${id}">${text}</h${token.depth}>\n`;
+    },
+    code(token) {
+      const lang = token.lang || '';
+      const attr = lang ? ` data-language="${lang}"` : '';
+      const escaped = token.text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      return `<pre${attr}><code class="language-${lang || 'text'}">${escaped}</code></pre>\n`;
+    },
+  },
+});
+const html = await marked.parse(body);
 
-const html = markdownToHtml(body);
+// Prev/next navigation
+const currentIdx = ALL_PAGES.findIndex(p => p.slug === slug);
+const prev = currentIdx > 0 ? ALL_PAGES[currentIdx - 1] : null;
+const next = currentIdx < ALL_PAGES.length - 1 ? ALL_PAGES[currentIdx + 1] : null;
 ---
 
 <Layout title={`${frontmatter.title} | Orchestra`} description={frontmatter.description}>
   <div class="mx-auto max-w-5xl px-4 py-8">
     <div class="flex gap-8">
-      <aside class="hidden w-64 shrink-0 lg:block">
-        <nav class="sticky top-20 space-y-6">
-          <div>
-            <h3 class="mb-2 text-xs font-semibold uppercase tracking-wider" style="color: var(--color-text-muted);">Start Here</h3>
-            <ul class="space-y-1">
-              <li><a href="/docs/overview/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Overview</a></li>
-              <li><a href="/docs/getting-started/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Getting Started</a></li>
-              <li><a href="/docs/installation/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Installation</a></li>
-              <li><a href="/docs/core-concepts/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Core Concepts</a></li>
-            </ul>
-          </div>
-          <div>
-            <h3 class="mb-2 text-xs font-semibold uppercase tracking-wider" style="color: var(--color-text-muted);">Guides</h3>
-            <ul class="space-y-1">
-              <li><a href="/docs/usage/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Usage</a></li>
-              <li><a href="/docs/tutorial-web-app/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Tutorial: Web App</a></li>
-              <li><a href="/docs/risk-mitigation/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Risk Mitigation</a></li>
-              <li><a href="/docs/custom-providers/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Custom Providers</a></li>
-            </ul>
-          </div>
-          <div>
-            <h3 class="mb-2 text-xs font-semibold uppercase tracking-wider" style="color: var(--color-text-muted);">Reference</h3>
-            <ul class="space-y-1">
-              <li><a href="/docs/configuration/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Configuration</a></li>
-              <li><a href="/docs/api-reference/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">API Reference</a></li>
-              <li><a href="/docs/cli-reference/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">CLI Reference</a></li>
-              <li><a href="/docs/architecture/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Architecture</a></li>
-              <li><a href="/docs/security/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Security</a></li>
-              <li><a href="/docs/troubleshooting/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Troubleshooting</a></li>
-              <li><a href="/docs/faq/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">FAQ</a></li>
-              <li><a href="/docs/changelog/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Changelog</a></li>
-            </ul>
-          </div>
-          <div>
-            <h3 class="mb-2 text-xs font-semibold uppercase tracking-wider" style="color: var(--color-text-muted);">Contributing</h3>
-            <ul class="space-y-1">
-              <li><a href="/docs/contributing/" class="block px-2 py-1 text-xs" style="color: var(--color-text-secondary);">Contributing</a></li>
-            </ul>
-          </div>
+      <!-- Left sidebar -->
+      <aside class="hidden w-56 shrink-0 lg:block">
+        <nav class="sticky top-20 space-y-5">
+          {
+            SIDEBAR.map(section => (
+              <div>
+                <h3 class="mb-2 text-xs font-semibold uppercase tracking-wider" style="color: var(--color-text-muted);">{section.label}</h3>
+                <ul class="space-y-0.5">
+                  {
+                    section.pages.map(page => {
+                      const isActive = page.slug === slug;
+                      return (
+                        <li>
+                          <a
+                            href={`/docs/${page.slug}/`}
+                            class="sidebar-link block rounded px-2 py-1 text-xs"
+                            style={{
+                              color: isActive ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+                              background: isActive ? 'var(--color-accent-dim)' : 'transparent',
+                              fontWeight: isActive ? 600 : 400,
+                            }}
+                          >{page.label}</a>
+                        </li>
+                      );
+                    })
+                  }
+                </ul>
+              </div>
+            ))
+          }
         </nav>
       </aside>
-      <article class="prose min-w-0 flex-1" style="max-width: none;">
-        <h1 style="color: var(--color-text-primary); font-family: 'JetBrains Mono', monospace;">{frontmatter.title}</h1>
+
+      <!-- Main content -->
+      <article class="min-w-0 flex-1">
+        <!-- Breadcrumb -->
+        <nav class="mb-4 text-xs" style="color: var(--color-text-muted);">
+          <a href="/docs/overview/" class="no-underline" style="color: var(--color-text-muted);">Docs</a>
+          <span class="mx-1.5">/</span>
+          <span style="color: var(--color-text-secondary);">{frontmatter.title}</span>
+        </nav>
+
+        <h1 class="doc-title">{frontmatter.title}</h1>
+
         <div class="doc-content" set:html={html} />
+
+        <!-- Prev/next navigation -->
+        {
+          (prev || next) && (
+            <div class="doc-nav mt-12 flex items-center justify-between border-t pt-6" style="border-color: var(--color-border-subtle);">
+              <div>
+                {prev && (
+                  <a href={`/docs/${prev.slug}/`} class="flex flex-col gap-0.5 no-underline" style="color: var(--color-text-secondary);">
+                    <span class="text-xs" style="color: var(--color-text-muted);">← Previous</span>
+                    <span class="text-sm font-medium" style="color: var(--color-text-primary);">{prev.label}</span>
+                  </a>
+                )}
+              </div>
+              <div class="text-right">
+                {next && (
+                  <a href={`/docs/${next.slug}/`} class="flex flex-col gap-0.5 no-underline" style="color: var(--color-text-secondary);">
+                    <span class="text-xs" style="color: var(--color-text-muted);">Next →</span>
+                    <span class="text-sm font-medium" style="color: var(--color-text-primary);">{next.label}</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          )
+        }
       </article>
+
+      <!-- Right sidebar — Table of Contents -->
+      {
+        tocItems.length >= 2 && (
+          <aside class="hidden w-52 shrink-0 xl:block">
+            <nav class="sticky top-20">
+              <h4 class="mb-3 text-xs font-semibold uppercase tracking-wider" style="color: var(--color-text-muted);">On this page</h4>
+              <ul class="space-y-1">
+                {
+                  tocItems.map(item => (
+                    <li>
+                      <a
+                        href={`#${item.id}`}
+                        class="toc-link block text-xs leading-relaxed no-underline"
+                        style={{
+                          color: 'var(--color-text-muted)',
+                          paddingLeft: item.level === 3 ? '1rem' : '0',
+                        }}
+                      >{item.text}</a>
+                    </li>
+                  ))
+                }
+              </ul>
+            </nav>
+          </aside>
+        )
+      }
     </div>
   </div>
 </Layout>
+
+<style>
+  .doc-title {
+    color: var(--color-text-primary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 1.5rem;
+  }
+
+  .sidebar-link:hover {
+    color: var(--color-text-primary) !important;
+    background: var(--color-bg-hover) !important;
+  }
+
+  .toc-link:hover {
+    color: var(--color-text-secondary) !important;
+  }
+
+  .doc-nav a:hover span:last-child {
+    color: var(--color-accent);
+  }
+</style>

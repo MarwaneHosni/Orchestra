@@ -12,7 +12,8 @@
     "astro": "^5.18.2",
     "@astrojs/starlight": "^0.36.3",
     "@astrojs/sitemap": "^3.3.0",
-    "@tailwindcss/vite": "^4.3.0"
+    "@tailwindcss/vite": "^4.3.0",
+    "marked": "^18.0.5"
   },
   "devDependencies": {
     "tailwindcss": "^4.3.0",
