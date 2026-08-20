@@ -3,8 +3,18 @@
 <h1 align="center">Orchestra</h1>
 
 <p align="center">
-  AI Software Development Orchestrator. Transforms raw ideas into structured, execution-ready plans, 12-phase SDLC blueprints, and dependency-aware task graphs.
+   ⚙️ AI Software Development Orchestrator. Transforms raw ideas into structured, execution-ready plans, 12-phase SDLC blueprints, and dependency-aware task graphs.
 </p>
+
+## What is Orchestra?
+
+Orchestra replaces unstructured AI chat with system-level engineering workflows, turning abstract software ideas into actionable execution plans.
+
+* **12-Phase SDLC Engine:** Structured lifecycle progression from ideation and requirements through architecture, task decomposition, and deployment monitoring.
+* **Dependency-Aware Task Graphing:** Automatically generates actionable task trees with explicit upstream and downstream dependency computation.
+* **Immutable Versioning & Diffs:** Tracks project evolutions through immutable snapshots, allowing side-by-side comparison of blueprints, prompts, and tasks.
+* **Agent-Optimized Exports:** Exports execution plans in Markdown or JSON formatted specifically with explicit constraints and validation for autonomous AI agents.
+* **Modern Monorepo Tech Stack:** Built with TypeScript, Next.js, Fastify, Drizzle ORM, and PostgreSQL. Bring-your-own-key design ensures no provider keys are stored in app data.
 
 ## Repository Structure
 
