@@ -3,7 +3,7 @@
 <h1 align="center">Orchestra</h1>
 
 <p align="center">
-  <em>AI Software Development Orchestrator — transform a raw software idea into a structured, execution-ready development plan.</em>
+  AI Software Development Orchestrator. Transforms raw ideas into structured, execution-ready plans, 12-phase SDLC blueprints, and dependency-aware task graphs.
 </p>
 
 ## Repository Structure
