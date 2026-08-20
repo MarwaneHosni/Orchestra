@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="assets/orchestra.png" alt="Orchestra logo" width="160" />
-</p>
+<img width="1983" height="793" alt="orchestra-logo" src="https://github.com/user-attachments/assets/4e00e158-2952-40fc-a444-7c0d8f4627f2" />
 
 <h1 align="center">Orchestra</h1>
 
