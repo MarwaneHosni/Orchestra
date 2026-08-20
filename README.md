@@ -1,6 +1,12 @@
-# Orchestra
+<p align="center">
+  <img src="assets/orchestra.png" alt="Orchestra logo" width="160" />
+</p>
 
-AI Software Development Orchestrator — transform a raw software idea into a structured, execution-ready development plan.
+<h1 align="center">Orchestra</h1>
+
+<p align="center">
+  <em>AI Software Development Orchestrator — transform a raw software idea into a structured, execution-ready development plan.</em>
+</p>
 
 ## Repository Structure
 
