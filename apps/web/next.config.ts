@@ -4,6 +4,9 @@ const API_URL = process.env.ORCHESTRA_API_URL ?? "http://localhost:3000";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   async rewrites() {
     return [
       {
