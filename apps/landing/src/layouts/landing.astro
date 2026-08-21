@@ -50,7 +50,7 @@ const { title = 'Orchestra — AI-first project planning for developers', descri
       (function() {
         const key = 'orchestra-theme';
         const stored = typeof localStorage !== 'undefined' && localStorage.getItem(key);
-        const theme = stored === 'dark' ? 'dark' : 'light';
+        const theme = stored === 'dark' || stored === 'light' ? stored : 'dark';
         document.documentElement.dataset.theme = theme;
         // Sync with Starlight's key so docs pages stay consistent
         if (typeof localStorage !== 'undefined') {

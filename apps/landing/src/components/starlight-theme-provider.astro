@@ -10,7 +10,7 @@
 		const storedTheme =
 			typeof localStorage !== 'undefined' && localStorage.getItem(key);
 		const theme =
-			storedTheme === 'dark' ? 'dark' : 'light';
+			storedTheme === 'dark' || storedTheme === 'light' ? storedTheme : 'dark';
 		document.documentElement.dataset.theme = theme;
 		// Sync with Starlight's key for any remaining Starlight code
 		if (typeof localStorage !== 'undefined') {
