@@ -20,9 +20,13 @@ import {
 import { saveAnalysisResults } from "../repositories/analysis-repository.js";
 import { createUsageRecord, createInMemoryUsageStore } from "../accounting/index.js";
 import type { TokenUsage } from "../provider/types.js";
-import type { AIProvider, GenerationInput, Message } from "../provider/types.js";
+import type { AIProvider, GenerationInput } from "../provider/types.js";
 import type { ModelSelection, UserPreferences } from "../router/types.js";
-import { validateExecutionPrompt, extractSectionContent, PROMPT_SCHEMA_VERSION } from "../prompt/structural-validator.js";
+import {
+  validateExecutionPrompt,
+  extractSectionContent,
+  PROMPT_SCHEMA_VERSION,
+} from "../prompt/structural-validator.js";
 import { EXECUTION_PROMPT_SECTIONS } from "../prompt/schema.js";
 import type { PromptSection } from "../prompt/types.js";
 import type { TaskContext } from "../prompt/types.js";
@@ -96,7 +100,6 @@ function repairPromptSections(
   const sections = extractSectionsFromMarkdown(aiPrompt);
 
   for (const error of errors) {
-
     switch (error.section) {
       case "objective":
         sections.objective = context.phaseSummary
@@ -121,10 +124,16 @@ function repairPromptSections(
           `Follow the existing project conventions and code style`,
         ];
         if (context.aiAssumptions?.length) {
-          items.push(`Assumptions from interview:`, ...context.aiAssumptions.map((a) => `  - ${a.description}`));
+          items.push(
+            `Assumptions from interview:`,
+            ...context.aiAssumptions.map((a) => `  - ${a.description}`),
+          );
         }
         if (context.aiConstraints?.length) {
-          items.push(`Constraints from interview:`, ...context.aiConstraints.map((c) => `  - ${c.description}`));
+          items.push(
+            `Constraints from interview:`,
+            ...context.aiConstraints.map((c) => `  - ${c.description}`),
+          );
         }
         if (context.aiRisks?.length) {
           items.push(`Risks to mitigate:`, ...context.aiRisks.map((r) => `  - ${r.description}`));
@@ -146,10 +155,12 @@ function repairPromptSections(
       case "validationCriteria":
         sections.validationCriteria = context.task.acceptanceCriteria?.length
           ? context.task.acceptanceCriteria
-          : [`Task "${context.task.title}" is complete and meets requirements`,
-             `Output follows the specified format and conventions`,
-             `All edge cases described in context are handled`,
-             `No regressions introduced to existing functionality`];
+          : [
+              `Task "${context.task.title}" is complete and meets requirements`,
+              `Output follows the specified format and conventions`,
+              `All edge cases described in context are handled`,
+              `No regressions introduced to existing functionality`,
+            ];
         break;
 
       case "architecturalAlignment":
@@ -163,10 +174,20 @@ function repairPromptSections(
 
       case "agentTips": {
         const tips = sections.agentTips;
-        if (tips.security.length === 0) tips.security = ["Validate all inputs and sanitize outputs", "Do not hardcode secrets or credentials"];
-        if (tips.edgeCases.length === 0) tips.edgeCases = ["Consider empty states", "Consider error states", "Consider boundary conditions"];
-        if (tips.dependencyWarnings.length === 0) tips.dependencyWarnings = ["Ensure all imported modules are declared", "Check type definitions match between interfaces"];
-        if (tips.commonBugs.length === 0) tips.commonBugs = ["Off-by-one errors in loops", "Race conditions in async operations"];
+        if (tips.security.length === 0)
+          tips.security = [
+            "Validate all inputs and sanitize outputs",
+            "Do not hardcode secrets or credentials",
+          ];
+        if (tips.edgeCases.length === 0)
+          tips.edgeCases = ["Consider empty states", "Consider error states", "Consider boundary conditions"];
+        if (tips.dependencyWarnings.length === 0)
+          tips.dependencyWarnings = [
+            "Ensure all imported modules are declared",
+            "Check type definitions match between interfaces",
+          ];
+        if (tips.commonBugs.length === 0)
+          tips.commonBugs = ["Off-by-one errors in loops", "Race conditions in async operations"];
         break;
       }
     }
@@ -175,10 +196,17 @@ function repairPromptSections(
   // Ensure agent tips always have content — the AI may write tips without
   // ### sub-headings, leaving the parsed arrays empty after extraction
   const tips = sections.agentTips;
-  if (tips.security.length === 0) tips.security = ["Validate all inputs and sanitize outputs", "Do not hardcode secrets or credentials"];
-  if (tips.edgeCases.length === 0) tips.edgeCases = ["Consider empty states", "Consider error states", "Consider boundary conditions"];
-  if (tips.dependencyWarnings.length === 0) tips.dependencyWarnings = ["Ensure all imported modules are declared", "Check type definitions match between interfaces"];
-  if (tips.commonBugs.length === 0) tips.commonBugs = ["Off-by-one errors in loops", "Race conditions in async operations"];
+  if (tips.security.length === 0)
+    tips.security = ["Validate all inputs and sanitize outputs", "Do not hardcode secrets or credentials"];
+  if (tips.edgeCases.length === 0)
+    tips.edgeCases = ["Consider empty states", "Consider error states", "Consider boundary conditions"];
+  if (tips.dependencyWarnings.length === 0)
+    tips.dependencyWarnings = [
+      "Ensure all imported modules are declared",
+      "Check type definitions match between interfaces",
+    ];
+  if (tips.commonBugs.length === 0)
+    tips.commonBugs = ["Off-by-one errors in loops", "Race conditions in async operations"];
 
   return formatPrompt(sections);
 }
@@ -189,8 +217,22 @@ function repairPromptSections(
  */
 function buildTaskContext(
   task: TaskNode,
-  phaseData: { summary?: string; narrative?: string; status?: string; confidence?: number; keyDecisions?: string[]; executionPrompt?: string } | undefined,
-  blueprint: { assumptions: { description: string }[]; constraints: { description: string }[]; risks: { description: string }[]; overallSummary?: string },
+  phaseData:
+    | {
+        summary?: string;
+        narrative?: string;
+        status?: string;
+        confidence?: number;
+        keyDecisions?: string[];
+        executionPrompt?: string | undefined;
+      }
+    | undefined,
+  blueprint: {
+    assumptions: { description: string }[];
+    constraints: { description: string }[];
+    risks: { description: string }[];
+    overallSummary?: string;
+  },
   projectName: string,
   graph: { tasks: TaskNode[] },
   taskMap: Map<string, TaskNode>,
@@ -239,9 +281,15 @@ function generatePromptFromContext(context: TaskContext): string | null {
       `Task must be completable within ${context.task.estimatedPromptRounds ?? 1} prompt round(s)`,
       `Output must be coherent and independently verifiable`,
       `Follow the existing project conventions and code style`,
-      ...(context.aiAssumptions?.length ? ["", "Assumptions from interview:", ...context.aiAssumptions.map((a) => `  - ${a.description}`)] : []),
-      ...(context.aiConstraints?.length ? ["", "Constraints from interview:", ...context.aiConstraints.map((c) => `  - ${c.description}`)] : []),
-      ...(context.aiRisks?.length ? ["", "Risks to mitigate:", ...context.aiRisks.map((r) => `  - ${r.description}`)] : []),
+      ...(context.aiAssumptions?.length
+        ? ["", "Assumptions from interview:", ...context.aiAssumptions.map((a) => `  - ${a.description}`)]
+        : []),
+      ...(context.aiConstraints?.length
+        ? ["", "Constraints from interview:", ...context.aiConstraints.map((c) => `  - ${c.description}`)]
+        : []),
+      ...(context.aiRisks?.length
+        ? ["", "Risks to mitigate:", ...context.aiRisks.map((r) => `  - ${r.description}`)]
+        : []),
     ],
     expectedOutput: `Complete the following work:\n\n1. ${context.task.title}\n2. Ensure the output meets the acceptance criteria below\n3. If applicable, update or create the relevant files in the project`,
     validationCriteria: context.task.acceptanceCriteria?.length
@@ -254,7 +302,10 @@ function generatePromptFromContext(context: TaskContext): string | null {
     agentTips: {
       security: ["Validate all inputs and sanitize outputs", "Do not hardcode secrets or credentials"],
       edgeCases: ["Consider empty states", "Consider error states", "Consider boundary conditions"],
-      dependencyWarnings: ["Ensure all imported modules are declared", "Check type definitions match between interfaces"],
+      dependencyWarnings: [
+        "Ensure all imported modules are declared",
+        "Check type definitions match between interfaces",
+      ],
       commonBugs: ["Off-by-one errors in loops", "Race conditions in async operations"],
     },
   };
@@ -267,14 +318,8 @@ function generatePromptFromContext(context: TaskContext): string | null {
  * Build a targeted fix prompt asking the AI to correct specific validation errors
  * in its execution prompt markdown. Includes section minimum lengths and structural requirements.
  */
-function buildFixPrompt(
-  aiPrompt: string,
-  errors: StructuralValidationError[],
-  context: TaskContext,
-): string {
-  const errorBullets = errors
-    .map((e) => `- ${e.message}`)
-    .join("\n");
+function buildFixPrompt(aiPrompt: string, errors: StructuralValidationError[], context: TaskContext): string {
+  const errorBullets = errors.map((e) => `- ${e.message}`).join("\n");
 
   // Minimum content length requirements per section
   const SECTION_MINS: Record<string, number> = {};
@@ -326,11 +371,16 @@ function createFixProvider(selection: ModelSelection): AIProvider | undefined {
   if (!apiKey) return undefined;
 
   switch (provider) {
-    case "openai": return new OpenAIProvider(apiKey);
-    case "anthropic": return new AnthropicProvider(apiKey);
-    case "openrouter": return new OpenRouterProvider(apiKey);
-    case "opencode-go": return new OpencodeGoProvider(apiKey);
-    default: return undefined;
+    case "openai":
+      return new OpenAIProvider(apiKey);
+    case "anthropic":
+      return new AnthropicProvider(apiKey);
+    case "openrouter":
+      return new OpenRouterProvider(apiKey);
+    case "opencode-go":
+      return new OpencodeGoProvider(apiKey);
+    default:
+      return undefined;
   }
 }
 
@@ -359,7 +409,10 @@ async function retryPromptWithAI(
     const decision = router.select("prompt_generation", preferences);
     selections = [decision.selection, ...decision.fallbackChain.slice(0, 2)];
   } catch {
-    log.warn({ taskId: context.task.id, phaseType: context.task.phaseType }, "prompt_retry_no_provider_available");
+    log.warn(
+      { taskId: context.task.id, phaseType: context.task.phaseType },
+      "prompt_retry_no_provider_available",
+    );
     return null;
   }
 
@@ -393,13 +446,28 @@ async function retryPromptWithAI(
       if (corrected.length >= 100) {
         const validation = validateExecutionPrompt(corrected);
         if (validation.valid) {
-          log.info({ model: selection.model, provider: selection.provider, taskId: context.task.id, phaseType: context.task.phaseType }, "ai_prompt_retry_success");
+          log.info(
+            {
+              model: selection.model,
+              provider: selection.provider,
+              taskId: context.task.id,
+              phaseType: context.task.phaseType,
+            },
+            "ai_prompt_retry_success",
+          );
           return corrected;
         }
         log.debug({ taskId: context.task.id, errors: validation.errors }, "ai_prompt_retry_still_invalid");
       }
     } catch (err) {
-      log.warn({ err: err instanceof Error ? err.message : err, provider: selection.provider, model: selection.model }, "ai_prompt_retry_provider_error");
+      log.warn(
+        {
+          err: err instanceof Error ? err.message : err,
+          provider: selection.provider,
+          model: selection.model,
+        },
+        "ai_prompt_retry_provider_error",
+      );
     }
   }
 
@@ -421,19 +489,36 @@ export async function generateWithAI(
 
   // Create workflow run
   createWorkflowRun(workflowId, planId);
-  emitProgress(createEvent(workflowId, "started", "synthesis", { totalStages: STAGE_ORDER.length, stages: [...STAGE_ORDER] }));
+  emitProgress(
+    createEvent(workflowId, "started", "synthesis", {
+      totalStages: STAGE_ORDER.length,
+      stages: [...STAGE_ORDER],
+    }),
+  );
 
   // 1. Build analysis from answers
   let analysis: ReturnType<typeof analyzeAnswers>;
   try {
     const pack = buildContextPack(projectId, projectName, sessionId, answers);
     updateWorkflowStep(workflowId, "synthesis", "completed");
-    emitProgress(createEvent(workflowId, "stage_completed", "synthesis", { stageLabel: "Analyzing your answers", attempt: 1, durationMs: 0 }));
+    emitProgress(
+      createEvent(workflowId, "stage_completed", "synthesis", {
+        stageLabel: "Analyzing your answers",
+        attempt: 1,
+        durationMs: 0,
+      }),
+    );
 
     analysis = analyzeAnswers(pack);
     updateWorkflowStep(workflowId, "analysis", "running");
     updateWorkflowStep(workflowId, "analysis", "completed");
-    emitProgress(createEvent(workflowId, "stage_completed", "analysis", { stageLabel: "Building project analysis", attempt: 1, durationMs: 0 }));
+    emitProgress(
+      createEvent(workflowId, "stage_completed", "analysis", {
+        stageLabel: "Building project analysis",
+        attempt: 1,
+        durationMs: 0,
+      }),
+    );
 
     // Persist analysis results
     saveAnalysisResults(planId, analysis);
@@ -451,11 +536,26 @@ export async function generateWithAI(
 
   // 2. Check credentials — no mock fallback
   const store = getCredentialStore();
-  let allCreds = store.list();
-  log.debug({ credentialCount: allCreds.length, providers: allCreds.map((c) => ({ provider: c.provider, status: c.status, id: c.id })) }, "credential_check_start");
+  const allCreds = store.list();
+  log.debug(
+    {
+      credentialCount: allCreds.length,
+      providers: allCreds.map((c) => ({ provider: c.provider, status: c.status, id: c.id })),
+    },
+    "credential_check_start",
+  );
 
-  const hasValidCreds = allCreds.some((c) => c.provider !== "mock" && (c.status === "valid" || c.status === "unverified"));
-  log.debug({ hasValidCreds, credentialCount: allCreds.length, providers: allCreds.map((c) => ({ provider: c.provider, status: c.status })) }, "credential_check_result");
+  const hasValidCreds = allCreds.some(
+    (c) => c.provider !== "mock" && (c.status === "valid" || c.status === "unverified"),
+  );
+  log.debug(
+    {
+      hasValidCreds,
+      credentialCount: allCreds.length,
+      providers: allCreds.map((c) => ({ provider: c.provider, status: c.status })),
+    },
+    "credential_check_result",
+  );
 
   if (!hasValidCreds) {
     log.warn({ credentialCount: allCreds.length }, "no_valid_credentials");
@@ -487,50 +587,91 @@ export async function generateWithAI(
     return undefined;
   });
 
-      // 5. Call AI
-      updateWorkflowStep(workflowId, "blueprint", "running");
-      emitProgress(createEvent(workflowId, "stage_started", "blueprint", { stageLabel: "Generating project plan with AI", attempt: 1 }));
-      emitProgress(createEvent(workflowId, "progress", "blueprint", { detail: "Generating project plan with AI...", elapsed: 0 }));
-      const blueprintStart = Date.now();
-      const heartbeatInterval = setInterval(() => {
-        emitProgress(createEvent(workflowId, "progress", "blueprint", {
-          detail: "Generating project plan with AI...",
-          elapsed: Math.round((Date.now() - blueprintStart) / 1000),
-        }));
-      }, 15000);
-      const result = await aiGen.generate(analysis, planId, planVersion, projectDescription);
-      clearInterval(heartbeatInterval);
+  // 5. Call AI
+  updateWorkflowStep(workflowId, "blueprint", "running");
+  emitProgress(
+    createEvent(workflowId, "stage_started", "blueprint", {
+      stageLabel: "Generating project plan with AI",
+      attempt: 1,
+    }),
+  );
+  emitProgress(
+    createEvent(workflowId, "progress", "blueprint", {
+      detail: "Generating project plan with AI...",
+      elapsed: 0,
+    }),
+  );
+  const blueprintStart = Date.now();
+  const heartbeatInterval = setInterval(() => {
+    emitProgress(
+      createEvent(workflowId, "progress", "blueprint", {
+        detail: "Generating project plan with AI...",
+        elapsed: Math.round((Date.now() - blueprintStart) / 1000),
+      }),
+    );
+  }, 15000);
+  const result = await aiGen.generate(analysis, planId, planVersion, projectDescription);
+  clearInterval(heartbeatInterval);
 
-      if (result.success && result.data) {
-        emitProgress(createEvent(workflowId, "progress", "blueprint", { detail: "Validating blueprint structure...", elapsed: Math.round((Date.now() - blueprintStart) / 1000) }));
-    emitProgress(createEvent(workflowId, "stage_completed", "blueprint", { stageLabel: "Generating project plan with AI", attempt: 1, durationMs: result.durationMs, model: result.model, provider: result.provider }));
+  if (result.success && result.data) {
+    emitProgress(
+      createEvent(workflowId, "progress", "blueprint", {
+        detail: "Validating blueprint structure...",
+        elapsed: Math.round((Date.now() - blueprintStart) / 1000),
+      }),
+    );
+    emitProgress(
+      createEvent(workflowId, "stage_completed", "blueprint", {
+        stageLabel: "Generating project plan with AI",
+        attempt: 1,
+        durationMs: result.durationMs,
+        model: result.model,
+        provider: result.provider,
+      }),
+    );
     updateWorkflowStep(workflowId, "blueprint", "completed");
     const { blueprint } = result.data;
 
     // 6. Generate task graph from AI-authored phases
     updateWorkflowStep(workflowId, "roadmap", "running");
-    emitProgress(createEvent(workflowId, "stage_completed", "roadmap", { stageLabel: "Creating roadmap", attempt: 1, durationMs: 0 }));
+    emitProgress(
+      createEvent(workflowId, "stage_completed", "roadmap", {
+        stageLabel: "Creating roadmap",
+        attempt: 1,
+        durationMs: 0,
+      }),
+    );
     updateWorkflowStep(workflowId, "roadmap", "completed");
 
     const phases: PhaseInput[] = blueprint.phases.map((p) => ({
       phaseType: p.phaseType,
       phaseName: p.phaseName,
-      status: p.status as "sufficient" | "insufficient" | "missing",
+      status:
+        p.status === "ai_augmented" ? "sufficient" : (p.status as "sufficient" | "insufficient" | "missing"),
       confidence: p.confidence,
       summary: p.summary,
       narrative: p.narrative,
       keyDecisions: p.keyDecisions,
-      executionPrompt: p.executionPrompt,
+      ...(p.executionPrompt !== undefined ? { executionPrompt: p.executionPrompt } : {}),
     }));
 
     let graph;
     try {
       updateWorkflowStep(workflowId, "taskGraph", "running");
       graph = generateTasks(planId, planVersion, phases);
-      emitProgress(createEvent(workflowId, "stage_completed", "taskGraph", { stageLabel: "Decomposing into tasks", attempt: 1, durationMs: 0 }));
+      emitProgress(
+        createEvent(workflowId, "stage_completed", "taskGraph", {
+          stageLabel: "Decomposing into tasks",
+          attempt: 1,
+          durationMs: 0,
+        }),
+      );
       updateWorkflowStep(workflowId, "taskGraph", "completed");
     } catch (err) {
-      log.warn({ phaseCount: phases.length, err: err instanceof Error ? err.message : err }, "task_graph_generation_failed");
+      log.warn(
+        { phaseCount: phases.length, err: err instanceof Error ? err.message : err },
+        "task_graph_generation_failed",
+      );
       completeWorkflowRun(
         workflowId,
         "failed",
@@ -555,33 +696,39 @@ export async function generateWithAI(
       preTaskIndex++;
       const phaseData = blueprint.phases.find((p) => p.phaseType === task.phaseType);
       const aiPrompt = phaseData?.executionPrompt;
-      emitProgress(createEvent(workflowId, "progress", "promptGen", {
-        detail: "Validating execution prompt...",
-        elapsed: Math.round((Date.now() - promptGenStart) / 1000),
-        subtask: `${preTaskIndex} of ${totalPreTasks}`,
-        progress: Math.round((preTaskIndex / totalPreTasks) * 100),
-      }));
+      emitProgress(
+        createEvent(workflowId, "progress", "promptGen", {
+          detail: "Validating execution prompt...",
+          elapsed: Math.round((Date.now() - promptGenStart) / 1000),
+          subtask: `${preTaskIndex} of ${totalPreTasks}`,
+          progress: Math.round((preTaskIndex / totalPreTasks) * 100),
+        }),
+      );
       if (aiPrompt && aiPrompt.length >= 500) {
         const validation = validateExecutionPrompt(aiPrompt);
         if (!validation.valid) {
-          emitProgress(createEvent(workflowId, "progress", "promptGen", {
-            detail: "Fixing validation errors — attempt 1 of 2",
-            elapsed: Math.round((Date.now() - promptGenStart) / 1000),
-            subtask: `${preTaskIndex} of ${totalPreTasks}`,
-            progress: Math.round((preTaskIndex / totalPreTasks) * 100),
-          }));
+          emitProgress(
+            createEvent(workflowId, "progress", "promptGen", {
+              detail: "Fixing validation errors — attempt 1 of 2",
+              elapsed: Math.round((Date.now() - promptGenStart) / 1000),
+              subtask: `${preTaskIndex} of ${totalPreTasks}`,
+              progress: Math.round((preTaskIndex / totalPreTasks) * 100),
+            }),
+          );
           const context = buildTaskContext(task, phaseData, blueprint, projectName, graph, taskMap);
           const fix = await retryPromptWithAI(aiPrompt, validation.errors, context, router);
           if (fix) {
             promptFixes.set(task.id, fix);
           } else {
             log.warn({ taskId: task.id, phaseType: task.phaseType }, "prompt_retry_attempt_2");
-            emitProgress(createEvent(workflowId, "progress", "promptGen", {
-              detail: "Fixing validation errors — attempt 2 of 2",
-              elapsed: Math.round((Date.now() - promptGenStart) / 1000),
-              subtask: `${preTaskIndex} of ${totalPreTasks}`,
-              progress: Math.round((preTaskIndex / totalPreTasks) * 100),
-            }));
+            emitProgress(
+              createEvent(workflowId, "progress", "promptGen", {
+                detail: "Fixing validation errors — attempt 2 of 2",
+                elapsed: Math.round((Date.now() - promptGenStart) / 1000),
+                subtask: `${preTaskIndex} of ${totalPreTasks}`,
+                progress: Math.round((preTaskIndex / totalPreTasks) * 100),
+              }),
+            );
             const fix2 = await retryPromptWithAI(aiPrompt, validation.errors, context, router, true);
             promptFixes.set(task.id, fix2);
           }
@@ -604,7 +751,15 @@ export async function generateWithAI(
 
           if (aiPrompt) {
             withAiPrompt++;
-            log.debug({ taskId: task.id, phaseType: task.phaseType, promptLength: aiPrompt.length, preview: aiPrompt.slice(0, 80) }, "ai_execution_prompt_found");
+            log.debug(
+              {
+                taskId: task.id,
+                phaseType: task.phaseType,
+                promptLength: aiPrompt.length,
+                preview: aiPrompt.slice(0, 80),
+              },
+              "ai_execution_prompt_found",
+            );
           } else {
             log.warn({ taskId: task.id, phaseType: task.phaseType }, "no_ai_execution_prompt");
           }
@@ -629,7 +784,10 @@ export async function generateWithAI(
               getPromptStore().save(artifact);
             } else {
               const context = buildTaskContext(task, phaseData, blueprint, projectName, graph, taskMap);
-              log.warn({ taskId: task.id, phaseType: task.phaseType, errors: validation.errors }, "execution_prompt_validation_failed");
+              log.warn(
+                { taskId: task.id, phaseType: task.phaseType, errors: validation.errors },
+                "execution_prompt_validation_failed",
+              );
 
               const aiRetry = promptFixes.get(task.id) ?? null;
               const fixed = aiRetry ?? repairPromptSections(aiPrompt, validation.errors, context);
@@ -652,10 +810,20 @@ export async function generateWithAI(
                     createdAt: now(),
                   };
                   getPromptStore().save(artifact);
-                  log.info({ taskId: task.id, phaseType: task.phaseType, repairMethod: aiRetry ? "ai_retry" : "section_repair" }, "execution_prompt_repaired");
+                  log.info(
+                    {
+                      taskId: task.id,
+                      phaseType: task.phaseType,
+                      repairMethod: aiRetry ? "ai_retry" : "section_repair",
+                    },
+                    "execution_prompt_repaired",
+                  );
                 } else {
                   fallbackUsed++;
-                  log.warn({ taskId: task.id, phaseType: task.phaseType, errors: fixedValidation.errors }, "execution_prompt_repair_failed");
+                  log.warn(
+                    { taskId: task.id, phaseType: task.phaseType, errors: fixedValidation.errors },
+                    "execution_prompt_repair_failed",
+                  );
                   assemblePrompt(context, getPromptStore(), planVersion);
                 }
               } else {
@@ -666,7 +834,10 @@ export async function generateWithAI(
           } else {
             fallbackUsed++;
             if (aiPrompt) {
-              log.warn({ taskId: task.id, phaseType: task.phaseType, promptLength: aiPrompt.length }, "ai_execution_prompt_too_short");
+              log.warn(
+                { taskId: task.id, phaseType: task.phaseType, promptLength: aiPrompt.length },
+                "ai_execution_prompt_too_short",
+              );
             }
             const context = buildTaskContext(task, phaseData, blueprint, projectName, graph, taskMap);
             const generated = generatePromptFromContext(context);
@@ -697,13 +868,27 @@ export async function generateWithAI(
           }
         }
       });
-      log.info({ totalTasks: graph.tasks.length, withAiPrompt, aiPromptUsed, fallbackUsed }, "prompt_assembly_summary");
-      emitProgress(createEvent(workflowId, "stage_completed", "promptGen", { stageLabel: "Assembling execution prompts", attempt: 1, durationMs: 0 }));
+      log.info(
+        { totalTasks: graph.tasks.length, withAiPrompt, aiPromptUsed, fallbackUsed },
+        "prompt_assembly_summary",
+      );
+      emitProgress(
+        createEvent(workflowId, "stage_completed", "promptGen", {
+          stageLabel: "Assembling execution prompts",
+          attempt: 1,
+          durationMs: 0,
+        }),
+      );
       updateWorkflowStep(workflowId, "promptGen", "completed");
 
       // 8. Generate project summary
       updateWorkflowStep(workflowId, "summary", "running");
-      emitProgress(createEvent(workflowId, "stage_started", "summary", { stageLabel: "Generating project summary", attempt: 1 }));
+      emitProgress(
+        createEvent(workflowId, "stage_started", "summary", {
+          stageLabel: "Generating project summary",
+          attempt: 1,
+        }),
+      );
       const userCred = allCreds.find((c) => c.status === "valid" || c.status === "unverified");
       const summaryPreferences: UserPreferences | undefined = userCred?.defaultModel
         ? { preferredProvider: userCred.provider, preferredModel: userCred.defaultModel }
@@ -711,14 +896,34 @@ export async function generateWithAI(
       const summaryResult = await aiGen.generateProjectSummary(blueprint, summaryPreferences);
       if (summaryResult.summary) {
         (blueprint as Record<string, unknown>).projectSummary = summaryResult.summary;
-        log.info({ model: summaryResult.model, provider: summaryResult.provider, durationMs: summaryResult.durationMs }, "project_summary_generated");
-        const sp: Record<string, unknown> = { stageLabel: "Generating project summary", attempt: 1, durationMs: summaryResult.durationMs };
+        log.info(
+          {
+            model: summaryResult.model,
+            provider: summaryResult.provider,
+            durationMs: summaryResult.durationMs,
+          },
+          "project_summary_generated",
+        );
+        const sp: Record<string, unknown> = {
+          stageLabel: "Generating project summary",
+          attempt: 1,
+          durationMs: summaryResult.durationMs,
+        };
         if (summaryResult.model) sp.model = summaryResult.model;
         if (summaryResult.provider) sp.provider = summaryResult.provider;
         emitProgress(createEvent(workflowId, "stage_completed", "summary", sp as any));
       } else {
-        log.warn({ durationMs: summaryResult.durationMs, error: summaryResult.error }, "project_summary_failed_continuing");
-        emitProgress(createEvent(workflowId, "stage_completed", "summary", { stageLabel: "Generating project summary", attempt: 1, durationMs: summaryResult.durationMs }));
+        log.warn(
+          { durationMs: summaryResult.durationMs, error: summaryResult.error },
+          "project_summary_failed_continuing",
+        );
+        emitProgress(
+          createEvent(workflowId, "stage_completed", "summary", {
+            stageLabel: "Generating project summary",
+            attempt: 1,
+            durationMs: summaryResult.durationMs,
+          }),
+        );
       }
       updateWorkflowStep(workflowId, "summary", "completed");
     } catch {
@@ -728,10 +933,16 @@ export async function generateWithAI(
 
     // Mark workflow complete
     completeWorkflowRun(workflowId, "completed", result.provider, result.model);
-    emitProgress(createEvent(workflowId, "completed", "complete", { totalDurationMs: Date.now() - parseInt(workflowId, 36) || 0, model: result.model, provider: result.provider }));
+    emitProgress(
+      createEvent(workflowId, "completed", "complete", {
+        totalDurationMs: Date.now() - parseInt(workflowId, 36) || 0,
+        model: result.model,
+        provider: result.provider,
+      }),
+    );
 
     // 8. Record usage — one record per attempt, plus a summary record
-    for (const attempt of (result.attempts ?? [])) {
+    for (const attempt of result.attempts ?? []) {
       const attemptRecord = createUsageRecord({
         projectId,
         userId: "system",
@@ -761,14 +972,17 @@ export async function generateWithAI(
   }
 
   // AI failed
-  console.log("[DEBUG ORCHESTRATOR] AI generation failed:", JSON.stringify({
-    success: result.success,
-    error: result.error,
-    provider: result.provider,
-    model: result.model,
-    attempts: result.attempts?.map((a) => `${a.provider}/${a.model}: ${a.success ? "ok" : a.error}`),
-    durationMs: result.durationMs,
-  }));
+  console.log(
+    "[DEBUG ORCHESTRATOR] AI generation failed:",
+    JSON.stringify({
+      success: result.success,
+      error: result.error,
+      provider: result.provider,
+      model: result.model,
+      attempts: result.attempts?.map((a) => `${a.provider}/${a.model}: ${a.success ? "ok" : a.error}`),
+      durationMs: result.durationMs,
+    }),
+  );
   updateWorkflowStep(workflowId, "blueprint", "failed");
   completeWorkflowRun(workflowId, "failed", result.provider, result.model, result.error);
   return { output: null as any, mode: "ai_fallback_deterministic" };

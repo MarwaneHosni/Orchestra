@@ -49,15 +49,11 @@ export interface StoreSizeSnapshot {
   stores: Record<string, number>;
 }
 
-export function captureStoreSnapshot(storeSizes: Record<string, () => number>): StoreSizeSnapshot {
+export function captureStoreSnapshot(storeSizes: Record<string, number>): StoreSizeSnapshot {
   const mem = process.memoryUsage();
   const stores: Record<string, number> = {};
-  for (const [name, getSize] of Object.entries(storeSizes)) {
-    try {
-      stores[name] = getSize();
-    } catch {
-      stores[name] = -1;
-    }
+  for (const [name, size] of Object.entries(storeSizes)) {
+    stores[name] = size;
   }
   return {
     timestamp: new Date().toISOString(),
@@ -75,7 +71,7 @@ export function captureStoreSnapshot(storeSizes: Record<string, () => number>): 
  * Returns the timer handle so it can be cleared on shutdown.
  */
 export function startMemoryWatch(
-  getStoreSizes: () => Record<string, () => number>,
+  getStoreSizes: () => Record<string, number>,
   intervalMs = 60_000,
 ): ReturnType<typeof setInterval> {
   const timer = setInterval(() => {

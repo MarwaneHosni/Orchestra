@@ -194,7 +194,7 @@ export async function registerExecutionTaskRoutes(app: FastifyInstance) {
     return prompt;
   });
 
-  app.patch("/api/v1/plans/:planId/tasks/:taskId/status", async (request, reply) => {
+  app.patch("/api/v1/plans/:planId/tasks/:taskId/status", async (request) => {
     const { planId, taskId } = request.params as { planId: string; taskId: string };
     const body = request.body as { status?: string };
     if (!body.status) throw new Error("status is required");

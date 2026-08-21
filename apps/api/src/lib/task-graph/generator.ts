@@ -5,7 +5,12 @@ export interface GraphStore {
   saveGraph(graph: TaskGraph): void;
   getGraph(planId: string, version: number): TaskGraph | undefined;
   getGraphsByPlan(planId: string): TaskGraph[];
-  updateTaskStatus(planId: string, planVersion: number, taskId: string, newStatus: string): TaskNode | undefined;
+  updateTaskStatus(
+    planId: string,
+    planVersion: number,
+    taskId: string,
+    newStatus: string,
+  ): TaskNode | undefined;
   replacePhaseTasks(
     planId: string,
     planVersion: number,
@@ -62,9 +67,9 @@ export function createInMemoryGraphStore(): GraphStore {
       const oldSet = new Set(oldTaskIds);
       graph.tasks = graph.tasks.filter((t) => !oldSet.has(t.id)).concat(newTasks);
       graph.tasks.sort((a, b) => a.order - b.order);
-      graph.dependencies = graph.dependencies.filter(
-        (d) => !oldSet.has(d.taskId) && !oldSet.has(d.dependsOnTaskId),
-      ).concat(newDeps);
+      graph.dependencies = graph.dependencies
+        .filter((d) => !oldSet.has(d.taskId) && !oldSet.has(d.dependsOnTaskId))
+        .concat(newDeps);
       return graph;
     },
   };
@@ -216,7 +221,8 @@ function extractVerificationPhrase(phase: PhaseInput): string | null {
   const decisions = phase.keyDecisions;
   if (decisions && decisions.length > 0) {
     const last = decisions[decisions.length - 1];
-    if (last && last.length > 10 && !last.toLowerCase().includes("implement")) return `Verify ${last[0]!.toLowerCase() + last.slice(1)}`;
+    if (last && last.length > 10 && !last.toLowerCase().includes("implement"))
+      return `Verify ${last[0]!.toLowerCase() + last.slice(1)}`;
   }
   if (phase.executionPrompt) {
     const fromObjective = extractObjective(phase.executionPrompt);
@@ -238,7 +244,7 @@ function extractVerificationPhrase(phase: PhaseInput): string | null {
 function deriveTaskTitle(
   phase: PhaseInput,
   index: number,
-  total: number,
+  _total: number,
   isFirst: boolean,
   isCore: boolean,
   isLast: boolean,

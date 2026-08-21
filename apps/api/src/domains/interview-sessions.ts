@@ -123,7 +123,9 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
   app.post(
     "/api/v1/interviews/:id/generate",
     {
-      schema: { body: { type: "object", properties: { workflowId: { type: "string" } }, additionalProperties: false } },
+      schema: {
+        body: { type: "object", properties: { workflowId: { type: "string" } }, additionalProperties: false },
+      },
     },
     async (request) => {
       const sessionId = (request.params as { id: string }).id;
@@ -132,12 +134,21 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
       if (!session) throw new NotFoundError("Session", sessionId);
 
       const answers = getStore().getLatestAnswersBySession(sessionId);
-      app.log.info({ sessionId, answerCount: answers.length, sessionStatus: session.status, projectId: session.projectId }, "generate_handler_start");
+      app.log.info(
+        {
+          sessionId,
+          answerCount: answers.length,
+          sessionStatus: session.status,
+          projectId: session.projectId,
+        },
+        "generate_handler_start",
+      );
 
       // Guardrail check: rate limit + budget + circuit breaker + abuse detection
-      const promptTokenEstimate = answers.length > 0
-        ? estimatePromptTokens(answers.map((a) => ({ role: "user", content: a.value })))
-        : 1000;
+      const promptTokenEstimate =
+        answers.length > 0
+          ? estimatePromptTokens(answers.map((a) => ({ role: "user", content: a.value })))
+          : 1000;
       const costEstimate = estimateCost({
         provider: "opencode-go",
         model: "deepseek-v4-flash",
@@ -151,7 +162,10 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
         promptTokenEstimate,
       );
       if (!guardResult.allowed) {
-        app.log.warn({ sessionId, blockedBy: guardResult.blockedBy, reason: guardResult.reason }, "generate_handler_guardrail_blocked");
+        app.log.warn(
+          { sessionId, blockedBy: guardResult.blockedBy, reason: guardResult.reason },
+          "generate_handler_guardrail_blocked",
+        );
         if (guardResult.blockedBy === "rate_limit") {
           throw new RateLimitedError(
             guardResult.reason ?? "Rate limit exceeded",
@@ -186,6 +200,7 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
           projectId: project.id,
           version: planVersion,
           status: "generating",
+          staleAt: null,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         });
@@ -204,12 +219,29 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
           body.workflowId,
         );
         const generateElapsed = Date.now() - generateStart;
-        app.log.info({ mode: aiResult.mode, provider: aiResult.provider, model: aiResult.model, elapsedMs: generateElapsed }, "generate_handler_ai_result");
+        app.log.info(
+          {
+            mode: aiResult.mode,
+            provider: aiResult.provider,
+            model: aiResult.model,
+            elapsedMs: generateElapsed,
+          },
+          "generate_handler_ai_result",
+        );
 
         let output: object;
 
         if (aiResult.mode === "ai_success") {
-          app.log.info({ sessionId, planId, provider: aiResult.provider, model: aiResult.model, elapsedMs: generateElapsed }, "generate_handler_ai_success");
+          app.log.info(
+            {
+              sessionId,
+              planId,
+              provider: aiResult.provider,
+              model: aiResult.model,
+              elapsedMs: generateElapsed,
+            },
+            "generate_handler_ai_success",
+          );
           // AI succeeded — use the AI-generated blueprint
           // Normalize AI output to match the expected frontend shape
           const aiOutput = aiResult.output as Record<string, unknown>;
@@ -266,7 +298,10 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
             createdAt: now,
             updatedAt: now,
           });
-          app.log.info({ sessionId, planId, planVersion, phaseCount: rawPhases.length }, "generate_handler_blueprint_saved");
+          app.log.info(
+            { sessionId, planId, planVersion, phaseCount: rawPhases.length },
+            "generate_handler_blueprint_saved",
+          );
           orch.transitionSession(sessionId, "completed");
           app.log.info({ sessionId, newStatus: "completed" }, "generate_handler_session_transitioned");
           output = aiResult.output;
@@ -276,18 +311,29 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
           app.log.info({ mode: aiResult.mode }, "AI generation unavailable — using deterministic fallback");
           const fallbackStart = Date.now();
           output = orch.generateBlueprint(sessionId);
-          app.log.info({ elapsedMs: Date.now() - fallbackStart }, "generate_handler_deterministic_fallback_done");
+          app.log.info(
+            { elapsedMs: Date.now() - fallbackStart },
+            "generate_handler_deterministic_fallback_done",
+          );
         }
 
         const actualTokens = aiResult.usage?.totalTokens ?? promptTokenEstimate;
-        guardrail.budget.recordOutcome(session.projectId, costEstimate.estimatedCost, actualTokens, "completed");
+        guardrail.budget.recordOutcome(
+          session.projectId,
+          costEstimate.estimatedCost,
+          actualTokens,
+          "completed",
+        );
         guardrail.getCircuitBreaker("provider")?.recordSuccess();
         guardrail.abuseDetector.clear(session.projectId);
         await queueSyncDb();
         app.log.info({ sessionId, totalElapsedMs: Date.now() - generateStart }, "generate_handler_success");
         return output;
       } catch (err) {
-        app.log.error({ err: err instanceof Error ? err.message : err, sessionId, planId }, "generate_handler_caught_error");
+        app.log.error(
+          { err: err instanceof Error ? err.message : err, sessionId, planId },
+          "generate_handler_caught_error",
+        );
         // Mark plan as failed on error
         const failNow = new Date().toISOString();
         getDb()
@@ -427,15 +473,26 @@ export async function registerInterviewSessionRoutes(app: FastifyInstance) {
     await queueSyncDb();
 
     const summaryChanged = result.updatedSummary !== null;
-    const changeSummary = actualChangeCount > 0 && summaryChanged
-      ? `Resolved ${riskIds.length} risk(s). Updated ${actualChangeCount} execution prompt(s) and project summary.`
-      : actualChangeCount > 0
-        ? `Resolved ${riskIds.length} risk(s). Updated ${actualChangeCount} execution prompt(s).`
-        : summaryChanged
-          ? `Resolved ${riskIds.length} risk(s). Updated project summary.`
-          : `Resolved ${riskIds.length} risk(s). No execution prompts were affected.`;
+    const changeSummary =
+      actualChangeCount > 0 && summaryChanged
+        ? `Resolved ${riskIds.length} risk(s). Updated ${actualChangeCount} execution prompt(s) and project summary.`
+        : actualChangeCount > 0
+          ? `Resolved ${riskIds.length} risk(s). Updated ${actualChangeCount} execution prompt(s).`
+          : summaryChanged
+            ? `Resolved ${riskIds.length} risk(s). Updated project summary.`
+            : `Resolved ${riskIds.length} risk(s). No execution prompts were affected.`;
 
-    app.log.info({ sessionId, planId, newVersion, riskCount: riskIds.length, rewrittenCount: actualChangeCount, summaryChanged }, "refine_complete");
+    app.log.info(
+      {
+        sessionId,
+        planId,
+        newVersion,
+        riskCount: riskIds.length,
+        rewrittenCount: actualChangeCount,
+        summaryChanged,
+      },
+      "refine_complete",
+    );
     return { planVersion: newVersion, changeSummary };
   });
 
