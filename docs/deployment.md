@@ -3,25 +3,25 @@
 ## Architecture Overview
 
 ```
-                        ┌──────────────────┐
-                        │   PostgreSQL 16   │
-                        │  (Railway Add-on) │
-                        └────────┬─────────┘
-                                 │
+                        ┌──────────────┐
+                        │  SQLite      │
+                        │ (orchestra.db│
+                        │  on volume)  │
+                        └──────┬───────┘
+                               │
   Internet ──► Frontend ──► API ──┘
-  (port 3001)    │       (port 3000)
+  (landing path) │       (port 3000)
                  │
-            Static assets
-           (Next.js SSG)
+            Next.js web + Astro landing
 ```
 
-The platform has two deployable units:
+The platform has these deployable units:
 
-- **API** — Fastify HTTP server (`apps/api`)
+- **API** — Fastify HTTP server (`apps/api`), stateful (in-memory + SQLite snapshot)
 - **Web** — Next.js frontend (`apps/web`)
-- **PostgreSQL** — Managed database (Railway, Render, or similar)
+- **Landing & Docs** — Astro static site (`apps/landing`)
 
-The worker (`apps/worker`) is not yet deployed; it will be added in a later phase.
+SQLite is the default store. A persistent volume must back `orchestra.db` so data survives restarts; PostgreSQL is optional via `DATABASE_URL`.
 
 ---
 
@@ -59,28 +59,26 @@ The deploy workflow (`.github/workflows/deploy.yml`) runs on:
 | `RAILWAY_TOKEN` | Railway API token for automated deploys            |
 | `DATABASE_URL`  | PostgreSQL connection string (injected by Railway) |
 
-### Railway Setup (Recommended)
+### Railway Setup (Recommended for API)
 
 1. Create a new Railway project.
-2. Add a **PostgreSQL** database add-on — Railway will inject `DATABASE_URL` into connected services.
-3. Create two services with the following configuration in the Railway dashboard:
+2. Add a service for the API rooted at the **repository root** (so the `Dockerfile` and `pnpm-workspace.yaml` are visible):
 
-   **API service** (`apps/api`):
+   **API service:**
    | Setting | Value |
    |---------|-------|
-   | Root Directory | `apps/api` |
-   | Build Command | `pnpm install && pnpm build` |
-   | Start Command | `pnpm start` |
+   | Root Directory | repo root (`/`) |
+   | Build Type | Dockerfile (repo-root `Dockerfile`) |
+   | Start Command | `node apps/api/dist/index.js` (from Dockerfile `CMD`) |
 
-   **Web service** (`apps/web`):
-   | Setting | Value |
-   |---------|-------|
-   | Root Directory | `apps/web` |
-   | Build Command | `pnpm install && pnpm build` |
-   | Start Command | `pnpm start` |
+3. Add a **Volume** mounted at a writable path and set `SQLITE_DB_PATH` to a file on it (e.g. `/data/orchestra.db`) for durable persistence.
+4. **Web** and **Landing** can be deployed on Vercel (static/Next.js friendly) or Railway:
 
-4. Generate a Railway token from **Dashboard → Settings → Tokens**.
-5. Add the token as `RAILWAY_TOKEN` in your GitHub repository secrets.
+   **Web service** (`apps/web`): build `pnpm --filter @orchestra/web build`, start `pnpm --filter @orchestra/web start`.
+   **Landing service** (`apps/landing`): build `pnpm --filter @orchestra/landing build`, output `dist/`.
+
+5. Generate a Railway token from **Dashboard → Settings → Tokens**.
+6. Add the token as `RAILWAY_TOKEN` in your GitHub repository secrets.
 
 ### Deploying Manually
 
@@ -102,7 +100,7 @@ All environment variables are injected by the deployment platform — never stor
 
 ```ini
 NODE_ENV=production
-DATABASE_URL=postgresql://user:pass@host:5432/orchestra
+SQLITE_DB_PATH=/data/orchestra.db   # SQLite file on a persistent volume
 ```
 
 ### Optional Variables
@@ -110,8 +108,15 @@ DATABASE_URL=postgresql://user:pass@host:5432/orchestra
 ```ini
 LOG_LEVEL=info
 PORT=3000           # API port (default 3000)
-WEB_PORT=3001       # Frontend port (default 3001)
-WORKER_CONCURRENCY=4
+DATABASE_URL=postgresql://user:pass@host:5432/orchestra   # alternative to SQLite
+```
+
+### Frontend Variables (web / landing)
+
+```ini
+NEXT_PUBLIC_API_URL=https://api.example.com   # dashboard → API base URL
+ORCHESTRA_API_URL=https://api.example.com     # Next.js rewrite target
+NEXT_PUBLIC_DOCS_URL=https://docs.example.com # Docs button target
 ```
 
 ### AI Provider Keys (optional in preview)

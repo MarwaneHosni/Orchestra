@@ -3,16 +3,19 @@
 ## High-Level Architecture
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌──────────────┐
-│  Frontend   │────▶│  Fastify API │────▶│   Worker     │
-│ (Next.js)   │     │  (apps/api)  │     │ (placeholder)│
-└─────────────┘     └──────┬───────┘     └──────────────┘
+┌─────────────┐     ┌──────────────┐
+│  Frontend   │────▶│  Fastify API │
+│ (Next.js)   │     │  (apps/api)  │
+└─────────────┘     └──────┬───────┘
                            │
-                    ┌──────▼───────┐
-                    │  PostgreSQL  │
-                    │    16-alpine │
-                    └──────────────┘
+                    ┌──────▼─────────────────┐
+                    │  SQLite (sql.js)       │
+                    │  via Drizzle ORM       │
+                    │  (PostgreSQL optional) │
+                    └────────────────────────┘
 ```
+
+The docs/marketing landing site (`apps/landing`, Astro) is a separate static site.
 
 ## Modular Monolith
 
@@ -22,51 +25,46 @@ The system starts as a modular monolith with clear module boundaries:
 | ----------------------------------------- | ------------------ | -------------- |
 | **API** — Fastify HTTP server             | `apps/api/`        | ✅ Implemented |
 | **Web** — Next.js 15 + Tailwind CSS v4    | `apps/web/`        | ✅ Implemented |
-| **Worker** — Background job processor     | `apps/worker/`     | ⏳ Placeholder |
+| **Landing** — Astro docs & marketing site | `apps/landing/`    | ✅ Implemented |
 | **Shared** — Common types, utilities      | `packages/shared/` | ✅ Implemented |
-| **Config** — Env config, provider routing | `packages/config/` | ⏳ Placeholder |
+| **Config** — Shared configuration helpers | `packages/config/` | ✅ Implemented |
 
 ### API (apps/api)
 
 Fastify 5 server with:
 
-- 9 domain modules under `src/domains/` (users, projects, ideas, plans, phases, subphases, questions, answers, generations)
-- Drizzle ORM for PostgreSQL with generated SQL migrations
+- Business domains under `src/domains/` (projects, interview sessions, execution tasks, phase resolution, provider credentials)
+- Drizzle ORM for SQLite (sql.js) with optional PostgreSQL via `DATABASE_URL`
 - Zod schemas for request validation (shared patterns in `src/schemas/`)
 - Centralized error handling (`src/lib/errors.ts`) with `AppError`, `NotFoundError`, `ValidationError`
 - Pino structured logging (JSON in production, pretty-print in development)
+- AI generation pipeline (blueprint → roadmap → task graph → execution prompts) with pluggable providers
 
 ### Web (apps/web)
 
-Next.js 15 with App Router, statically rendered:
+Next.js 15 with App Router:
 
-- 7 routes: dashboard, projects (list + new), blueprints, plans, settings, 404
+- Routes: dashboard, projects, new project, interview, summary, tasks, blueprints, plans, settings
 - Responsive layout with mobile hamburger navigation
 - Reusable UI primitives: Button, Card, Input, Skeleton, EmptyState, ErrorState
 - Accessible form foundations: FormField with aria-describedby, aria-invalid wiring
 - Tailwind CSS v4 with custom `orchestra` color palette and semantic tokens
 
-### Worker (apps/worker)
+### Landing (apps/landing)
 
-Placeholder. Will handle long-running AI prompts, task decomposition, and exports in a later phase.
+Astro static site serving the marketing page plus a 17-page documentation section (`/docs/*`).
 
 ## Key Domains
 
-Nine core domains are defined in `apps/api/src/domains/`:
+Core domains are defined in `apps/api/src/domains/`:
 
-| Domain      | Schema | Routes                               | Status         |
-| ----------- | ------ | ------------------------------------ | -------------- |
-| users       | ✅     | GET /api/v1/users/:id                | ⏳ 501 stub    |
-| projects    | ✅     | GET/POST, GET /api/v1/projects       | ✅ Implemented |
-| ideas       | ✅     | GET /api/v1/projects/:id/ideas       | ⏳ 501 stub    |
-| plans       | ✅     | GET /api/v1/projects/:id/plans       | ⏳ 501 stub    |
-| phases      | ✅     | GET /api/v1/plans/:id/phases         | ⏳ 501 stub    |
-| subphases   | ✅     | GET /api/v1/phases/:id/subphases     | ⏳ 501 stub    |
-| questions   | ✅     | GET /api/v1/questions                | ⏳ 501 stub    |
-| answers     | ✅     | POST /api/v1/projects/:id/answers    | ⏳ 501 stub    |
-| generations | ✅     | GET /api/v1/projects/:id/generations | ⏳ 501 stub    |
+- **Projects** — create, list, delete projects
+- **Interview sessions** — guided 12-phase interview flow (start, next question, answers, generate)
+- **Execution tasks** — task graph queries, status updates, prompt lookup/export
+- **Phase resolution** — phase status and answer handling
+- **Provider credentials** — store/validate AI provider keys (encrypted at rest)
 
-Only projects has working CRUD routes. The remaining eight domains have their database schemas, Zod types, and route stubs in place but return 501 Not Implemented.
+Supporting routes (`src/routes/`) expose health, version, observability, diagnostics, usage, cache, and SSE progress endpoints.
 
 ## Planning Engine Workflow
 
@@ -125,18 +123,19 @@ Every major step emits a structured JSON log entry:
 
 These features are intentionally deferred:
 
-- **AI provider integration** — the app has no AI calls yet. Provider routing and prompt generation domains are defined but not wired.
-- **Authentication** — no user auth. The `users` table exists for future auth integration.
-- **Background worker** — `apps/worker` is a placeholder. Job queues, AI prompt execution, and exports will run here later.
-- **Integration tests** — API endpoints have no automated tests against the database.
-- **Monitoring** — Pino logging is configured. Sentry setup is documented but not installed.
+- **Multi-user authentication** — no user auth. The app is single-user/self-hosted.
+- **Background worker** — generation runs synchronously today; a background worker could be extracted later if it becomes a bottleneck.
+- **Integration tests** — some API endpoints lack automated tests against the database.
+- **Sentry / error reporting** — Pino logging is configured. Sentry setup is documented but not installed.
 
-**Recently built (Phase 4):**
+**Recently built:**
 
-- **Task graph** — in-memory `generateTasks()` decomposes 12 phases into 20–40 tasks with sequential + cross-phase dependencies, status computation (ready/blocked/needs_review), and failure states for missing/insufficient phases. See `apps/api/src/lib/task-graph/` and [task-decomposition.md](task-decomposition.md).
+- **AI generation pipeline** — pluggable providers (OpenAI, Anthropic, OpenRouter, custom), blueprint/roadmap/task-graph/prompt generation, usage accounting, budget guardrails, rate limiting, AI cache.
+- **Task graph** — `generateTasks()` decomposes 12 phases into 20–40 tasks with sequential + cross-phase dependencies, status computation (ready/blocked/needs_review), and failure states for missing/insufficient phases. See `apps/api/src/lib/task-graph/` and [task-decomposition.md](task-decomposition.md).
 - **Prompt generation** — `assemblePrompt()` builds versioned prompt artifacts from task context with deterministic Markdown rendering, validation, and failureReason propagation. See `apps/api/src/lib/prompt/`.
 - **Export pipeline** — bundle exports via `GET /api/v1/plans/:planId/prompts/export` produce `orchestra-prompt-bundle-v1` JSON with full lineage metadata.
 - **Regeneration** — `deriveGraph()` creates new versioned task graphs from existing ones, preserving old versions and tracking `derivedFromPlanVersion`.
+- **Persistence** — SQLite-backed stores for sessions, credentials, prompts, and task graphs, with atomic snapshot sync (`queueSyncDb()`).
 
 ## Conventions
 
@@ -161,7 +160,7 @@ These features are intentionally deferred:
 
 - `packages/shared` imports nothing from other workspace packages (leaf dependency).
 - `apps/*` may import from `packages/*` but never from sibling `apps/*`.
-- Cross-app communication runs through HTTP (API) or the worker queue — never direct imports.
+- Cross-app communication runs through HTTP (API) — never direct imports.
 
 ### Environment Variables
 
@@ -178,17 +177,17 @@ These features are intentionally deferred:
 
 ## Database
 
-- PostgreSQL 16 via Docker Compose for local development.
-- Drizzle ORM for schema management with generated SQL migrations in `apps/api/drizzle/`.
-- 9 tables, all with UUID primary keys, timestamptz columns, and foreign keys.
+- **SQLite (sql.js)** is the default store (`SQLITE_DB_PATH`, default `./orchestra.db`) — no server required, local-first. Optional PostgreSQL via `DATABASE_URL`.
+- Drizzle ORM manages the schema, with generated SQL migrations in `apps/api/drizzle/`.
+- 18 tables in the SQLite schema (projects, ideas, interview_sessions, questions, answers, plans, blueprints, provider_credentials, task_graphs, execution_tasks, task_dependencies, prompt_artifacts, usage_records, activity_log, analysis_results, workflow_runs, ai_cache_entries, ai_cache_invalidation_markers).
 - Migration: `pnpm --filter @orchestra/api db:migrate`.
 - Schema docs: [schema.md](schema.md).
 
 ## CI/CD
 
-- **CI**: GitHub Actions on every PR — lint, format check, typecheck, test, build.
-- **Deploy**: GitHub Actions on push to `main` — builds and deploys to Railway (or equivalent PaaS).
-- **Secrets**: GitHub secrets + Railway service variables. Never stored in the repository.
+- **CI**: GitHub Actions on every push/PR — lint, format check, typecheck, test, build.
+- **Deploy**: `api` deploys to Railway (or equivalent PaaS) via the repo-root `Dockerfile`; `web` and `landing` can deploy to Vercel or Railway.
+- **Secrets**: GitHub secrets + platform service variables. Never stored in the repository.
 - **Health**: `GET /health` (liveness), `GET /ready` (readiness with DB check), `GET /api/v1/status` (version).
 
 ## Future Separation Path
@@ -196,6 +195,6 @@ These features are intentionally deferred:
 When the monolith needs to scale:
 
 1. Extract `packages/shared` to an independent npm-published package.
-2. Extract `apps/worker` to a standalone deployment with its own queue (Bull/BullMQ + Redis).
+2. Extract heavy generation work into a background worker with its own queue (Bull/BullMQ + Redis).
 3. Extract `apps/api` to scale HTTP endpoints independently.
 4. The monorepo structure already supports this without restructuring.

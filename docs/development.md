@@ -2,18 +2,19 @@
 
 ## Prerequisites
 
-| Tool                                                              | Version | Why                |
-| ----------------------------------------------------------------- | ------- | ------------------ |
-| [Node.js](https://nodejs.org/)                                    | >= 20   | Runtime            |
-| [pnpm](https://pnpm.io/installation)                              | >= 9    | Package manager    |
-| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | latest  | PostgreSQL service |
+| Tool                                                              | Version | Why                                 |
+| ----------------------------------------------------------------- | ------- | ----------------------------------- |
+| [Node.js](https://nodejs.org/)                                    | >= 20   | Runtime                             |
+| [pnpm](https://pnpm.io/installation)                              | >= 9    | Package manager                     |
+| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | latest  | Optional — local PostgreSQL service |
+
+> **Databases:** SQLite (via sql.js) is the default and requires zero external services. Docker/PostgreSQL is only required if you opt into `DATABASE_URL`.
 
 Verify everything is installed:
 
 ```bash
 node --version     # v20.x or later
 pnpm --version     # 9.x
-docker info        # must not error
 ```
 
 ---
@@ -21,20 +22,18 @@ docker info        # must not error
 ## Quick Start
 
 ```bash
-# One-shot: copies .env, starts Docker, installs deps, builds
+# One-shot: copies .env, installs deps, builds
 pnpm setup
 
 # Start the app
 pnpm dev
 ```
 
-The `pnpm setup` script:
+The `pnpm dev` script starts the API (`apps/api`, port 3000) and web frontend (`apps/web`, port 3001) in watch mode. The Astro docs/landing site (`apps/landing`, port 4321) runs separately:
 
-1. Creates `.env` from `.env.example` if it doesn't exist yet.
-2. Verifies Docker is running.
-3. Starts PostgreSQL via Docker Compose.
-4. Polls the container health check until PostgreSQL is ready.
-5. Runs `pnpm install` and `pnpm build`.
+```bash
+pnpm --filter @orchestra/landing dev
+```
 
 To run the steps individually instead:
 
@@ -44,7 +43,6 @@ cp .env.example .env
 # Windows
 copy .env.example .env
 
-docker compose up -d
 pnpm install
 pnpm build
 pnpm dev
@@ -67,18 +65,18 @@ See [docs/deployment.md](deployment.md) for CI/CD, secrets management, and produ
 | `.env`            | Actual values for local development                 | **No** (gitignored) |
 | CI / deployed env | Values injected via secrets manager or CI variables | N/A                 |
 
-### Required local variables
+### Database configuration
+
+By default the API uses **SQLite** (`SQLITE_DB_PATH`, default `./orchestra.db`) — no database server or Docker required.
+
+To use PostgreSQL instead, set `DATABASE_URL` (see [config](deployment.md)):
 
 ```ini
-# .env  (auto-created by `pnpm setup` from .env.example)
+# .env  (optional — only if you want PostgreSQL)
 DATABASE_URL=postgresql://orchestra:orchestra_dev@localhost:5432/orchestra
 ```
 
-The `.env` values in the example are safe for local development because:
-
-- PostgreSQL is only exposed on `localhost:5432` (Docker port mapping).
-- The user/password are scoped to the local Docker volume.
-- No production data ever touches the local database.
+The dev credentials in `.env.example` are safe for local development because PostgreSQL (when used) is only exposed on `localhost:5432` via Docker port mapping, scoped to a local Docker volume.
 
 ### Adding a new variable
 
@@ -103,7 +101,9 @@ For local development, the `POSTGRES_PASSWORD` in `.env.example` is a low-value 
 
 ## Database Management
 
-### Starting / stopping
+> By default the API persists to **SQLite** (`orchestra.db`), which needs no server. The commands below manage the optional PostgreSQL container used when `DATABASE_URL` is set.
+
+### Starting / stopping (PostgreSQL only)
 
 ```bash
 pnpm db:start    # docker compose up -d
@@ -155,7 +155,7 @@ The `pnpm setup` script polls this automatically — it waits until the health s
 
 ### Application health
 
-Once the API server is implemented, it will expose a `GET /health` endpoint. The worker will expose its own health via the job queue connection status.
+The API exposes `GET /health` (liveness) and `GET /ready` (readiness with database status).
 
 ---
 
@@ -230,7 +230,7 @@ git commit --no-verify
 ## Common Tasks
 
 ```bash
-pnpm dev          # Start api, web & worker in watch mode
+pnpm dev          # Start api & web in watch mode
 pnpm build        # Compile TypeScript for all packages
 pnpm typecheck    # Type-check without emitting files
 pnpm test         # Run tests
