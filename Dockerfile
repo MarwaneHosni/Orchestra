@@ -12,7 +12,7 @@ WORKDIR /app
 COPY . .
 
 RUN pnpm install --frozen-lockfile
-RUN pnpm --filter @orchestra/api build
+RUN pnpm --filter @orchestra/api... build
 
 EXPOSE 3000
 
