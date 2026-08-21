@@ -1,5 +1,6 @@
 import { TerminalTitle } from "@/components/ui/terminal-title";
 import { SectionDivider } from "@/components/ui/badge";
+import { getDocsUrl } from "@/lib/api-config";
 import Link from "next/link";
 
 function BtnLink({ href, children }: { href: string; children: React.ReactNode }) {
@@ -23,11 +24,20 @@ const statCards = [
 
 const steps = [
   { step: "1", title: "Create a project", desc: "Give your idea a name and a short description." },
-  { step: "2", title: "Refine through interview", desc: "Answer structured questions to flesh out requirements, architecture, and constraints." },
-  { step: "3", title: "Get your plan", desc: "Receive a complete blueprint, roadmap, and dependency-aware task graph." },
+  {
+    step: "2",
+    title: "Refine through interview",
+    desc: "Answer structured questions to flesh out requirements, architecture, and constraints.",
+  },
+  {
+    step: "3",
+    title: "Get your plan",
+    desc: "Receive a complete blueprint, roadmap, and dependency-aware task graph.",
+  },
 ];
 
 export default function DashboardPage() {
+  const docsUrl = getDocsUrl();
   return (
     <div className="space-y-8" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
       <div className="flex items-center justify-between">
@@ -37,7 +47,10 @@ export default function DashboardPage() {
             Welcome to Orchestra. Start by creating your first project.
           </p>
         </div>
-        <BtnLink href="/projects/new">New project</BtnLink>
+        <div className="flex items-center gap-2">
+          <BtnLink href={`${docsUrl}/docs/overview/`}>Docs</BtnLink>
+          <BtnLink href="/projects/new">New project</BtnLink>
+        </div>
       </div>
 
       <SectionDivider title="Overview" />
@@ -56,11 +69,29 @@ export default function DashboardPage() {
             }}
             className="hover:bg-bg-hover hover:border-border-default"
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: 11,
+                color: "var(--color-text-muted)",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+              }}
+            >
               <span style={{ color: card.color, fontSize: 10 }}>{card.glyph}</span>
               <span>{card.label}</span>
             </div>
-            <div style={{ marginTop: 8, fontSize: 28, fontWeight: 600, color: "var(--color-text-primary)", lineHeight: 1 }}>
+            <div
+              style={{
+                marginTop: 8,
+                fontSize: 28,
+                fontWeight: 600,
+                color: "var(--color-text-primary)",
+                lineHeight: 1,
+              }}
+            >
               {card.value}
             </div>
           </div>
@@ -85,21 +116,29 @@ export default function DashboardPage() {
             }}
             className="hover:bg-bg-hover hover:border-border-default"
           >
-            <div style={{
-              width: 28, height: 28, flexShrink: 0,
-              display: "inline-flex", alignItems: "center", justifyContent: "center",
-              borderRadius: "50%",
-              background: "var(--color-accent-purple-dim)",
-              color: "var(--color-accent-purple)",
-              fontSize: 13, fontWeight: 600, lineHeight: 1,
-            }}>
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                flexShrink: 0,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "50%",
+                background: "var(--color-accent-purple-dim)",
+                color: "var(--color-accent-purple)",
+                fontSize: 13,
+                fontWeight: 600,
+                lineHeight: 1,
+              }}
+            >
               {s.step}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>
-                {s.title}
-              </p>
-              <p style={{ marginTop: 2, fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.5 }}>
+              <p style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>{s.title}</p>
+              <p
+                style={{ marginTop: 2, fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.5 }}
+              >
                 {s.desc}
               </p>
             </div>

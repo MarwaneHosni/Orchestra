@@ -42,3 +42,15 @@ export function apiUrl(path: string): string {
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
   return `${getApiBaseUrl()}${cleanPath}`;
 }
+
+/**
+ * Full URL to the Orchestra docs site.
+ * The docs live in the separate landing app, so an absolute URL is used.
+ * Set `NEXT_PUBLIC_DOCS_URL` to the deployed docs base. Defaults to the
+ * public docs site (`https://orchestra.dev`).
+ */
+export function getDocsUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_DOCS_URL;
+  if (configured) return configured.replace(/\/+$/, "");
+  return "https://orchestra.dev";
+}
