@@ -10,6 +10,7 @@
     "dev": "node scripts/dev.mjs",
     "build": "pnpm -r build",
     "lint": "eslint .",
+    "scan:secrets": "node scripts/scan-secrets.mjs --all",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "test": "vitest run",

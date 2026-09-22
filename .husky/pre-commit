@@ -1,1 +1,2 @@
+node scripts/scan-secrets.mjs --staged
 npx lint-staged
